@@ -8,8 +8,16 @@ export const Route = createFileRoute("/_app/aset")({
 
 const rows = [
   { kode: "001/INC-GA/M/25", nama: "MacBook Pro 14", status: "Bagus" },
-  { kode: "002/INC-GA/M/25", nama: "Kursi Ergonomis Herman", status: "Rusak Ringan" },
-  { kode: "003/INC-GA/M/25", nama: "Proyektor Epson EB-X41", status: "Rusak Berat" },
+  {
+    kode: "002/INC-GA/M/25",
+    nama: "Kursi Ergonomis Herman",
+    status: "Rusak Ringan",
+  },
+  {
+    kode: "003/INC-GA/M/25",
+    nama: "Proyektor Epson EB-X41",
+    status: "Rusak Berat",
+  },
 ] as const
 
 function AsetPage() {
@@ -20,7 +28,9 @@ function AsetPage() {
           <p className="text-xs font-semibold tracking-[0.5px] text-muted-foreground uppercase">
             Katalog
           </p>
-          <h1 className="text-3xl font-medium tracking-[-0.5px]">Daftar Aset</h1>
+          <h1 className="text-3xl font-medium tracking-[-0.5px]">
+            Daftar Aset
+          </h1>
           <p className="text-base text-muted-foreground">
             95 aset tercatat. Contoh 3 baris pertama ditampilkan di bawah.
           </p>
@@ -42,7 +52,10 @@ function AsetPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.kode} className="border-b border-hairline last:border-0">
+              <tr
+                key={r.kode}
+                className="border-b border-hairline last:border-0"
+              >
                 <td className="px-5 py-4 font-mono text-xs">{r.kode}</td>
                 <td className="px-5 py-4">{r.nama}</td>
                 <td className="px-5 py-4">

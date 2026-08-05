@@ -1,7 +1,14 @@
 node_modules/
+dist/
 coverage/
 .pnpm-store/
 pnpm-lock.yaml
 package-lock.json
-pnpm-lock.yaml
 yarn.lock
+bun.lock
+
+# generated
+src/routeTree.gen.ts
+
+# assets
+public/
