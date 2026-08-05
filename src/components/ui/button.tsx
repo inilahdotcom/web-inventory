@@ -4,46 +4,51 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding text-sm font-medium leading-[1.3] whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        primary:
+          "rounded-full bg-primary text-primary-foreground hover:bg-[color-mix(in_oklab,var(--primary)_90%,white_10%)] active:bg-[var(--primary-pressed,#2c2c34)] disabled:bg-hairline disabled:text-muted-foreground",
+        yellow:
+          "rounded-full bg-brand-yellow text-brand-yellow-foreground hover:bg-[color-mix(in_oklab,var(--brand-yellow)_92%,black_8%)] active:bg-[color-mix(in_oklab,var(--brand-yellow)_85%,black_15%)] disabled:bg-hairline disabled:text-muted-foreground",
+        blue: "rounded-full bg-brand-blue text-brand-blue-foreground hover:bg-[color-mix(in_oklab,var(--brand-blue)_92%,black_8%)] active:bg-[color-mix(in_oklab,var(--brand-blue)_85%,black_15%)] disabled:bg-hairline disabled:text-muted-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "rounded-full border border-hairline-strong bg-transparent text-foreground hover:bg-muted active:bg-[color-mix(in_oklab,var(--muted)_80%,black_20%)] disabled:border-hairline disabled:text-muted-foreground",
+        "on-dark":
+          "rounded-full bg-white text-primary hover:bg-white/90 active:bg-white/80 disabled:bg-white/40 disabled:text-primary/50",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "rounded-md bg-transparent text-foreground hover:bg-muted active:bg-[color-mix(in_oklab,var(--muted)_80%,black_20%)] disabled:text-muted-foreground",
+        link: "h-auto rounded-none bg-transparent p-0 text-brand-blue underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "rounded-full bg-[#600000] text-white hover:bg-[color-mix(in_oklab,#600000_90%,white_10%)] active:bg-[color-mix(in_oklab,#600000_80%,black_20%)] disabled:bg-hairline disabled:text-muted-foreground",
       },
       size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+        sm: "h-9 px-4 text-[13px]",
+        md: "h-11 px-6 py-3",
+        lg: "h-12 px-7 text-[15px]",
+        icon: "size-9 rounded-full border border-hairline bg-card p-0 text-foreground",
+        "icon-sm": "size-8 rounded-full border border-hairline bg-card p-0 text-foreground",
+        "icon-lg":
+          "size-11 rounded-full border border-hairline bg-card p-0 text-foreground",
       },
     },
+    compoundVariants: [
+      { variant: "ghost", size: "md", className: "h-auto px-3 py-2" },
+      { variant: "ghost", size: "sm", className: "h-auto px-2.5 py-1.5" },
+      { variant: "link", size: ["sm", "md", "lg"], className: "h-auto px-0 py-0" },
+    ],
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: "primary",
+      size: "md",
     },
   }
 )
 
 function Button({
   className,
-  variant = "default",
-  size = "default",
+  variant = "primary",
+  size = "md",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
