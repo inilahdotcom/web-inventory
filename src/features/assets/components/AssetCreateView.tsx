@@ -106,6 +106,7 @@ export function AssetCreateView() {
                             name="namaBarang"
                             value={formData.namaBarang}
                             onChange={handleChange}
+                            className="text-[#1C1C1E]"
                             errorText="Nama ini sangat mirip dengan 021/INC-GA/1/26 – MacBook Pro M1 13&quot; (Redaksi L3). Pastikan bukan aset yang sama (FR-C07)."
                         />
 
@@ -115,6 +116,7 @@ export function AssetCreateView() {
                                 name="kategori"
                                 value={formData.kategori}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                                 options={[{ label: 'Komputer & Laptop', value: 'laptop' }]}
                             />
                             <InputField
@@ -122,6 +124,7 @@ export function AssetCreateView() {
                                 name="merek"
                                 value={formData.merek}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                                 helperText="Boleh dikosongkan. Admin dapat menambah merek baru dari sini."
                             />
                         </div>
@@ -133,6 +136,7 @@ export function AssetCreateView() {
                                 name="jumlah"
                                 value={formData.jumlah}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                                 helperText="Bilangan bulat minimal 1 (BR-03)."
                             />
                             <div className="space-y-1">
