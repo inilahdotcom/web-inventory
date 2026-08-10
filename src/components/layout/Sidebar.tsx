@@ -20,8 +20,8 @@ export function Sidebar() {
 
       <nav className="px-[14px] pt-[11px]">
         <div className="space-y-[3px]">
-          <NavItem to="/" label="Dashboard" exact />
-          <NavItem to="/asset" label="Daftar Aset" count="95" />
+          <NavItem to="/dashboard" label="Dashboard" />
+          <NavItem to="/aset" label="Daftar Aset" count="95" />
           <NavItem to="/mutasi" label="Mutasi Aset" />
           <NavItem to="/import" label="Import Data" />
           <NavItem to="/laporan" label="Laporan" />
