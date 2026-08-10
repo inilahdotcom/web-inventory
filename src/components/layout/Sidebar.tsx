@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router"
 
 export function Sidebar() {
   return (
-    <aside className="hidden min-h-svh w-[232px] shrink-0 bg-[#1c1c1e] text-white lg:block">
+    <aside className="fixed inset-y-0 left-0 z-20 hidden h-svh w-[232px] flex-col bg-[#1c1c1e] text-white lg:flex">
       <div className="flex h-16 items-center px-[22px]">
         <span className="grid size-[27px] place-items-center rounded-[8px] bg-[#ffd02f] text-[11px] font-bold text-[#1c1c1e]">
           GA
@@ -18,7 +18,7 @@ export function Sidebar() {
         <span className="ml-auto text-[13px] text-[#777780]">«</span>
       </div>
 
-      <nav className="px-[14px] pt-[11px]">
+      <nav className="flex-1 px-[14px] pt-[11px]">
         <div className="space-y-[3px]">
           <NavItem to="/dashboard" label="Dashboard" />
           <NavItem to="/aset" label="Daftar Aset" count="95" />
@@ -38,6 +38,16 @@ export function Sidebar() {
           <NavItem to="/profil" label="Profil" />
         </div>
       </nav>
+
+      <div className="p-[14px]">
+        <button className="flex h-[47px] w-full items-center gap-[10px] rounded-[11px] bg-[#343438] px-[10px] text-left">
+          <span className="grid size-[27px] place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">RS</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-bold leading-[13px] text-white">Rizky Saputra</span>
+            <span className="block truncate pt-[1px] text-[10px] leading-[12px] text-[#858896]">Admin GA</span>
+          </span>
+        </button>
+      </div>
     </aside>
   )
 }

@@ -7,9 +7,9 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   return (
-    <div className="flex min-h-svh bg-[#f7f8fa]">
+    <div className="h-svh bg-[#f7f8fa]">
       <Sidebar />
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="h-svh min-w-0 overflow-y-auto lg:ml-[232px]">
         <Outlet />
       </main>
     </div>
