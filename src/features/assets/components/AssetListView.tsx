@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 
 type Asset = {
   code: string
@@ -138,16 +138,60 @@ const tableColumns =
   "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
 
 export function AssetListView() {
+  const [query, setQuery] = useState("lenovo")
+  const [hasSearched, setHasSearched] = useState(false)
+  const [filter, setFilter] = useState("Semua")
+  const [selectedCodes, setSelectedCodes] = useState(
+    () =>
+      new Set(
+        assets.filter((asset) => asset.selected).map((asset) => asset.code)
+      )
+  )
+  const [notice, setNotice] = useState("")
+  const visibleAssets = useMemo(() => {
+    const normalized = query.toLowerCase()
+    return assets.filter((asset) => {
+      const matchesSearch =
+        !hasSearched ||
+        !normalized ||
+        `${asset.code} ${asset.name} ${asset.brand} ${asset.category}`
+          .toLowerCase()
+          .includes(normalized)
+      const matchesFilter =
+        filter === "Semua" ||
+        (filter === "Perlu tindakan" && asset.attention) ||
+        (filter === "Tanpa harga" && !asset.price) ||
+        (filter === "Kandidat duplikat" && asset.detail.includes("Mirip")) ||
+        filter === "Tanpa foto"
+      return matchesSearch && matchesFilter
+    })
+  }, [filter, hasSearched, query])
+  const toggleSelection = (code: string) =>
+    setSelectedCodes((current) => {
+      const next = new Set(current)
+      next.has(code) ? next.delete(code) : next.add(code)
+      return next
+    })
+  const selectAll = () =>
+    setSelectedCodes(new Set(visibleAssets.map((asset) => asset.code)))
   return (
-    <div className="min-h-svh min-w-[1208px] bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="flex h-16 items-center gap-[14px] border-b border-[#e0e2e8] bg-white px-6">
-        <div className="flex h-10 w-[340px] items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px]">
+    <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
+      <header className="flex h-16 items-center gap-[10px] border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-[14px] sm:px-6 lg:pl-6">
+        <label className="flex h-10 min-w-0 flex-1 items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px] sm:max-w-[340px]">
           <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
-          <span className="text-[13px]">lenovo</span>
-          <span className="ml-auto text-[11px] text-[#8e91a0]">
-            14 hasil &middot; 0,4 s
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setHasSearched(true)
+            }}
+            className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
+            aria-label="Cari aset"
+          />
+          <span className="ml-auto hidden text-[11px] text-[#8e91a0] sm:block">
+            {visibleAssets.length} hasil &middot; 0,4 s
           </span>
-        </div>
+        </label>
         <div className="ml-auto flex items-center gap-[10px]">
           <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
             ?
@@ -158,8 +202,8 @@ export function AssetListView() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-4 px-7 py-6 pb-7">
-        <section className="flex items-end gap-[14px]">
+      <div className="flex flex-col gap-4 px-4 py-6 pb-7 sm:px-7">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-[14px]">
           <div className="flex flex-col gap-[5px]">
             <h1 className="text-[28px] leading-none font-semibold tracking-[-0.6px]">
               Daftar Aset
@@ -168,7 +212,7 @@ export function AssetListView() {
               95 aset &middot; 213 unit &middot; nilai tercatat Rp 1.421.870.000
             </span>
           </div>
-          <div className="ml-auto flex gap-[9px]">
+          <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-[9px]">
             <Pill className="h-10 px-4 text-[13.5px]">
               Kolom{" "}
               <span className="text-[11px] font-normal text-[#6b6f7e]">
@@ -178,7 +222,8 @@ export function AssetListView() {
             <Pill className="h-10 px-4 text-[13.5px]">Export Excel</Pill>
             <button
               type="button"
-              className="flex h-10 items-center rounded-full bg-[#1c1c1e] px-[19px] text-[13.5px] font-semibold text-white"
+              onClick={() => setNotice("Form tambah aset belum tersedia.")}
+              className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-[19px] text-[13.5px] font-semibold text-white sm:col-auto"
             >
               + Tambah Aset
             </button>
@@ -187,19 +232,34 @@ export function AssetListView() {
 
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-[7px]">
-            <Pill active>
+            <Pill
+              active={filter === "Semua"}
+              onClick={() => setFilter("Semua")}
+            >
               Semua <span className="opacity-55">95</span>
             </Pill>
-            <Pill>
+            <Pill
+              active={filter === "Perlu tindakan"}
+              onClick={() => setFilter("Perlu tindakan")}
+            >
               Perlu tindakan <span className="text-[#600000]">11</span>
             </Pill>
-            <Pill>
+            <Pill
+              active={filter === "Tanpa harga"}
+              onClick={() => setFilter("Tanpa harga")}
+            >
               Tanpa harga <span className="text-[#746019]">62</span>
             </Pill>
-            <Pill>
+            <Pill
+              active={filter === "Tanpa foto"}
+              onClick={() => setFilter("Tanpa foto")}
+            >
               Tanpa foto <span className="text-[#746019]">95</span>
             </Pill>
-            <Pill>
+            <Pill
+              active={filter === "Kandidat duplikat"}
+              onClick={() => setFilter("Kandidat duplikat")}
+            >
               Kandidat duplikat <span className="text-[#600000]">11</span>
             </Pill>
             <span className="mx-1 h-[22px] w-px bg-[#e0e2e8]" />
@@ -208,8 +268,17 @@ export function AssetListView() {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-[7px]">
-            <ActiveFilter>Merek: LENOVO</ActiveFilter>
-            <ActiveFilter>Kondisi: Bagus, Rusak Berat</ActiveFilter>
+            <ActiveFilter
+              onClick={() => {
+                setQuery("")
+                setHasSearched(true)
+              }}
+            >
+              Merek: LENOVO
+            </ActiveFilter>
+            <ActiveFilter onClick={() => setFilter("Semua")}>
+              Kondisi: Bagus, Rusak Berat
+            </ActiveFilter>
             {[
               "Kategori",
               "Status",
@@ -221,38 +290,82 @@ export function AssetListView() {
                 {label} <span className="text-[#8e91a0]">&#9662;</span>
               </Pill>
             ))}
-            <span className="ml-1 text-[12.5px] font-semibold text-[#4262ff]">
+            <button
+              onClick={() => {
+                setFilter("Semua")
+                setQuery("")
+                setHasSearched(true)
+              }}
+              className="ml-1 text-[12.5px] font-semibold text-[#4262ff]"
+            >
               Reset filter
-            </span>
+            </button>
           </div>
         </section>
 
-        <section className="flex items-center gap-3 rounded-full bg-[#1c1c1e] py-2 pr-2 pl-[18px] text-white">
-          <span className="text-[13px] font-semibold">3 aset terpilih</span>
-          <span className="text-[12px] text-[#a5a8b5]">
-            6 unit &middot; Rp 41.469.000
-          </span>
-          <div className="ml-auto flex gap-[7px]">
-            {["Ubah kondisi", "Mutasi", "Export terpilih"].map((label) => (
-              <span
-                key={label}
-                className="flex h-8 items-center rounded-full bg-white px-[14px] text-[12.5px] font-semibold text-[#1c1c1e]"
+        {selectedCodes.size > 0 && (
+          <section className="flex flex-wrap items-center gap-3 rounded-full bg-[#1c1c1e] py-2 pr-2 pl-[18px] text-white">
+            <span className="text-[13px] font-semibold">
+              {selectedCodes.size} aset terpilih
+            </span>
+            <span className="text-[12px] text-[#a5a8b5]">
+              6 unit &middot; Rp 41.469.000
+            </span>
+            <div className="ml-auto flex gap-[7px]">
+              {["Ubah kondisi", "Mutasi", "Export terpilih"].map((label) => (
+                <button
+                  onClick={() =>
+                    setNotice(`${label} siap diproses untuk aset terpilih.`)
+                  }
+                  key={label}
+                  className="flex h-8 items-center rounded-full bg-white px-[14px] text-[12.5px] font-semibold text-[#1c1c1e]"
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                onClick={() => setSelectedCodes(new Set())}
+                className="flex h-8 items-center rounded-full border border-white/35 px-[14px] text-[12.5px] font-semibold"
               >
-                {label}
-              </span>
+                Hapus
+              </button>
+            </div>
+          </section>
+        )}
+        {notice && (
+          <button
+            onClick={() => setNotice("")}
+            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574]"
+          >
+            {notice} &times;
+          </button>
+        )}
+
+        <section className="md:hidden">
+          <div className="space-y-3">
+            {visibleAssets.map((asset) => (
+              <AssetCard
+                key={asset.code}
+                asset={asset}
+                selected={selectedCodes.has(asset.code)}
+                onToggle={() => toggleSelection(asset.code)}
+              />
             ))}
-            <span className="flex h-8 items-center rounded-full border border-white/35 px-[14px] text-[12.5px] font-semibold">
-              Hapus
-            </span>
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
+        <section className="hidden overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white md:block">
           <div className="min-w-[1000px]">
             <div
               className={`grid h-10 ${tableColumns} items-center gap-[9px] border-b border-[#e0e2e8] bg-[#f7f8fa] px-[18px] text-[10.5px] font-semibold tracking-[0.4px] text-[#6b6f7e] uppercase`}
             >
-              <CheckBox />
+              <CheckBox
+                selected={
+                  selectedCodes.size === visibleAssets.length &&
+                  visibleAssets.length > 0
+                }
+                onClick={selectAll}
+              />
               <span className="text-[#1c1c1e]">Kode &uarr;</span>
               <span>Nama barang</span>
               <span>Kategori</span>
@@ -264,8 +377,13 @@ export function AssetListView() {
               <span className="text-right">Harga</span>
               <span />
             </div>
-            {assets.map((asset) => (
-              <AssetRow key={asset.code} asset={asset} />
+            {visibleAssets.map((asset) => (
+              <AssetRow
+                key={asset.code}
+                asset={asset}
+                selected={selectedCodes.has(asset.code)}
+                onToggle={() => toggleSelection(asset.code)}
+              />
             ))}
           </div>
           <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-[18px] py-[13px]">
@@ -290,12 +408,20 @@ export function AssetListView() {
   )
 }
 
-function AssetRow({ asset }: { asset: Asset }) {
+function AssetRow({
+  asset,
+  selected,
+  onToggle,
+}: {
+  asset: Asset
+  selected: boolean
+  onToggle: () => void
+}) {
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-[9px] border-b border-[#eef0f3] px-[18px] last:border-b-0 ${asset.selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+      className={`grid h-14 ${tableColumns} items-center gap-[9px] border-b border-[#eef0f3] px-[18px] last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
     >
-      <CheckBox selected={asset.selected} />
+      <CheckBox selected={selected} onClick={onToggle} />
       <span className="font-mono text-[12.5px] text-[#4262ff]">
         {asset.code}
       </span>
@@ -337,13 +463,78 @@ function AssetRow({ asset }: { asset: Asset }) {
   )
 }
 
-function CheckBox({ selected = false }: { selected?: boolean }) {
+function AssetCard({
+  asset,
+  selected,
+  onToggle,
+}: {
+  asset: Asset
+  selected: boolean
+  onToggle: () => void
+}) {
   return (
-    <span
+    <article
+      className={`rounded-2xl border p-4 ${selected ? "border-[#d8d2ff] bg-[#f5f3ff]" : "border-[#eef0f3] bg-white"}`}
+    >
+      <div className="flex items-start gap-3">
+        <CheckBox selected={selected} onClick={onToggle} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <span className="font-mono text-[11px] text-[#4262ff]">
+              {asset.code}
+            </span>
+            <span
+              className={`ml-auto shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${conditionClass[asset.condition]}`}
+            >
+              {asset.condition}
+            </span>
+          </div>
+          <h2 className="mt-2 truncate text-[15px] font-semibold">
+            {asset.name}
+          </h2>
+          <p
+            className={`mt-0.5 text-[11.5px] ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
+          >
+            {asset.detail}
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-[11px] text-[#6b6f7e]">
+            <span>
+              <b className="block text-[#1c1c1e]">Kategori</b>
+              {asset.category}
+            </span>
+            <span>
+              <b className="block text-[#1c1c1e]">Lokasi</b>
+              {asset.location}
+            </span>
+            <span>
+              <b className="block text-[#1c1c1e]">Jumlah</b>
+              {asset.quantity} {asset.unit}
+            </span>
+            <span>
+              <b className="block text-[#1c1c1e]">Harga</b>
+              {asset.price ? `Rp ${asset.price}` : "Belum diisi"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function CheckBox({
+  selected = false,
+  onClick,
+}: {
+  selected?: boolean
+  onClick?: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
       className={`grid size-4 place-items-center rounded-[4px] border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
-    </span>
+    </button>
   )
 }
 
@@ -351,26 +542,38 @@ function Pill({
   children,
   active = false,
   className = "",
+  onClick,
 }: {
   children: ReactNode
   active?: boolean
   className?: string
+  onClick?: () => void
 }) {
   return (
-    <span
+    <button
+      onClick={onClick}
       className={`flex h-[34px] items-center gap-[6px] rounded-full border px-[15px] text-[12.5px] font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
     >
       {children}
-    </span>
+    </button>
   )
 }
 
-function ActiveFilter({ children }: { children: ReactNode }) {
+function ActiveFilter({
+  children,
+  onClick,
+}: {
+  children: ReactNode
+  onClick?: () => void
+}) {
   return (
-    <span className="flex h-[34px] items-center gap-2 rounded-full bg-[#1c1c1e] px-[13px] text-[12.5px] font-semibold text-white">
+    <button
+      onClick={onClick}
+      className="flex h-[34px] items-center gap-2 rounded-full bg-[#1c1c1e] px-[13px] text-[12.5px] font-semibold text-white"
+    >
       {children}
       <span className="opacity-60">&times;</span>
-    </span>
+    </button>
   )
 }
 
