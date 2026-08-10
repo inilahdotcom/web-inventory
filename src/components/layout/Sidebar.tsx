@@ -1,8 +1,55 @@
 import { Link } from "@tanstack/react-router"
+import { useState } from "react"
+
+const primaryItems = [
+  ["/dashboard", "Dashboard"],
+  ["/aset", "Daftar Aset", "95"],
+  ["/mutasi", "Mutasi Aset"],
+  ["/import", "Import Data"],
+  ["/laporan", "Laporan"],
+  ["/arsip", "Arsip Aset", "3"],
+] as const
+const adminItems = [
+  ["/master-data", "Master Data"],
+  ["/pengguna", "Pengguna", "7"],
+  ["/audit-log", "Audit Log"],
+  ["/profil", "Profil"],
+] as const
 
 export function Sidebar() {
+  const [open, setOpen] = useState(false)
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden h-svh w-[232px] flex-col bg-[#1c1c1e] text-white lg:flex">
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Buka menu"
+        className="fixed top-4 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
+      >
+        ☰
+      </button>
+      <aside className="fixed inset-y-0 left-0 z-20 hidden h-svh w-[232px] bg-[#1c1c1e] text-white lg:flex">
+        <SidebarContent />
+      </aside>
+      {open && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Tutup menu"
+            className="absolute inset-0 bg-black/45"
+          />
+          <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
+            <SidebarContent onNavigate={() => setOpen(false)} />
+          </aside>
+        </div>
+      )}
+    </>
+  )
+}
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full w-full flex-col">
       <div className="flex h-16 items-center px-[22px]">
         <span className="grid size-[27px] place-items-center rounded-[8px] bg-[#ffd02f] text-[11px] font-bold text-[#1c1c1e]">
           GA
@@ -15,40 +62,51 @@ export function Sidebar() {
             General Affairs
           </span>
         </span>
-        <span className="ml-auto text-[13px] text-[#777780]">«</span>
+        <span className="ml-auto text-[13px] text-[#777780]">&laquo;</span>
       </div>
-
       <nav className="flex-1 px-[14px] pt-[11px]">
         <div className="space-y-[3px]">
-          <NavItem to="/dashboard" label="Dashboard" />
-          <NavItem to="/aset" label="Daftar Aset" count="95" />
-          <NavItem to="/mutasi" label="Mutasi Aset" />
-          <NavItem to="/import" label="Import Data" />
-          <NavItem to="/laporan" label="Laporan" />
-          <NavItem to="/arsip" label="Arsip Aset" count="3" />
+          {primaryItems.map(([to, label, count]) => (
+            <NavItem
+              key={to}
+              to={to}
+              label={label}
+              count={count}
+              onNavigate={onNavigate}
+            />
+          ))}
         </div>
-
         <p className="mt-[25px] mb-[9px] px-[9px] text-[10px] font-bold text-[#777780]">
           ADMIN
         </p>
         <div className="space-y-[3px]">
-          <NavItem to="/master-data" label="Master Data" />
-          <NavItem to="/pengguna" label="Pengguna" count="7" />
-          <NavItem to="/audit-log" label="Audit Log" />
-          <NavItem to="/profil" label="Profil" />
+          {adminItems.map(([to, label, count]) => (
+            <NavItem
+              key={to}
+              to={to}
+              label={label}
+              count={count}
+              onNavigate={onNavigate}
+            />
+          ))}
         </div>
       </nav>
-
       <div className="p-[14px]">
-        <button className="flex h-[47px] w-full items-center gap-[10px] rounded-[11px] bg-[#343438] px-[10px] text-left">
-          <span className="grid size-[27px] place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">RS</span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[11px] font-bold leading-[13px] text-white">Rizky Saputra</span>
-            <span className="block truncate pt-[1px] text-[10px] leading-[12px] text-[#858896]">Admin GA</span>
+        <span className="flex h-[47px] items-center gap-[10px] rounded-[11px] bg-[#343438] px-[10px]">
+          <span className="grid size-[27px] place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">
+            RS
           </span>
-        </button>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] leading-[13px] font-bold text-white">
+              Rizky Saputra
+            </span>
+            <span className="block truncate pt-[1px] text-[10px] leading-[12px] text-[#858896]">
+              Admin GA
+            </span>
+          </span>
+        </span>
       </div>
-    </aside>
+    </div>
   )
 }
 
@@ -56,17 +114,17 @@ function NavItem({
   to,
   label,
   count,
-  exact = false,
+  onNavigate,
 }: {
   to: string
   label: string
   count?: string
-  exact?: boolean
+  onNavigate?: () => void
 }) {
   return (
     <Link
       to={to}
-      activeOptions={{ exact }}
+      onClick={onNavigate}
       className="flex h-[33px] items-center rounded-[8px] px-[9px] text-[12.5px] font-medium text-[#a5a8b5]"
       activeProps={{
         className:
