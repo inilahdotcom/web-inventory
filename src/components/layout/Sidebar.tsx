@@ -24,7 +24,7 @@ export function Sidebar() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
-        className="fixed top-4 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
+        className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
       >
         ☰
       </button>

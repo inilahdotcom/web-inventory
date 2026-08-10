@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { LayoutGrid, Table2 } from "lucide-react"
 
 type Asset = {
   code: string
@@ -141,6 +142,10 @@ export function AssetListView() {
   const [query, setQuery] = useState("lenovo")
   const [hasSearched, setHasSearched] = useState(false)
   const [filter, setFilter] = useState("Semua")
+  const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 767px)").matches
+  )
   const [selectedCodes, setSelectedCodes] = useState(
     () =>
       new Set(
@@ -174,9 +179,20 @@ export function AssetListView() {
     })
   const selectAll = () =>
     setSelectedCodes(new Set(visibleAssets.map((asset) => asset.code)))
+  const tableIsActive =
+    viewMode === "table" || (viewMode === "auto" && !isMobile)
+  const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)")
+    const syncViewport = () => setIsMobile(mediaQuery.matches)
+    mediaQuery.addEventListener("change", syncViewport)
+    return () => mediaQuery.removeEventListener("change", syncViewport)
+  }, [])
+
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="flex h-16 items-center gap-[10px] border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-[14px] sm:px-6 lg:pl-6">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-[10px] border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-[14px] sm:pr-6 sm:pl-16 lg:pl-6">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px] sm:max-w-[340px]">
           <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
           <input
@@ -304,28 +320,30 @@ export function AssetListView() {
         </section>
 
         {selectedCodes.size > 0 && (
-          <section className="flex flex-wrap items-center gap-3 rounded-full bg-[#1c1c1e] py-2 pr-2 pl-[18px] text-white">
-            <span className="text-[13px] font-semibold">
-              {selectedCodes.size} aset terpilih
-            </span>
-            <span className="text-[12px] text-[#a5a8b5]">
-              6 unit &middot; Rp 41.469.000
-            </span>
-            <div className="ml-auto flex gap-[7px]">
+          <section className="flex flex-col gap-2 rounded-2xl bg-[#1c1c1e] px-4 py-3 text-white sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-[18px]">
+            <div className="flex items-center gap-3">
+              <span className="text-[13px] font-semibold">
+                {selectedCodes.size} aset terpilih
+              </span>
+              <span className="text-[12px] text-[#a5a8b5]">
+                6 unit &middot; Rp 41.469.000
+              </span>
+            </div>
+            <div className="flex w-full flex-wrap gap-[7px] sm:ml-auto sm:w-auto sm:flex-nowrap">
               {["Ubah kondisi", "Mutasi", "Export terpilih"].map((label) => (
                 <button
                   onClick={() =>
                     setNotice(`${label} siap diproses untuk aset terpilih.`)
                   }
                   key={label}
-                  className="flex h-8 items-center rounded-full bg-white px-[14px] text-[12.5px] font-semibold text-[#1c1c1e]"
+                  className="flex h-8 flex-1 items-center justify-center rounded-full bg-white px-[14px] text-[12.5px] font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none"
                 >
                   {label}
                 </button>
               ))}
               <button
                 onClick={() => setSelectedCodes(new Set())}
-                className="flex h-8 items-center rounded-full border border-white/35 px-[14px] text-[12.5px] font-semibold"
+                className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-[14px] text-[12.5px] font-semibold whitespace-nowrap sm:flex-none"
               >
                 Hapus
               </button>
@@ -341,8 +359,39 @@ export function AssetListView() {
           </button>
         )}
 
-        <section className="md:hidden">
-          <div className="space-y-3">
+        <div className="flex justify-start">
+          <div className="inline-flex h-10 rounded-full border border-[#c7cad5] bg-white p-1">
+            <button
+              onClick={() => setViewMode("table")}
+              aria-label="Tampilan tabel"
+              title="Tampilan tabel"
+              aria-pressed={tableIsActive}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+            >
+              <Table2 size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+            <button
+              onClick={() => setViewMode("card")}
+              aria-label="Tampilan kartu"
+              title="Tampilan kartu"
+              aria-pressed={cardIsActive}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+            >
+              <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <section
+          className={
+            viewMode === "card"
+              ? "block"
+              : viewMode === "table"
+                ? "hidden"
+                : "block md:hidden"
+          }
+        >
+          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0 xl:grid-cols-3">
             {visibleAssets.map((asset) => (
               <AssetCard
                 key={asset.code}
@@ -354,7 +403,29 @@ export function AssetListView() {
           </div>
         </section>
 
-        <section className="hidden overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white md:block">
+        {viewMode === "table" && (
+          <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white md:hidden">
+            <div className="grid h-10 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#e0e2e8] bg-[#f7f8fa] px-3 text-[10px] font-semibold tracking-[0.35px] text-[#6b6f7e] uppercase">
+              <span className="pl-6">Nama barang</span>
+              <span>Kondisi</span>
+              <span className="text-right">Harga</span>
+            </div>
+            {visibleAssets.map((asset) => (
+              <MobileAssetRow
+                key={asset.code}
+                asset={asset}
+                selected={selectedCodes.has(asset.code)}
+                onToggle={() => toggleSelection(asset.code)}
+              />
+            ))}
+          </section>
+        )}
+
+        <section
+          className={`${
+            viewMode === "card" ? "hidden" : "hidden md:block"
+          } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
+        >
           <div className="min-w-[1000px]">
             <div
               className={`grid h-10 ${tableColumns} items-center gap-[9px] border-b border-[#e0e2e8] bg-[#f7f8fa] px-[18px] text-[10.5px] font-semibold tracking-[0.4px] text-[#6b6f7e] uppercase`}
@@ -459,6 +530,49 @@ function AssetRow({
         {asset.price ?? "Belum diisi"}
       </span>
       <span className="text-center text-[15px] text-[#8e91a0]">&#8943;</span>
+    </div>
+  )
+}
+
+function MobileAssetRow({
+  asset,
+  selected,
+  onToggle,
+}: {
+  asset: Asset
+  selected: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div
+      className={`grid min-h-[67px] grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <CheckBox selected={selected} onClick={onToggle} />
+        <span className="min-w-0">
+          <span className="block truncate text-[12.5px] font-semibold">
+            {asset.name}
+          </span>
+          <span className="block truncate font-mono text-[10.5px] text-[#4262ff]">
+            {asset.code}
+          </span>
+        </span>
+      </div>
+      <span className="min-w-0">
+        <span
+          className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold ${conditionClass[asset.condition]}`}
+        >
+          {asset.condition}
+        </span>
+        <span className="mt-1 block truncate text-[10.5px] text-[#6b6f7e]">
+          {asset.location}
+        </span>
+      </span>
+      <span
+        className={`truncate text-right font-mono text-[10.5px] ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
+      >
+        {asset.price ?? "Belum diisi"}
+      </span>
     </div>
   )
 }
