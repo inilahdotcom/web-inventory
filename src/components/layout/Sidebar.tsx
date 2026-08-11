@@ -9,6 +9,7 @@ const primaryItems = [
   ["/laporan", "Laporan"],
   ["/arsip", "Arsip Aset", "3"],
 ] as const
+
 const adminItems = [
   ["/master-data", "Master Data"],
   ["/pengguna", "Pengguna", "7"],
