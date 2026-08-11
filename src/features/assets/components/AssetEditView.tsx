@@ -23,7 +23,7 @@ export function AssetEditView() {
                 <div className="text-xs text-neutral-500 space-x-2">
                     <span>Daftar Aset</span>
                     <span>/</span>
-                    <span>053/INC-GA/1/26</span>
+                    <span>052/INC-GA/1/26</span>
                     <span>/</span>
                     <span className="text-neutral-900 font-medium">Ubah</span>
                 </div>
