@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 
 export function Sidebar() {
@@ -6,7 +6,7 @@ export function Sidebar() {
 
     return (
         <>
-            {/* Tombol Burger Mobile Terpisah di Atas */}
+
             <div className="lg:hidden flex items-center justify-between bg-[#121212] px-4 py-3 text-white border-b border-neutral-800 w-full sticky top-0 z-40">
                 <div className="flex items-center space-x-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 text-xs font-bold text-neutral-900">
@@ -26,7 +26,7 @@ export function Sidebar() {
                 </button>
             </div>
 
-            {/* Backdrop / Overlay Hitam saat Mobile Drawer Terbuka */}
+
             {isOpen && (
                 <div
                     onClick={() => setIsOpen(false)}
@@ -34,7 +34,6 @@ export function Sidebar() {
                 />
             )}
 
-            {/* Sidebar Utama (Desktop: Statis | Mobile: Drawer Melayang di Atas) */}
             <aside
                 className={`
                     fixed inset-y-0 left-0 z-50 flex w-64 flex-col justify-between bg-[#121212] p-4 text-white shrink-0 border-r border-neutral-800 transition-transform duration-300 ease-in-out
