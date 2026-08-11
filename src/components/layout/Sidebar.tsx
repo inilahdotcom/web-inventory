@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
 const primaryItems = [
-  ["/dashboard", "Dashboard"],
-  ["/asset", "Daftar Aset", "95"],
+  ["/", "Dashboard"],
+  ["/asset/new", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
   ["/import", "Import Data"],
   ["/laporan", "Laporan"],
@@ -62,58 +62,62 @@ export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; 
 
 function SidebarContent({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="flex h-16 items-center px-5.5">
-        <span className="grid size-7 place-items-center rounded-lg bg-[#ffd02f] text-[11px] font-bold text-[#1c1c1e]">
-          GA
-        </span>
-        <span className="ml-2.5">
-          <span className="block text-xs leading-tight font-bold">
-            INC Inventaris
+    <div className="flex h-full w-full flex-col justify-between">
+      <div className="space-y-6">
+        <div className="flex h-16 items-center px-5.5">
+          <span className="grid size-7 place-items-center rounded-lg bg-amber-400 text-xs font-bold text-neutral-900">
+            GA
           </span>
-          <span className="block text-[10px] leading-3 text-[#777780]">
-            General Affairs
+          <span className="ml-2.25">
+            <span className="block text-xs leading-3.5 font-bold">
+              INC Inventaris
+            </span>
+            <span className="block text-[10px] leading-3 text-neutral-400">
+              General Affairs
+            </span>
           </span>
-        </span>
-        <button type="button" onClick={onCollapse} aria-label="Ciutkan sidebar" className="ml-auto text-sm text-[#777780]">&laquo;</button>
+          <button type="button" onClick={onCollapse} aria-label="Ciutkan sidebar" className="ml-auto text-sm text-neutral-400 cursor-pointer">&laquo;</button>
+        </div>
+        <nav className="flex-1 px-3.5 pt-3">
+          <div className="space-y-0.75">
+            {primaryItems.map(([to, label, count]) => (
+              <NavItem
+                key={to}
+                to={to}
+                label={label}
+                count={count}
+                onNavigate={onNavigate}
+                exact={to === "/"}
+              />
+            ))}
+          </div>
+          <p className="mt-6 mb-2.25 px-2.25 text-[10px] font-bold text-neutral-400">
+            ADMIN
+          </p>
+          <div className="space-y-0.75">
+            {adminItems.map(([to, label, count]) => (
+              <NavItem
+                key={to}
+                to={to}
+                label={label}
+                count={count}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </nav>
       </div>
-      <nav className="flex-1 px-3.5 pt-3">
-        <div className="space-y-1">
-          {primaryItems.map(([to, label, count]) => (
-            <NavItem
-              key={to}
-              to={to}
-              label={label}
-              count={count}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-        <p className="mt-6 mb-2 px-2 text-[10px] font-bold text-[#777780]">
-          ADMIN
-        </p>
-        <div className="space-y-1">
-          {adminItems.map(([to, label, count]) => (
-            <NavItem
-              key={to}
-              to={to}
-              label={label}
-              count={count}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-      </nav>
-      <div className="p-3.5">
-        <span className="flex h-12 items-center gap-2.5 rounded-xl bg-[#343438] px-2.5">
-          <span className="grid size-7 place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">
+
+      <div className="p-3.5 border-t border-neutral-800/60">
+        <span className="flex h-12 items-center gap-2.5 rounded-xl bg-neutral-900/80 p-3 border border-neutral-800">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-amber-400/20 text-amber-400 font-bold text-xs">
             RS
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs leading-tight font-bold text-white">
+            <span className="block truncate text-xs font-medium text-white">
               Rizky Saputra
             </span>
-            <span className="block truncate pt-0.5 text-[10px] leading-3 text-[#858896]">
+            <span className="block truncate pt-px text-[10px] text-neutral-400">
               Admin GA
             </span>
           </span>
@@ -128,30 +132,33 @@ function NavItem({
   label,
   count,
   onNavigate,
+  exact = false,
 }: {
   to: string
   label: string
   count?: string
   onNavigate?: () => void
+  exact?: boolean
 }) {
   return (
     <Link
       to={to}
       onClick={onNavigate}
-      className="flex h-8 items-center rounded-lg px-2 text-xs font-medium text-[#a5a8b5]"
+      activeOptions={{ exact }}
+      className="flex h-8 items-center rounded-lg px-2.25 text-xs font-medium text-neutral-400 transition hover:bg-neutral-800/60 hover:text-white"
       activeProps={{
         className:
-          "flex h-8.5 items-center rounded-lg bg-[#3a3a3e] px-2 text-xs font-bold text-white",
+          "flex h-8 items-center rounded-lg bg-neutral-800 px-2.25 text-xs font-semibold text-white",
       }}
     >
       {({ isActive }) => (
         <>
           <span
-            className={`mr-3 size-3.5 rounded border ${isActive ? "border-[#ffd02f] bg-[#ffd02f]" : "border-[#858896]"}`}
+            className={`mr-2.75 size-3.5 rounded border ${isActive ? "border-amber-400 bg-amber-400" : "border-neutral-600 bg-transparent"}`}
           />
-          <span>{label}</span>
+          <span className="truncate">{label}</span>
           {count && (
-            <span className="ml-auto text-[10px] font-medium text-[#858896]">
+            <span className="ml-auto text-[10px] font-normal text-neutral-400">
               {count}
             </span>
           )}

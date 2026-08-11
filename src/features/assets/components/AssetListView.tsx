@@ -153,6 +153,7 @@ export function AssetListView() {
       )
   )
   const [notice, setNotice] = useState("")
+
   const visibleAssets = useMemo(() => {
     const normalized = query.toLowerCase()
     return assets.filter((asset) => {
@@ -171,14 +172,17 @@ export function AssetListView() {
       return matchesSearch && matchesFilter
     })
   }, [filter, hasSearched, query])
+
   const toggleSelection = (code: string) =>
     setSelectedCodes((current) => {
       const next = new Set(current)
       next.has(code) ? next.delete(code) : next.add(code)
       return next
     })
+
   const selectAll = () =>
     setSelectedCodes(new Set(visibleAssets.map((asset) => asset.code)))
+
   const tableIsActive =
     viewMode === "table" || (viewMode === "auto" && !isMobile)
   const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
@@ -194,7 +198,7 @@ export function AssetListView() {
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-2.5 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-3.5 sm:pr-6 sm:pl-16 lg:pl-6">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85">
-          <span className="text-sm text-[#a5a8b5]">&#8981;</span>
+          <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
           <input
             value={query}
             onChange={(event) => {
@@ -209,7 +213,7 @@ export function AssetListView() {
           </span>
         </label>
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-sm text-[#555a6a]">
+          <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
             ?
           </span>
           <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-xs font-semibold text-[#600000]">
@@ -220,7 +224,7 @@ export function AssetListView() {
 
       <div className="flex flex-col gap-4 px-4 py-6 pb-7 sm:px-7">
         <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-3.5">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.25">
             <h1 className="text-3xl leading-none font-semibold tracking-tight">
               Daftar Aset
             </h1>
@@ -228,7 +232,7 @@ export function AssetListView() {
               95 aset &middot; 213 unit &middot; nilai tercatat Rp 1.421.870.000
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2.25">
             <Pill className="h-10 px-4 text-sm">
               Kolom{" "}
               <span className="text-xs font-normal text-[#6b6f7e]">
@@ -320,7 +324,7 @@ export function AssetListView() {
         </section>
 
         {selectedCodes.size > 0 && (
-          <section className="flex flex-col gap-2 rounded-2xl bg-[#1c1c1e] px-4 py-3 text-white sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-4">
+          <section className="flex flex-col gap-2 rounded-2xl bg-[#1c1c1e] px-4 py-3 text-white sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-4.5">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold">
                 {selectedCodes.size} aset terpilih
@@ -405,7 +409,7 @@ export function AssetListView() {
 
         {viewMode === "table" && (
           <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white md:hidden">
-            <div className="grid h-10 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#e0e2e8] bg-[#f7f8fa] px-3 text-xs font-semibold tracking-wide text-[#6b6f7e] uppercase">
+            <div className="grid h-10 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#e0e2e8] bg-[#f7f8fa] px-3 text-[10px] font-semibold tracking-wide text-[#6b6f7e] uppercase">
               <span className="pl-6">Nama barang</span>
               <span>Kondisi</span>
               <span className="text-right">Harga</span>
@@ -428,7 +432,7 @@ export function AssetListView() {
         >
           <div className="min-w-250">
             <div
-              className={`grid h-10 ${tableColumns} items-center gap-2.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4 text-xs font-semibold tracking-wide text-[#6b6f7e] uppercase`}
+              className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
             >
               <CheckBox
                 selected={
@@ -457,12 +461,12 @@ export function AssetListView() {
               />
             ))}
           </div>
-          <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4 py-3">
+          <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3">
             <span className="text-xs text-[#6b6f7e]">
               Menampilkan 1&ndash;25 dari 95 aset
             </span>
             <div className="ml-auto flex items-center gap-2">
-              <Pill className="h-8 px-3">
+              <Pill className="h-8 px-3.25">
                 25 / halaman <span className="text-[#8e91a0]">&#9662;</span>
               </Pill>
               <Page bordered>&lsaquo;</Page>
@@ -490,7 +494,7 @@ function AssetRow({
 }) {
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.5 border-b border-[#eef0f3] px-4 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
       <span className="font-mono text-xs text-[#4262ff]">
@@ -518,7 +522,7 @@ function AssetRow({
       <span className="text-xs text-[#555a6a]">{asset.unit}</span>
       <span>
         <span
-          className={`rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
+          className={`rounded-full px-2.25 py-0.75 text-[11px] font-semibold ${conditionClass[asset.condition]}`}
         >
           {asset.condition}
         </span>
@@ -545,7 +549,7 @@ function MobileAssetRow({
 }) {
   return (
     <div
-      className={`grid min-h-16 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
     >
       <div className="flex min-w-0 items-center gap-2">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -553,23 +557,23 @@ function MobileAssetRow({
           <span className="block truncate text-xs font-semibold">
             {asset.name}
           </span>
-          <span className="block truncate font-mono text-xs text-[#4262ff]">
+          <span className="block truncate font-mono text-[10px] text-[#4262ff]">
             {asset.code}
           </span>
         </span>
       </div>
       <span className="min-w-0">
         <span
-          className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-xs font-semibold ${conditionClass[asset.condition]}`}
+          className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${conditionClass[asset.condition]}`}
         >
           {asset.condition}
         </span>
-        <span className="mt-1 block truncate text-xs text-[#6b6f7e]">
+        <span className="mt-1 block truncate text-[11px] text-[#6b6f7e]">
           {asset.location}
         </span>
       </span>
       <span
-        className={`truncate text-right font-mono text-xs ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
+        className={`truncate text-right font-mono text-[11px] ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
       >
         {asset.price ?? "Belum diisi"}
       </span>
@@ -645,7 +649,7 @@ function CheckBox({
   return (
     <button
       onClick={onClick}
-      className={`grid size-4 place-items-center rounded border text-xs ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
+      className={`grid size-4 place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
     </button>
@@ -666,7 +670,7 @@ function Pill({
   return (
     <button
       onClick={onClick}
-      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
+      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
     >
       {children}
     </button>
