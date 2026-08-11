@@ -19,8 +19,6 @@ export function AssetEditView() {
 
     return (
         <form onSubmit={(e) => e.preventDefault()} className="w-full space-y-6 max-w-7xl mx-auto pb-12">
-            
-            {/* Header / Breadcrumb */}
             <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 lg:px-8 py-4 -mx-10 -mt-8 mb-6">
                 <div className="text-xs text-neutral-500 space-x-2">
                     <span>Daftar Aset</span>
@@ -34,16 +32,13 @@ export function AssetEditView() {
                 </div>
             </header>
 
-            {/* Title */}
             <div>
                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Ubah aset</h1>
                 <p className="text-xs text-neutral-500">Setiap perubahan dicatat di audit log beserta nilai lama dan baru (FR-UD3).</p>
             </div>
 
-            {/* Layout Utama 2 Kolom */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Kolom Kiri */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
 
@@ -108,12 +103,14 @@ export function AssetEditView() {
                                 name="jumlah"
                                 value={formData.jumlah}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                             />
                             <InputField
                                 label="Harga perolehan"
                                 name="hargaPerolehan"
                                 value={formData.hargaPerolehan}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                             />
                         </div>
 
@@ -137,7 +134,6 @@ export function AssetEditView() {
                     </div>
                 </div>
 
-                {/* Kolom Kanan (Panel Informasi) */}
                 <div className="space-y-6">
                     <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-5 shadow-sm space-y-3">
                         <h3 className="text-xs font-semibold text-neutral-900">3 perubahan akan disimpan</h3>
@@ -166,8 +162,6 @@ export function AssetEditView() {
                 </div>
 
             </div>
-
-            {/* Footer Actions */}
             <div className="flex items-center justify-end border-t border-neutral-200 bg-white px-6 lg:px-8 py-4 rounded-xl shadow-sm gap-3 sticky bottom-4 z-10">
                 <button type="button" className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100">
                     Batal

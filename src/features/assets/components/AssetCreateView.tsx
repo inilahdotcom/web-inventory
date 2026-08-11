@@ -20,7 +20,6 @@ export function AssetCreateView() {
         kodeAset: '896/INC-GA/8/26',
     })
 
-  
     const [fotos, setFotos] = useState<File[]>([])
     const [loading, setLoading] = useState(false)
 
@@ -28,7 +27,6 @@ export function AssetCreateView() {
         const { name, value } = e.target
         setFormData((prev) => ({ ...prev, [name]: value }))
     }
-
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -41,13 +39,11 @@ export function AssetCreateView() {
         }
     }
 
-
     const handleSubmit = async (e: React.FormEvent, keepAdding: boolean = false) => {
         e.preventDefault()
         setLoading(true)
 
         try {
- 
             const payload = new FormData()
             Object.entries(formData).forEach(([key, value]) => {
                 payload.append(key, value.toString())
@@ -57,16 +53,12 @@ export function AssetCreateView() {
             })
 
             console.log('Payload siap dikirim ke API:', formData, 'Jumlah Foto:', fotos.length)
-            
 
             alert(keepAdding ? 'Aset berhasil disimpan! Silakan tambah lagi.' : 'Aset berhasil disimpan!')
-            
-            if (keepAdding) {
 
+            if (keepAdding) {
                 setFormData((prev) => ({ ...prev, namaBarang: '', keterangan: '' }))
                 setFotos([])
-            } else {
-
             }
         } catch (error) {
             console.error('Gagal menyimpan aset:', error)
@@ -76,8 +68,9 @@ export function AssetCreateView() {
     }
 
     return (
-        <form onSubmit={(e) => handleSubmit(e, false)} className="w-full space-y-6 max-w-7xl mx-auto pb-12">
-            <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 lg:px-8 py-4 -mx-10 -mt-8 mb-6">
+        /* Ditambahkan px-4 sm:px-6 agar form tidak menempel di pinggir layar pada mode mobile */
+        <form onSubmit={(e) => handleSubmit(e, false)} className="w-full max-w-7xl mx-auto space-y-6 pb-12 px-4 sm:px-6 lg:px-8">
+            <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4 mb-6 rounded-xl shadow-sm">
                 <div className="text-xs text-neutral-500 space-x-2">
                     <span>Daftar Aset</span>
                     <span>/</span>
@@ -93,14 +86,13 @@ export function AssetCreateView() {
                 <p className="text-xs text-neutral-500">Field bertanda * wajib diisi. Validasi dijalankan di klien dan server (FR-C03).</p>
             </div>
 
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 <div className="lg:col-span-2 space-y-6">
-                    
+
                     <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
                         <h2 className="text-sm font-semibold text-neutral-900">Identitas barang</h2>
-                        
+
                         <InputField
                             label="Nama barang *"
                             name="namaBarang"
@@ -147,9 +139,7 @@ export function AssetCreateView() {
                                             key={item}
                                             type="button"
                                             onClick={() => setFormData((prev) => ({ ...prev, satuan: item }))}
-                                            className={`flex-1 rounded-md py-1.5 text-xs font-medium transition ${
-                                                formData.satuan === item ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-900'
-                                            }`}
+                                            className={`flex-1 rounded-md py-1.5 text-xs font-medium transition ${formData.satuan === item ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-900'}`}
                                         >
                                             {item}
                                         </button>
@@ -158,6 +148,7 @@ export function AssetCreateView() {
                             </div>
                         </div>
                     </div>
+
                     <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
                         <h2 className="text-sm font-semibold text-neutral-900">Kondisi, lokasi, dan nilai</h2>
 
@@ -168,11 +159,10 @@ export function AssetCreateView() {
                                     <span
                                         key={kondisi}
                                         onClick={() => setFormData((prev) => ({ ...prev, kondisi }))}
-                                        className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${
-                                            formData.kondisi === kondisi
-                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
-                                                : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
-                                        }`}
+                                        className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${formData.kondisi === kondisi
+                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
+                                            : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+                                            }`}
                                     >
                                         {kondisi}
                                     </span>
@@ -187,11 +177,10 @@ export function AssetCreateView() {
                                     <span
                                         key={status}
                                         onClick={() => setFormData((prev) => ({ ...prev, status }))}
-                                        className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${
-                                            formData.status === status
-                                                ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
-                                                : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
-                                        }`}
+                                        className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${formData.status === status
+                                            ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
+                                            : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+                                            }`}
                                     >
                                         {status}
                                     </span>
@@ -205,6 +194,7 @@ export function AssetCreateView() {
                                 label="Harga perolehan"
                                 name="hargaPerolehan"
                                 value={formData.hargaPerolehan}
+                                className="text-[#1C1C1E]"
                                 onChange={handleChange}
                                 helperText="Ketik 19519000 – pemisah ribuan ditambahkan otomatis (FR-C04)."
                             />
@@ -214,6 +204,7 @@ export function AssetCreateView() {
                                 name="tanggalPerolehan"
                                 value={formData.tanggalPerolehan}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                                 helperText="Tidak boleh melebihi hari ini (BR-05)."
                             />
                         </div>
@@ -224,12 +215,14 @@ export function AssetCreateView() {
                                 name="lokasi"
                                 value={formData.lokasi}
                                 onChange={handleChange}
+                                className="text-[#1C1C1E]"
                                 options={[{ label: 'Redaksi Lantai 3', value: 'lt3' }]}
                             />
                             <InputField
                                 label="Pemegang aset"
                                 name="pemegangAset"
                                 value={formData.pemegangAset}
+                                className="text-[#1C1C1E]"
                                 onChange={handleChange}
                                 placeholder="Nama karyawan atau tim"
                             />
@@ -243,7 +236,7 @@ export function AssetCreateView() {
                                 value={formData.keterangan}
                                 onChange={handleChange}
                                 placeholder="Spesifikasi, nomor seri, catatan kondisi per unit..."
-                                className="w-full rounded-lg border border-neutral-300 p-3 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+                                className="w-full text-[#1C1C1E] rounded-lg border border-neutral-300 p-3 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
                             ></textarea>
                         </div>
                     </div>
