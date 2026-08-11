@@ -12,7 +12,7 @@ function AppLayout() {
   return (
     <div className="h-svh bg-[#f7f8fa]">
       <Sidebar collapsed={sidebarCollapsed} onCollapsedChange={setSidebarCollapsed} />
-      <main className={`h-svh min-w-0 overflow-y-auto ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-[232px]"}`}>
+      <main className={`h-svh min-w-0 overflow-y-auto ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-58"}`}>
         <Outlet />
       </main>
     </div>
