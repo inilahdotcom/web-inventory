@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 const primaryItems = [
   ["/dashboard", "Dashboard"],
@@ -16,8 +16,20 @@ const adminItems = [
   ["/profil", "Profil"],
 ] as const
 
-export function Sidebar() {
+export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; onCollapsedChange: (collapsed: boolean) => void }) {
   const [open, setOpen] = useState(false)
+  const [showDesktopContent, setShowDesktopContent] = useState(!collapsed)
+
+  useEffect(() => {
+    if (collapsed) return
+    const timer = window.setTimeout(() => setShowDesktopContent(true), 180)
+    return () => window.clearTimeout(timer)
+  }, [collapsed])
+
+  const collapseSidebar = () => {
+    setShowDesktopContent(false)
+    onCollapsedChange(true)
+  }
 
   return (
     <>
@@ -28,8 +40,8 @@ export function Sidebar() {
       >
         ☰
       </button>
-      <aside className="fixed inset-y-0 left-0 z-20 hidden h-svh w-[232px] bg-[#1c1c1e] text-white lg:flex">
-        <SidebarContent />
+      <aside className={`fixed inset-y-0 left-0 z-20 hidden h-svh bg-[#1c1c1e] text-white transition-[width] duration-200 lg:flex ${collapsed ? "w-16" : "w-[232px]"}`}>
+        {showDesktopContent ? <SidebarContent onCollapse={collapseSidebar} /> : <button type="button" onClick={() => onCollapsedChange(false)} aria-label="Buka sidebar" className="m-3 grid size-10 place-items-center rounded-full bg-[#343438] text-lg text-white">☰</button>}
       </aside>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
@@ -47,7 +59,7 @@ export function Sidebar() {
   )
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex h-16 items-center px-[22px]">
@@ -62,7 +74,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             General Affairs
           </span>
         </span>
-        <span className="ml-auto text-[13px] text-[#777780]">&laquo;</span>
+        <button type="button" onClick={onCollapse} aria-label="Ciutkan sidebar" className="ml-auto text-[13px] text-[#777780]">&laquo;</button>
       </div>
       <nav className="flex-1 px-[14px] pt-[11px]">
         <div className="space-y-[3px]">
