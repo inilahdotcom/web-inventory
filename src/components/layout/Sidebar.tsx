@@ -5,7 +5,7 @@ const primaryItems = [
   ["/", "Dashboard"],
   ["/asset/new", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
-  ["/import", "Import Data"],
+  ["/import/preview", "Import Data"],
   ["/laporan", "Laporan"],
   ["/arsip", "Arsip Aset", "3"],
 ] as const
