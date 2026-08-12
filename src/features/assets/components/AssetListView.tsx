@@ -153,6 +153,7 @@ export function AssetListView() {
       )
   )
   const [notice, setNotice] = useState("")
+
   const visibleAssets = useMemo(() => {
     const normalized = query.toLowerCase()
     return assets.filter((asset) => {
@@ -171,14 +172,17 @@ export function AssetListView() {
       return matchesSearch && matchesFilter
     })
   }, [filter, hasSearched, query])
+
   const toggleSelection = (code: string) =>
     setSelectedCodes((current) => {
       const next = new Set(current)
       next.has(code) ? next.delete(code) : next.add(code)
       return next
     })
+
   const selectAll = () =>
     setSelectedCodes(new Set(visibleAssets.map((asset) => asset.code)))
+
   const tableIsActive =
     viewMode === "table" || (viewMode === "auto" && !isMobile)
   const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
@@ -201,10 +205,10 @@ export function AssetListView() {
               setQuery(event.target.value)
               setHasSearched(true)
             }}
-            className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             aria-label="Cari aset"
           />
-          <span className="ml-auto hidden text-[11px] text-[#8e91a0] sm:block">
+          <span className="ml-auto hidden text-xs text-[#8e91a0] sm:block">
             {visibleAssets.length} hasil &middot; 0,4 s
           </span>
         </label>
@@ -212,7 +216,7 @@ export function AssetListView() {
           <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
             ?
           </span>
-          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-[11px] font-semibold text-[#600000]">
+          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-xs font-semibold text-[#600000]">
             RS
           </span>
         </div>
@@ -224,14 +228,14 @@ export function AssetListView() {
             <h1 className="text-3xl leading-none font-semibold tracking-tight">
               Daftar Aset
             </h1>
-            <span className="text-[13px] text-[#6b6f7e]">
+            <span className="text-sm text-[#6b6f7e]">
               95 aset &middot; 213 unit &middot; nilai tercatat Rp 1.421.870.000
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2.25">
             <Pill className="h-10 px-4 text-sm">
               Kolom{" "}
-              <span className="text-[11px] font-normal text-[#6b6f7e]">
+              <span className="text-xs font-normal text-[#6b6f7e]">
                 10/12
               </span>
             </Pill>
@@ -322,7 +326,7 @@ export function AssetListView() {
         {selectedCodes.size > 0 && (
           <section className="flex flex-col gap-2 rounded-2xl bg-[#1c1c1e] px-4 py-3 text-white sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-4.5">
             <div className="flex items-center gap-3">
-              <span className="text-[13px] font-semibold">
+              <span className="text-sm font-semibold">
                 {selectedCodes.size} aset terpilih
               </span>
               <span className="text-xs text-[#a5a8b5]">
@@ -353,7 +357,7 @@ export function AssetListView() {
         {notice && (
           <button
             onClick={() => setNotice("")}
-            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574]"
+            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
           >
             {notice} &times;
           </button>
@@ -594,11 +598,11 @@ function AssetCard({
         <CheckBox selected={selected} onClick={onToggle} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <span className="font-mono text-[11px] text-[#4262ff]">
+            <span className="font-mono text-xs text-[#4262ff]">
               {asset.code}
             </span>
             <span
-              className={`ml-auto shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${conditionClass[asset.condition]}`}
+              className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
             >
               {asset.condition}
             </span>
