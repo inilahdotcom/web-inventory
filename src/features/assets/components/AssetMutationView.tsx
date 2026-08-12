@@ -16,7 +16,7 @@ export function AssetMutationView() {
   }
   return (
     <div className="min-h-svh bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="flex h-16 items-center border-b border-[#e0e2e8] bg-white px-6 text-[13px] text-[#8e91a0]">
+      <header className="flex h-16 items-center overflow-hidden border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 text-[13px] text-[#8e91a0] sm:pr-6 lg:px-6">
         <span className="text-[#6b6f7e]">Daftar Aset</span>
         <span className="px-2">/</span>
         <span className="font-mono">018/INC-GA/1/26</span>

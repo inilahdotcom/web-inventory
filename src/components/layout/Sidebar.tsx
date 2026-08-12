@@ -73,7 +73,10 @@ export function Sidebar({
             className="absolute inset-0 bg-black/45"
           />
           <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent
+              onNavigate={() => setOpen(false)}
+              onCollapse={() => setOpen(false)}
+            />
           </aside>
         </div>
       )}
