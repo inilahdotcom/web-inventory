@@ -91,7 +91,7 @@ export function LoginForm() {
             <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full"
+                className="w-full bg-[#1C1C1E] text-white hover:bg-[#2C2C2E]"
             >
                 {loading ? 'Memproses...' : 'Masuk'}
             </Button>
