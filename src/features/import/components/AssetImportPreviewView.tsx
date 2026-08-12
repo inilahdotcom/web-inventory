@@ -46,54 +46,57 @@ export function AssetImportPreviewView({
 
     return (
         <div className="w-full space-y-6 pb-12 text-[#1C1C1E]">
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 bg-white px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
-                <div className="flex items-center gap-4 text-xs overflow-hidden py-1 font-medium">
-                    <div className="flex items-center gap-2 text-neutral-400 shrink-0">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-white text-[10px]">✓</span>
-                        <span className="text-neutral-500">1. Unggah file</span>
-                    </div>
-                    <span className="text-neutral-300">—</span>
 
-                    <div className="relative flex items-center gap-2 text-neutral-900 font-semibold shrink-0 py-1">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-white text-xs font-bold">2</span>
-                        <span className="text-neutral-900">2. Pratinjau & koreksi</span>
-                        <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-pink-500"></div>
-                    </div>
-                    <span className="text-neutral-300">—</span>
+            <div className="flex flex-col sticky top-0 z-30 xl:flex-row xl:items-center justify-between gap-4 border-b border-neutral-200 bg-white pl-14 pr-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
+                <div className="w-full overflow-x-auto scrollbar-none py-1">
+                    <div className="flex items-center gap-4 text-xs font-medium min-w-max">
+                        <div className="flex items-center gap-2 text-neutral-400 shrink-0">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-white text-[10px]">✓</span>
+                            <span className="text-neutral-500">1. Unggah file</span>
+                        </div>
+                        <span className="text-neutral-300">—</span>
 
-                    <div className="flex items-center gap-2 text-neutral-400 shrink-0">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-neutral-600 text-xs font-semibold">3</span>
-                        <span className="text-neutral-400">3. Simpan</span>
+                        <div className="relative flex items-center gap-2 text-neutral-900 font-semibold shrink-0 py-1">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-white text-xs font-bold">2</span>
+                            <span className="text-neutral-900">2. Pratinjau & koreksi</span>
+                            <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-pink-500"></div>
+                        </div>
+                        <span className="text-neutral-300">—</span>
+
+                        <div className="flex items-center gap-2 text-neutral-400 shrink-0">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-neutral-600 text-xs font-semibold">3</span>
+                            <span className="text-neutral-400">3. Simpan</span>
+                        </div>
                     </div>
                 </div>
 
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     onClick={onUnduhTemplate}
-                    className="text-xs font-medium text-blue-600 hover:underline text-left sm:text-right shrink-0"
+                    className="text-xs font-medium text-blue-600 hover:underline text-left xl:text-right shrink-0 pb-1 xl:pb-0"
                 >
                     Unduh template Excel
                 </button>
             </div>
 
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-                
+
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Pratinjau import</h1>
                         <p className="text-xs text-neutral-500 mt-1 break-all">{fileName} · {fileInfo}</p>
                     </div>
                     <div className="flex items-center gap-3 self-end md:self-auto">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={onGantiFile}
                             className="rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm"
                         >
                             Ganti file
                         </button>
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={onSimpanValid}
                             className="rounded-xl bg-neutral-900 px-5 py-2.5 text-xs font-medium text-white hover:bg-neutral-800 shadow-sm"
                         >

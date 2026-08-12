@@ -1,4 +1,3 @@
-
 export interface AuditLogItem {
     id: string | number
     type: 'UPDATE' | 'DELETE' | 'CREATE' | 'IMPORT'
@@ -71,39 +70,41 @@ export function AuditLogView({
     }
 
     return (
-        <div className="min-h-screen w-full">
-            <div className="w-full space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8 text-[#1C1C1E] pt-6">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium">
+        <div className="min-h-screen w-full text-[#1C1C1E] bg-neutral-50/50">
+            <div className="flex flex-col sticky top-0 z-30 xl:flex-row xl:items-center justify-between gap-4 border-b border-neutral-200 bg-white pl-14 pr-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
+                <div className="w-full overflow-x-auto pb-1 xl:pb-0 scrollbar-none">
+                    <div className="flex items-center gap-2 text-xs min-w-max">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
                             <span className="text-neutral-500">Pengguna:</span>
                             <span className="text-neutral-900 font-semibold">Semua</span>
                             <span className="text-neutral-400">▾</span>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
                             <span className="text-neutral-500">Entitas:</span>
                             <span className="text-neutral-900 font-semibold">assets</span>
                             <span className="text-neutral-400 cursor-pointer">×</span>
                         </div>
-                        
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium">
+
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
                             <span className="text-neutral-500">Aksi:</span>
                             <span className="text-neutral-900 font-semibold">Semua</span>
                             <span className="text-neutral-400">▾</span>
                         </div>
-                        
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium">
+
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
                             <span className="text-neutral-900 font-semibold">01/08/2026 - 05/08/2026</span>
                             <span className="text-neutral-400">▾</span>
                         </div>
                     </div>
-
-                    <div className="bg-[#FFFBEB] border border-[#FDE68A] text-[#78350F] px-4 py-2 rounded-xl text-xs font-medium shadow-sm flex items-center gap-2 w-fit">
-                        Hanya baca — log tidak dapat diubah atau dihapus
-                    </div>
                 </div>
 
+                <div className="bg-[#FFFBEB] border border-[#FDE68A] text-[#78350F] px-4 py-2 rounded-xl text-xs font-medium shadow-sm flex items-center gap-2 shrink-0 w-fit">
+                    Hanya baca — log tidak dapat diubah atau dihapus
+                </div>
+            </div>
+
+            <div className="w-full space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8 pt-6">
                 <div className="flex items-center justify-between pt-2">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Audit log</h1>
@@ -152,8 +153,8 @@ export function AuditLogView({
                                     </div>
                                     <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 font-mono text-[11px] text-neutral-700 space-y-1">
                                         <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">NEW_VALUES</div>
-                                        <pre 
-                                        className="whitespace-pre-wrap text-neutral-600"
+                                        <pre
+                                            className="whitespace-pre-wrap text-neutral-600"
                                         >
                                             {JSON.stringify(log.newValues, null, 2)}
                                         </pre>

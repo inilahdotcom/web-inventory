@@ -20,7 +20,6 @@ export function AssetEditView() {
     return (
         <form onSubmit={(e) => e.preventDefault()} className="w-full min-h-svh flex flex-col justify-between">
             <div className="space-y-6 pb-28">
-                {/* Header Navbar atas yang sudah dirapikan jaraknya */}
                 <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-200 bg-white px-6 lg:px-8">
                     <div className="text-xs text-neutral-500 space-x-2">
                         <span>Daftar Aset</span>
@@ -34,7 +33,6 @@ export function AssetEditView() {
                     </div>
                 </header>
 
-                {/* Konten Utama dengan margin/padding kiri-kanan yang aman (px-4 sm:px-6 lg:px-8) */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Ubah aset</h1>
@@ -165,7 +163,6 @@ export function AssetEditView() {
                 </div>
             </div>
 
-            {/* Footer Aksi di bawah dengan jarak yang pas */}
             <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-neutral-200 bg-white px-6 lg:px-8 py-4 shadow-md">
                 <span className="text-xs text-neutral-400">Perubahan belum tersimpan</span>
                 <div className="flex gap-3">
