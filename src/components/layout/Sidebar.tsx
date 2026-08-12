@@ -72,7 +72,7 @@ export function Sidebar({
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
-          <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
+          <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
             <SidebarContent onNavigate={() => setOpen(false)} />
           </aside>
         </div>
