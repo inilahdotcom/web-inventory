@@ -47,7 +47,7 @@ export function AssetImportPreviewView({
     return (
         <div className="w-full space-y-6 pb-12 text-[#1C1C1E]">
             
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 bg-white px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
+            <div className="flex flex-col sticky top-0 z-10  sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 bg-white px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
                 <div className="flex items-center gap-4 text-xs overflow-hidden py-1 font-medium">
                     <div className="flex items-center gap-2 text-neutral-400 shrink-0">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-white text-[10px]">✓</span>
