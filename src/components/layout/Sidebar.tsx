@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 
 const primaryItems = [
   ["/", "Dashboard"],
-  ["/asset/new", "Daftar Aset", "95"],
+  ["/asset", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
   ["/import/preview", "Import Data"],
   ["/laporan", "Laporan"],
@@ -87,7 +87,6 @@ function SidebarContent({ onNavigate, onCollapse }: { onNavigate?: () => void; o
                 label={label}
                 count={count}
                 onNavigate={onNavigate}
-                exact={to === "/"}
               />
             ))}
           </div>
