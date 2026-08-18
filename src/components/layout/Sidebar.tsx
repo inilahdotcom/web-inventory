@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 
 const primaryItems = [
   ["/", "Dashboard"],
-  ["/asset/new", "Daftar Aset", "95"],
+  ["/aset", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
   ["/import/preview", "Import Data"],
   ["/laporan", "Laporan"],
@@ -17,7 +17,13 @@ const adminItems = [
   ["/profil", "Profil"],
 ] as const
 
-export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; onCollapsedChange: (collapsed: boolean) => void }) {
+export function Sidebar({
+  collapsed,
+  onCollapsedChange,
+}: {
+  collapsed: boolean
+  onCollapsedChange: (collapsed: boolean) => void
+}) {
   const [open, setOpen] = useState(false)
   const [showDesktopContent, setShowDesktopContent] = useState(!collapsed)
 
@@ -35,24 +41,42 @@ export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; 
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
         className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
       >
         ☰
       </button>
-      <aside className={`fixed inset-y-0 left-0 z-20 hidden h-svh bg-[#1c1c1e] text-white transition-[width] duration-200 lg:flex ${collapsed ? "w-16" : "w-58"}`}>
-        {showDesktopContent ? <SidebarContent onCollapse={collapseSidebar} /> : <button type="button" onClick={() => onCollapsedChange(false)} aria-label="Buka sidebar" className="m-3 grid size-10 place-items-center rounded-full bg-[#343438] text-lg text-white">☰</button>}
+      <aside
+        className={`fixed inset-y-0 left-0 z-20 hidden h-svh bg-[#1c1c1e] text-white transition-[width] duration-200 lg:flex ${collapsed ? "w-16" : "w-[232px]"}`}
+      >
+        {showDesktopContent ? (
+          <SidebarContent onCollapse={collapseSidebar} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => onCollapsedChange(false)}
+            aria-label="Buka sidebar"
+            className="m-3 grid size-10 place-items-center rounded-full bg-[#343438] text-lg text-white"
+          >
+            ☰
+          </button>
+        )}
       </aside>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
+            type="button"
             onClick={() => setOpen(false)}
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
-          <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
-            <SidebarContent onNavigate={() => setOpen(false)} />
+          <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
+            <SidebarContent
+              onNavigate={() => setOpen(false)}
+              onCollapse={() => setOpen(false)}
+            />
           </aside>
         </div>
       )}
@@ -60,64 +84,74 @@ export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; 
   )
 }
 
-function SidebarContent({ onNavigate, onCollapse }: { onNavigate?: () => void; onCollapse?: () => void }) {
+function SidebarContent({
+  onNavigate,
+  onCollapse,
+}: {
+  onNavigate?: () => void
+  onCollapse?: () => void
+}) {
   return (
-    <div className="flex h-full w-full flex-col justify-between">
-      <div className="space-y-6">
-        <div className="flex h-16 items-center px-5.5">
-          <span className="grid size-7 place-items-center rounded-lg bg-amber-400 text-xs font-bold text-neutral-900">
-            GA
+    <div className="flex h-full w-full flex-col">
+      <div className="flex h-16 items-center px-[22px]">
+        <span className="grid size-[27px] place-items-center rounded-[8px] bg-[#ffd02f] text-[11px] font-bold text-[#1c1c1e]">
+          GA
+        </span>
+        <span className="ml-[9px]">
+          <span className="block text-[12px] leading-[14px] font-bold">
+            INC Inventaris
           </span>
-          <span className="ml-2.25">
-            <span className="block text-xs leading-3.5 font-bold">
-              INC Inventaris
-            </span>
-            <span className="block text-[10px] leading-3 text-neutral-400">
-              General Affairs
-            </span>
+          <span className="block text-[10px] leading-[13px] text-[#777780]">
+            General Affairs
           </span>
-          <button type="button" onClick={onCollapse} aria-label="Ciutkan sidebar" className="ml-auto text-sm text-neutral-400 cursor-pointer">&laquo;</button>
-        </div>
-        <nav className="flex-1 px-3.5 pt-3">
-          <div className="space-y-0.75">
-            {primaryItems.map(([to, label, count]) => (
-              <NavItem
-                key={to}
-                to={to}
-                label={label}
-                count={count}
-                onNavigate={onNavigate}
-                exact={to === "/"}
-              />
-            ))}
-          </div>
-          <p className="mt-6 mb-2.25 px-2.25 text-[10px] font-bold text-neutral-400">
-            ADMIN
-          </p>
-          <div className="space-y-0.75">
-            {adminItems.map(([to, label, count]) => (
-              <NavItem
-                key={to}
-                to={to}
-                label={label}
-                count={count}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
-        </nav>
+        </span>
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Ciutkan sidebar"
+          className="ml-auto text-[13px] text-[#777780]"
+        >
+          «
+        </button>
       </div>
-
-      <div className="p-3.5 border-t border-neutral-800/60">
-        <span className="flex h-12 items-center gap-2.5 rounded-xl bg-neutral-900/80 p-3 border border-neutral-800">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-amber-400/20 text-amber-400 font-bold text-xs">
+      <nav className="flex-1 px-[14px] pt-[11px]">
+        <div className="space-y-[3px]">
+          {primaryItems.map(([to, label, count]) => (
+            <NavItem
+              key={to}
+              to={to}
+              label={label}
+              count={count}
+              onNavigate={onNavigate}
+              exact={to === "/"}
+            />
+          ))}
+        </div>
+        <p className="mt-[25px] mb-[9px] px-[9px] text-[10px] font-bold text-[#777780]">
+          ADMIN
+        </p>
+        <div className="space-y-[3px]">
+          {adminItems.map(([to, label, count]) => (
+            <NavItem
+              key={to}
+              to={to}
+              label={label}
+              count={count}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      </nav>
+      <div className="p-[14px]">
+        <span className="flex h-[47px] items-center gap-[10px] rounded-[11px] bg-[#343438] px-[10px]">
+          <span className="grid size-[27px] place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">
             RS
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-medium text-white">
+            <span className="block truncate text-[11px] leading-[13px] font-bold">
               Rizky Saputra
             </span>
-            <span className="block truncate pt-px text-[10px] text-neutral-400">
+            <span className="block truncate pt-[1px] text-[10px] leading-[12px] text-[#858896]">
               Admin GA
             </span>
           </span>
@@ -145,20 +179,20 @@ function NavItem({
       to={to}
       onClick={onNavigate}
       activeOptions={{ exact }}
-      className="flex h-8 items-center rounded-lg px-2.25 text-xs font-medium text-neutral-400 transition hover:bg-neutral-800/60 hover:text-white"
+      className="flex h-[33px] items-center rounded-[8px] px-[9px] text-[12.5px] font-medium text-[#a5a8b5]"
       activeProps={{
         className:
-          "flex h-8 items-center rounded-lg bg-neutral-800 px-2.25 text-xs font-semibold text-white",
+          "flex h-[34px] items-center rounded-[8px] bg-[#3a3a3e] px-[9px] text-[12.5px] font-bold text-white",
       }}
     >
       {({ isActive }) => (
         <>
           <span
-            className={`mr-2.75 size-3.5 rounded border ${isActive ? "border-amber-400 bg-amber-400" : "border-neutral-600 bg-transparent"}`}
+            className={`mr-[11px] size-[14px] rounded-[4px] border ${isActive ? "border-[#ffd02f] bg-[#ffd02f]" : "border-[#858896]"}`}
           />
-          <span className="truncate">{label}</span>
+          <span>{label}</span>
           {count && (
-            <span className="ml-auto text-[10px] font-normal text-neutral-400">
+            <span className="ml-auto text-[10px] font-medium text-[#858896]">
               {count}
             </span>
           )}
