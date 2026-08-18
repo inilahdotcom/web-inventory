@@ -2,10 +2,10 @@ import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
 const primaryItems = [
-  ["/dashboard", "Dashboard"],
+  ["/", "Dashboard"],
   ["/aset", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
-  ["/import", "Import Data"],
+  ["/import/preview", "Import Data"],
   ["/laporan", "Laporan"],
   ["/arsip", "Arsip Aset", "3"],
 ] as const
@@ -72,7 +72,7 @@ export function Sidebar({
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
-          <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
+          <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
             <SidebarContent
               onNavigate={() => setOpen(false)}
               onCollapse={() => setOpen(false)}
@@ -123,6 +123,7 @@ function SidebarContent({
               label={label}
               count={count}
               onNavigate={onNavigate}
+              exact={to === "/"}
             />
           ))}
         </div>
@@ -165,16 +166,19 @@ function NavItem({
   label,
   count,
   onNavigate,
+  exact = false,
 }: {
   to: string
   label: string
   count?: string
   onNavigate?: () => void
+  exact?: boolean
 }) {
   return (
     <Link
       to={to}
       onClick={onNavigate}
+      activeOptions={{ exact }}
       className="flex h-[33px] items-center rounded-[8px] px-[9px] text-[12.5px] font-medium text-[#a5a8b5]"
       activeProps={{
         className:
