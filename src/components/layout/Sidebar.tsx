@@ -2,13 +2,14 @@ import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
 const primaryItems = [
-  ["/dashboard", "Dashboard"],
+  ["/", "Dashboard"],
   ["/aset", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
-  ["/import", "Import Data"],
+  ["/import/preview", "Import Data"],
   ["/laporan", "Laporan"],
   ["/arsip", "Arsip Aset", "3"],
 ] as const
+
 const adminItems = [
   ["/master-data", "Master Data"],
   ["/pengguna", "Pengguna", "7"],
@@ -40,6 +41,7 @@ export function Sidebar({
   return (
     <>
       <button
+        type="button"
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
         className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
@@ -65,12 +67,16 @@ export function Sidebar({
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
+            type="button"
             onClick={() => setOpen(false)}
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
           <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent
+              onNavigate={() => setOpen(false)}
+              onCollapse={() => setOpen(false)}
+            />
           </aside>
         </div>
       )}
@@ -105,7 +111,7 @@ function SidebarContent({
           aria-label="Ciutkan sidebar"
           className="ml-auto text-[13px] text-[#777780]"
         >
-          &laquo;
+          «
         </button>
       </div>
       <nav className="flex-1 px-[14px] pt-[11px]">
@@ -117,6 +123,7 @@ function SidebarContent({
               label={label}
               count={count}
               onNavigate={onNavigate}
+              exact={to === "/"}
             />
           ))}
         </div>
@@ -141,7 +148,7 @@ function SidebarContent({
             RS
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[11px] leading-[13px] font-bold text-white">
+            <span className="block truncate text-[11px] leading-[13px] font-bold">
               Rizky Saputra
             </span>
             <span className="block truncate pt-[1px] text-[10px] leading-[12px] text-[#858896]">
@@ -159,16 +166,19 @@ function NavItem({
   label,
   count,
   onNavigate,
+  exact = false,
 }: {
   to: string
   label: string
   count?: string
   onNavigate?: () => void
+  exact?: boolean
 }) {
   return (
     <Link
       to={to}
       onClick={onNavigate}
+      activeOptions={{ exact }}
       className="flex h-[33px] items-center rounded-[8px] px-[9px] text-[12.5px] font-medium text-[#a5a8b5]"
       activeProps={{
         className:

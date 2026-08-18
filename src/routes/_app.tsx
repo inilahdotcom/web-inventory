@@ -2,9 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { useState } from "react"
 import { Sidebar } from "@/components/layout/Sidebar"
 
-export const Route = createFileRoute("/_app")({
-  component: AppLayout,
-})
+export const Route = createFileRoute("/_app")({ component: AppLayout })
 
 function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
