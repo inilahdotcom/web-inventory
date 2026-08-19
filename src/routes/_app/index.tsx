@@ -1,5 +1,6 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
+import { DashboardView } from "@/features/dashboard/DashboardView"
 
 export const Route = createFileRoute("/_app/")({
-  beforeLoad: () => { throw redirect({ to: "/laporan" }) },
+  component: DashboardView,
 })
