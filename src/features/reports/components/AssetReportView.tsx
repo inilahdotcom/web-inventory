@@ -106,6 +106,20 @@ function PdfPreview() { return <section className="flex flex-col gap-3 rounded-2
 function Line({ width = "w-full" }: { width?: string }) { return <span className={`block h-1.5 rounded-sm bg-[#eef0f3] ${width}`} /> }
 function Signature({ label, value }: { label: string; value: string }) { return <span><span className="block text-[9px] text-[#8e91a0]">{label}</span><span className="mt-2 block h-5 border-b border-[#c7cad5]" /><span className="mt-1 block text-[9px] text-[#6b6f7e]">{value}</span></span> }
 function CompletenessNote() { return <section className="flex flex-col gap-2 rounded-2xl bg-[#ffc6c6] p-5"><h2 className="text-base font-semibold text-[#600000]">Catatan kelengkapan data</h2><p className="text-xs leading-relaxed text-[#600000]">Total nilai hanya menghitung 33 aset yang punya harga. Setiap laporan nilai aset menyertakan persentase kelengkapan agar angka tidak dibaca sebagai nilai penuh inventaris.</p></section> }
-function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="flex h-9 items-center rounded-full border border-[#c7cad5] bg-white px-3.5 text-xs font-semibold"><span className="sr-only">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="bg-transparent outline-none"><option value="Semua">{label}: Semua</option>{options.slice(1).map((option) => <option key={option}>{label}: {option}</option>)}</select></label> }
+function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false)
+
+  const selectOption = (option: string) => {
+    onChange(option)
+    setOpen(false)
+  }
+
+  return <div className="relative">
+    <button type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open} className="flex h-9 items-center gap-1 rounded-full border border-[#c7cad5] bg-white px-3.5 text-xs font-semibold">{label}: {value}<span aria-hidden="true">▾</span></button>
+    {open && <div className="absolute top-10 right-0 z-20 min-w-full overflow-hidden rounded-xl border border-[#e0e2e8] bg-white p-1 shadow-lg">
+      {options.map((option) => <button key={option} type="button" onClick={() => selectOption(option)} className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option === value ? "bg-[#1c1c1e] text-white" : "hover:bg-[#f7f8fa]"}`}>{option}</button>)}
+    </div>}
+  </div>
+}
 function ActionButton({ children, onClick, dark = false }: { children: ReactNode; onClick: () => void; dark?: boolean }) { return <button type="button" onClick={onClick} className={`flex h-9 items-center rounded-full px-3.5 text-sm font-semibold ${dark ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white"}`}>{children}</button> }
 function Notice({ children, onClose }: { children: ReactNode; onClose: () => void }) { return <button type="button" onClick={onClose} className="w-fit rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]">{children} ×</button> }
