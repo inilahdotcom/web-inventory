@@ -1,4 +1,3 @@
-import { FileSpreadsheet, FileText, MapPin } from "lucide-react"
 import { useState, type ReactNode } from "react"
 
 type ReportTab = "Rekap per kategori" | "Aset rusak" | "Per lokasi & pemegang" | "Mutasi aset"
@@ -42,8 +41,8 @@ export function AssetReportView() {
           ))}
         </div>
         <div className="ml-auto flex min-w-max gap-2">
-          <ActionButton icon={<FileSpreadsheet size={15} />} onClick={() => setNotice("Export Excel disiapkan (simulasi).")}>Export Excel</ActionButton>
-          <ActionButton dark icon={<FileText size={15} />} onClick={() => setNotice("Export PDF disiapkan (simulasi).")}>Export PDF</ActionButton>
+          <ActionButton onClick={() => setNotice("Export Excel disiapkan (simulasi).")}>Export Excel</ActionButton>
+          <ActionButton dark onClick={() => setNotice("Export PDF disiapkan (simulasi).")}>Export PDF</ActionButton>
         </div>
       </header>
 
@@ -107,6 +106,6 @@ function PdfPreview() { return <section className="flex flex-col gap-3 rounded-2
 function Line({ width = "w-full" }: { width?: string }) { return <span className={`block h-1.5 rounded-sm bg-[#eef0f3] ${width}`} /> }
 function Signature({ label, value }: { label: string; value: string }) { return <span><span className="block text-[9px] text-[#8e91a0]">{label}</span><span className="mt-2 block h-5 border-b border-[#c7cad5]" /><span className="mt-1 block text-[9px] text-[#6b6f7e]">{value}</span></span> }
 function CompletenessNote() { return <section className="flex flex-col gap-2 rounded-2xl bg-[#ffc6c6] p-5"><h2 className="text-base font-semibold text-[#600000]">Catatan kelengkapan data</h2><p className="text-xs leading-relaxed text-[#600000]">Total nilai hanya menghitung 33 aset yang punya harga. Setiap laporan nilai aset menyertakan persentase kelengkapan agar angka tidak dibaca sebagai nilai penuh inventaris.</p></section> }
-function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="flex h-9 items-center rounded-full border border-[#c7cad5] bg-white px-3.5 text-xs font-semibold"><MapPin size={13} className="mr-1.5 text-[#6b6f7e]" /><span className="sr-only">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="bg-transparent outline-none"><option value="Semua">{label}: Semua</option>{options.slice(1).map((option) => <option key={option}>{label}: {option}</option>)}</select></label> }
-function ActionButton({ children, icon, onClick, dark = false }: { children: ReactNode; icon: ReactNode; onClick: () => void; dark?: boolean }) { return <button type="button" onClick={onClick} className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold ${dark ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white"}`}>{icon}{children}</button> }
+function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) { return <label className="flex h-9 items-center rounded-full border border-[#c7cad5] bg-white px-3.5 text-xs font-semibold"><span className="sr-only">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="bg-transparent outline-none"><option value="Semua">{label}: Semua</option>{options.slice(1).map((option) => <option key={option}>{label}: {option}</option>)}</select></label> }
+function ActionButton({ children, onClick, dark = false }: { children: ReactNode; onClick: () => void; dark?: boolean }) { return <button type="button" onClick={onClick} className={`flex h-9 items-center rounded-full px-3.5 text-sm font-semibold ${dark ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white"}`}>{children}</button> }
 function Notice({ children, onClose }: { children: ReactNode; onClose: () => void }) { return <button type="button" onClick={onClose} className="w-fit rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]">{children} ×</button> }
