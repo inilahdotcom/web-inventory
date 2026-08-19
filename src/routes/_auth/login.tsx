@@ -10,10 +10,10 @@ function LoginPage() {
   return (
     <div className="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-8 px-6">
       <header className="flex flex-col gap-2">
-        <span className="inline-block w-fit rounded-full bg-brand-yellow px-3 py-1 text-xs font-semibold tracking-[0.5px] text-brand-yellow-foreground uppercase">
+        <span className="inline-block w-fit rounded-full bg-brand-yellow px-3 py-1 text-xs font-semibold tracking-wide text-brand-yellow-foreground uppercase">
           INC Inventaris
         </span>
-        <h1 className="text-3xl font-medium tracking-[-0.5px] text-foreground">
+        <h1 className="text-3xl font-medium tracking-tight text-foreground">
           Masuk ke akun
         </h1>
         <p className="text-base text-muted-foreground">
