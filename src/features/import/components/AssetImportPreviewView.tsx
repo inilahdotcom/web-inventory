@@ -38,7 +38,7 @@ export function AssetImportPreviewView({
     ],
     onGantiFile,
     onSimpanValid,
-    onUnduhTemplate
+    onUnduhTemplate,
 }: AssetImportPreviewViewProps) {
     const [filterTab, setFilterTab] = useState<'gagal' | 'semua'>('gagal')
 
@@ -47,21 +47,26 @@ export function AssetImportPreviewView({
     return (
         <div className="w-full space-y-6 pb-12 text-[#1C1C1E]">
             
-            <div className="flex flex-col sticky top-0 z-30 sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 bg-white px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
-                <div className="flex items-center  gap-4 text-xs overflow-hidden py-1 font-medium">
+            {/* STICKY HEADER STEPPER (z-10 & pl-14 lg:pl-0 agar tidak menutupi burger sidebar) */}
+            <div className="sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 bg-white px-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-2xs">
+                
+                <div className="flex items-center gap-3 overflow-x-auto py-1 text-xs font-medium no-scrollbar pl-14 lg:pl-0">
+                    {/* Step 1 */}
                     <div className="flex items-center gap-2 text-neutral-400 shrink-0">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-white text-[10px]">✓</span>
                         <span className="text-neutral-500">1. Unggah file</span>
                     </div>
-                    <span className="text-neutral-300">—</span>
+                    <span className="text-neutral-300 shrink-0">—</span>
 
+                    {/* Step 2 (Active) */}
                     <div className="relative flex items-center gap-2 text-neutral-900 font-semibold shrink-0 py-1">
                         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-white text-xs font-bold">2</span>
                         <span className="text-neutral-900">2. Pratinjau & koreksi</span>
                         <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-pink-500"></div>
                     </div>
-                    <span className="text-neutral-300">—</span>
+                    <span className="text-neutral-300 shrink-0">—</span>
 
+                    {/* Step 3 */}
                     <div className="flex items-center gap-2 text-neutral-400 shrink-0">
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-neutral-600 text-xs font-semibold">3</span>
                         <span className="text-neutral-400">3. Simpan</span>
@@ -79,7 +84,7 @@ export function AssetImportPreviewView({
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
                 
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-neutral-200 shadow-2xs">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Pratinjau import</h1>
                         <p className="text-xs text-neutral-500 mt-1 break-all">{fileName} · {fileInfo}</p>
@@ -88,14 +93,14 @@ export function AssetImportPreviewView({
                         <button 
                             type="button" 
                             onClick={onGantiFile}
-                            className="rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm"
+                            className="rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs cursor-pointer"
                         >
                             Ganti file
                         </button>
                         <button 
                             type="button" 
                             onClick={onSimpanValid}
-                            className="rounded-xl bg-neutral-900 px-5 py-2.5 text-xs font-medium text-white hover:bg-neutral-800 shadow-sm"
+                            className="rounded-xl bg-neutral-900 px-5 py-2.5 text-xs font-medium text-white hover:bg-neutral-800 shadow-2xs cursor-pointer"
                         >
                             Simpan {stats.siapSimpan} baris valid
                         </button>
@@ -103,7 +108,7 @@ export function AssetImportPreviewView({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="rounded-2xl border border-[#A7F3D0] bg-[#C3FAF5] p-5 space-y-1 shadow-sm">
+                    <div className="rounded-2xl border border-[#A7F3D0] bg-[#C3FAF5] p-5 space-y-1 shadow-2xs">
                         <span className="text-xs font-medium text-[#065F46]">Siap disimpan</span>
                         <div className="flex items-baseline gap-2 pt-1">
                             <span className="text-3xl font-bold text-[#064E3B]">{stats.siapSimpan}</span>
@@ -111,7 +116,7 @@ export function AssetImportPreviewView({
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-[#FECDD3] bg-[#FFC6C6] p-5 space-y-1 shadow-sm">
+                    <div className="rounded-2xl border border-[#FECDD3] bg-[#FFC6C6] p-5 space-y-1 shadow-2xs">
                         <span className="text-xs font-medium text-[#9F1239]">Gagal</span>
                         <div className="flex items-baseline gap-2 pt-1">
                             <span className="text-3xl font-bold text-[#881337]">{stats.gagal}</span>
@@ -119,7 +124,7 @@ export function AssetImportPreviewView({
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-[#FDE68A] bg-[#FFF8E0] p-5 space-y-1 shadow-sm">
+                    <div className="rounded-2xl border border-[#FDE68A] bg-[#FFF8E0] p-5 space-y-1 shadow-2xs">
                         <span className="text-xs font-medium text-[#92400E]">Dinormalkan</span>
                         <div className="flex items-baseline gap-2 pt-1">
                             <span className="text-3xl font-bold text-[#78350F]">{stats.dinormalkan}</span>
@@ -127,7 +132,7 @@ export function AssetImportPreviewView({
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-neutral-200 bg-[#FFFFFF] p-5 space-y-1 shadow-sm">
+                    <div className="rounded-2xl border border-neutral-200 bg-[#FFFFFF] p-5 space-y-1 shadow-2xs">
                         <span className="text-xs font-medium text-neutral-600">Diabaikan</span>
                         <div className="flex items-baseline gap-2 pt-1">
                             <span className="text-3xl font-bold text-neutral-900">{stats.diabaikan}</span>
@@ -136,7 +141,7 @@ export function AssetImportPreviewView({
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+                <div className="rounded-2xl border border-neutral-200 bg-white shadow-2xs overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-neutral-200 gap-3">
                         <p className="text-xs font-medium text-neutral-700">
                             <span className="font-bold text-[#1C1C1E]">{stats.gagal} baris gagal</span> — Koreksi langsung di tabel ini, atau lanjutkan tanpa baris tersebut.
@@ -145,14 +150,14 @@ export function AssetImportPreviewView({
                             <button
                                 type="button"
                                 onClick={() => setFilterTab('gagal')}
-                                className={`px-4 py-1.5 rounded-lg font-medium transition-all ${filterTab === 'gagal' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+                                className={`px-4 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${filterTab === 'gagal' ? 'bg-white text-neutral-900 shadow-2xs' : 'text-neutral-500 hover:text-neutral-900'}`}
                             >
                                 Hanya yang gagal
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setFilterTab('semua')}
-                                className={`px-4 py-1.5 rounded-lg font-medium transition-all ${filterTab === 'semua' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+                                className={`px-4 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${filterTab === 'semua' ? 'bg-white text-neutral-900 shadow-2xs' : 'text-neutral-500 hover:text-neutral-900'}`}
                             >
                                 Semua baris
                             </button>
@@ -195,14 +200,14 @@ export function AssetImportPreviewView({
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-5 text-xs text-[#746019] shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-5 text-xs text-[#746019] shadow-2xs">
                     <div>
                         <span className="font-semibold block mb-1">Normalisasi otomatis yang dijalankan</span>
                         <p className="text-[#746019] text-[11px] leading-relaxed">
                             Harga bertipe teks (Rp 19.519.088) dikonversi ke numerik · 3 baris header yang muncul ulang di tengah data dilewati · spasi ganda pada nama item dirapikan · merek kosong dibiarkan kosong, tidak diisi "LOKAL".
                         </p>
                     </div>
-                    <button type="button" className="rounded-xl bg-neutral-900 text-white px-4 py-2 text-xs font-medium hover:bg-neutral-800 shrink-0 shadow-sm self-start sm:self-auto">
+                    <button type="button" className="rounded-xl bg-neutral-900 text-white px-4 py-2 text-xs font-medium hover:bg-neutral-800 shrink-0 shadow-2xs self-start sm:self-auto cursor-pointer">
                         Lihat detail
                     </button>
                 </div>

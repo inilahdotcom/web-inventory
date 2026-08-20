@@ -40,14 +40,16 @@ export function Sidebar({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Buka menu"
-        className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
-      >
-        ☰
-      </button>
+     <button
+  type="button"
+  onClick={() => setOpen(true)}
+  aria-label="Buka menu"
+  className="fixed top-3 left-3.5 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-[#1c1c1e] text-white shadow-md hover:bg-[#2c2c2e] transition cursor-pointer border-0 outline-none p-0 lg:hidden"
+>
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+</button>
       <aside
         className={`fixed inset-y-0 left-0 z-20 hidden h-svh bg-[#1c1c1e] text-white transition-[width] duration-200 lg:flex ${collapsed ? "w-16" : "w-58"}`}
       >
