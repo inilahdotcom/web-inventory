@@ -23,9 +23,9 @@ export const buttonVariants = cva(
           "rounded-full bg-[#600000] text-white hover:bg-[color-mix(in_oklab,#600000_90%,white_10%)] active:bg-[color-mix(in_oklab,#600000_80%,black_20%)] disabled:bg-hairline disabled:text-muted-foreground",
       },
       size: {
-        sm: "h-9 px-4 text-[13px]",
+        sm: "h-9 px-4 text-sm",
         md: "h-11 px-6 py-3",
-        lg: "h-12 px-7 text-[15px]",
+        lg: "h-12 px-7 text-base",
         icon: "size-9 rounded-full border border-hairline bg-card p-0 text-foreground",
         "icon-sm":
           "size-8 rounded-full border border-hairline bg-card p-0 text-foreground",
