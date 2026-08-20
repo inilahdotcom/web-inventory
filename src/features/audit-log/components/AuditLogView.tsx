@@ -1,3 +1,5 @@
+
+
 export interface AuditLogItem {
     id: string | number
     type: 'UPDATE' | 'DELETE' | 'CREATE' | 'IMPORT'
@@ -71,40 +73,43 @@ export function AuditLogView({
 
     return (
         <div className="min-h-screen w-full text-[#1C1C1E] bg-neutral-50/50">
-            <div className="flex flex-col sticky top-0 z-30 xl:flex-row xl:items-center justify-between gap-4 border-b border-neutral-200 bg-white pl-14 pr-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-xs">
-                <div className="w-full overflow-x-auto pb-1 xl:pb-0 scrollbar-none">
+            {/* STICKY HEADER FILTER (z-10 & pl-14 lg:pl-0 untuk ruang tombol burger fixed) */}
+            <div className="sticky top-0 z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-neutral-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-2xs">
+                
+                {/* Pl-14 khusus mobile/tablet agar filter bergeser memberi ruang untuk burger */}
+                <div className="w-full overflow-x-auto pb-1 xl:pb-0 no-scrollbar pl-14 lg:pl-0">
                     <div className="flex items-center gap-2 text-xs min-w-max">
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
                             <span className="text-neutral-500">Pengguna:</span>
                             <span className="text-neutral-900 font-semibold">Semua</span>
                             <span className="text-neutral-400">▾</span>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
                             <span className="text-neutral-500">Entitas:</span>
                             <span className="text-neutral-900 font-semibold">assets</span>
                             <span className="text-neutral-400 cursor-pointer">×</span>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
                             <span className="text-neutral-500">Aksi:</span>
                             <span className="text-neutral-900 font-semibold">Semua</span>
                             <span className="text-neutral-400">▾</span>
                         </div>
 
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-sm font-medium shrink-0">
+                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
                             <span className="text-neutral-900 font-semibold">01/08/2026 - 05/08/2026</span>
                             <span className="text-neutral-400">▾</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-[#FFFBEB] border border-[#FDE68A] text-[#78350F] px-4 py-2 rounded-xl text-xs font-medium shadow-sm flex items-center gap-2 shrink-0 w-fit">
+                <div className="bg-[#FFFBEB] border border-[#FDE68A] text-[#78350F] px-4 py-2 rounded-xl text-xs font-medium shadow-2xs flex items-center gap-2 shrink-0 w-fit">
                     Hanya baca — log tidak dapat diubah atau dihapus
                 </div>
             </div>
 
-            <div className="w-full space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8 pt-6">
+            <div className="w-full space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8 pt-2">
                 <div className="flex items-center justify-between pt-2">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Audit log</h1>
@@ -115,7 +120,7 @@ export function AuditLogView({
                     <button
                         type="button"
                         onClick={onExport}
-                        className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm"
+                        className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs cursor-pointer"
                     >
                         Export log
                     </button>
@@ -125,7 +130,7 @@ export function AuditLogView({
                     {logs.map((log) => (
                         <div
                             key={log.id}
-                            className="rounded-2xl bg-white p-5 shadow-sm space-y-3"
+                            className="rounded-2xl bg-white p-5 shadow-2xs space-y-3 border border-neutral-200/60"
                         >
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
                                 <div className="flex items-center gap-3">
