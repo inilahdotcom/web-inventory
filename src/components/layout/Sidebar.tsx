@@ -36,7 +36,7 @@ export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; 
       <button
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
-        className="fixed top-4 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
+        className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
       >
         ☰
       </button>
@@ -51,7 +51,7 @@ export function Sidebar({ collapsed, onCollapsedChange }: { collapsed: boolean; 
             className="absolute inset-0 bg-black/45"
           />
           <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent onNavigate={() => setOpen(false)} onCollapse={() => setOpen(false)} />
           </aside>
         </div>
       )}
