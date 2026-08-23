@@ -1,10 +1,9 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding text-sm leading-[1.3] font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+export const buttonVariants = cva(
+  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center border border-transparent bg-clip-padding text-sm leading-[1.3] font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -24,9 +23,9 @@ const buttonVariants = cva(
           "rounded-full bg-[#600000] text-white hover:bg-[color-mix(in_oklab,#600000_90%,white_10%)] active:bg-[color-mix(in_oklab,#600000_80%,black_20%)] disabled:bg-hairline disabled:text-muted-foreground",
       },
       size: {
-        sm: "h-9 px-4 text-[13px]",
+        sm: "h-9 px-4 text-sm",
         md: "h-11 px-6 py-3",
-        lg: "h-12 px-7 text-[15px]",
+        lg: "h-12 px-7 text-base",
         icon: "size-9 rounded-full border border-hairline bg-card p-0 text-foreground",
         "icon-sm":
           "size-8 rounded-full border border-hairline bg-card p-0 text-foreground",
@@ -50,19 +49,23 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant = "primary",
-  size = "md",
-  ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+export interface ButtonProps
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
 }
 
-export { Button, buttonVariants }
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
