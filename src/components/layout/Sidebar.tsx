@@ -11,7 +11,7 @@ const primaryItems = [
 ] as const
 const adminItems = [
   ["/master-data", "Master Data"],
-  ["/pengguna", "Pengguna", "7"],
+  ["/user-management", "Pengguna", "7"],
   ["/audit-log", "Audit Log"],
   ["/profil", "Profil"],
 ] as const
