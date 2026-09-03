@@ -12,7 +12,7 @@ const primaryItems = [
 
 const adminItems = [
   ["/master-data", "Master Data"],
-  ["/pengguna", "Pengguna", "7"],
+  ["/user-management", "Pengguna", "7"],
   ["/audit-log", "Audit Log"],
   ["/profile", "Profil"],
 ] as const
@@ -44,7 +44,7 @@ export function Sidebar({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
-        className="fixed top-3 left-3.5 z-30 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-0 bg-[#1c1c1e] p-0 text-white shadow-md transition outline-none hover:bg-[#2c2c2e] lg:hidden"
+        className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
       >
         <svg
           className="h-4 w-4"
@@ -84,11 +84,8 @@ export function Sidebar({
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
-          <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
-            <SidebarContent
-              onNavigate={() => setOpen(false)}
-              onCollapse={() => setOpen(false)}
-            />
+          <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
+            <SidebarContent onNavigate={() => setOpen(false)} onCollapse={() => setOpen(false)} />
           </aside>
         </div>
       )}
