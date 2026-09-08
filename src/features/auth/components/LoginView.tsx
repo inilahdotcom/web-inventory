@@ -18,7 +18,6 @@ export function LoginView() {
                     <p className="text-xs lg:text-sm text-neutral-400 leading-relaxed max-w-sm">
                         95 aset General Affairs kini tercatat dengan validasi, hak akses, dan riwayat perubahan. Tidak ada lagi kode ganda atau harga yang tak terbaca.
                     </p>
-                    
 
                     <div className="flex space-x-12 pt-4">
                         <div>
@@ -41,7 +40,6 @@ export function LoginView() {
                 </div>
             </div>
 
-
             <div className="flex w-full lg:w-8/12 items-center justify-center p-8 lg:p-16">
                 <div className="w-full max-w-md space-y-6">
                     <div className="space-y-2">
@@ -49,9 +47,10 @@ export function LoginView() {
                         <p className="text-sm text-neutral-500">Gunakan email kantor Anda.</p>
                     </div>
 
-     
+                    {/* Form Login (Pesan Error Dinamis Muncul di Dalam Sini) */}
                     <LoginForm />
 
+                    {/* Informasi Aturan Sistem (Statis sebagai Panduan UX) */}
                     <div className="rounded-lg bg-amber-50/60 p-4 border border-amber-200/50 text-xs text-neutral-600 space-y-1">
                         <span className="font-semibold text-neutral-900 block">Keamanan akun</span>
                         <p>Akun terkunci sementara 15 menit setelah 5 kali gagal (FR-A04). Sesi berakhir otomatis setelah 60 menit tidak aktif.</p>
