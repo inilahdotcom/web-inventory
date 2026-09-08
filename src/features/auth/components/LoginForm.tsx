@@ -11,8 +11,6 @@ export function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
-    
-    // State untuk menandai apakah akun sedang terkunci
     const [isLocked, setIsLocked] = useState(false)
 
     const navigate = useNavigate()
