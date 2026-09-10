@@ -11,13 +11,11 @@ export function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState('')
-    const [isLocked, setIsLocked] = useState(false)
 
     const navigate = useNavigate()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (isLocked) return // Mencegah submit jika terkunci
 
         setLoading(true)
         setErrorMessage('')
@@ -33,23 +31,11 @@ export function LoginForm() {
             const rawMsg = resData?.message || resData?.error || resData?.details
             const cleanMsg = rawMsg?.toLowerCase() || ''
 
-            // Check apakah akun terkunci
-            if (
-                status === 403 || 
-                cleanMsg === 'forbidden' || 
-                cleanMsg.includes('lock') || 
-                cleanMsg.includes('kunci')
-            ) {
-                setErrorMessage('Akun Anda telah dikunci selama 15 menit karena 5 kali gagal login.')
-                setIsLocked(true) // Set state locked jadi true
-            } 
-            else if (rawMsg && cleanMsg !== 'bad_request' && cleanMsg !== 'unauthorized') {
+            if (rawMsg && cleanMsg !== 'bad_request' && cleanMsg !== 'unauthorized') {
                 setErrorMessage(rawMsg)
-            } 
-            else if (status === 401 || status === 400) {
+            } else if (status === 401 || status === 400) {
                 setErrorMessage('Email atau password salah. Silakan periksa kembali.')
-            } 
-            else {
+            } else {
                 setErrorMessage('Terjadi kesalahan pada server. Silakan coba lagi nanti.')
             }
         } finally {
@@ -71,7 +57,7 @@ export function LoginForm() {
                 value={email}
                 placeholder="Masukkan email"
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loading || isLocked}
+                disabled={loading}
                 required
             />
 
@@ -88,14 +74,13 @@ export function LoginForm() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Masukkan password"
-                        disabled={loading || isLocked}
+                        disabled={loading}
                         className="border-neutral-300 focus:border-neutral-900 pr-16"
                         required
                     />
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        disabled={isLocked}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-neutral-500 hover:text-neutral-800 disabled:opacity-50"
                     >
                         {showPassword ? 'Sembunyikan' : 'Lihat'}
@@ -109,7 +94,7 @@ export function LoginForm() {
                     id="remember"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    disabled={loading || isLocked}
+                    disabled={loading}
                     className="h-4 w-4 rounded border-neutral-300 accent-neutral-900 cursor-pointer disabled:cursor-not-allowed"
                 />
                 <label htmlFor="remember" className="text-xs text-neutral-600 cursor-pointer">
@@ -119,10 +104,10 @@ export function LoginForm() {
 
             <Button
                 type="submit"
-                disabled={loading || isLocked}
+                disabled={loading}
                 className="w-full bg-[#1C1C1E] text-white hover:bg-[#2C2C2E] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                {loading ? 'Memproses...' : isLocked ? 'Akun Terkunci' : 'Masuk'}
+                {loading ? 'Memproses...' : 'Masuk'}
             </Button>
         </form>
     )

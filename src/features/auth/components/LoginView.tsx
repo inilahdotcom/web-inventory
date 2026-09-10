@@ -47,15 +47,7 @@ export function LoginView() {
                         <p className="text-sm text-neutral-500">Gunakan email kantor Anda.</p>
                     </div>
 
-                    {/* Form Login (Pesan Error Dinamis Muncul di Dalam Sini) */}
                     <LoginForm />
-
-                    {/* Informasi Aturan Sistem (Statis sebagai Panduan UX) */}
-                    <div className="rounded-lg bg-amber-50/60 p-4 border border-amber-200/50 text-xs text-neutral-600 space-y-1">
-                        <span className="font-semibold text-neutral-900 block">Keamanan akun</span>
-                        <p>Akun terkunci sementara 15 menit setelah 5 kali gagal (FR-A04). Sesi berakhir otomatis setelah 60 menit tidak aktif.</p>
-                    </div>
-
                     <p className="text-xs text-neutral-500 text-center pt-2">
                         Akun dibuat oleh Admin GA. Hubungi{' '}
                         <a href="mailto:it@inc.co.id" className="text-blue-600 hover:underline">

@@ -1,26 +1,86 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { InputField } from '@/components/ui/InputField'
 import { SelectedField } from '@/components/ui/SelectedField'
+import { assetService, type CreateAssetPayload } from '@/services/assetService'
+import { masterDataService, type MasterDataItem } from '@/services/masterDataService'
+
+// Map UI pilihan ke nilai ENUM database MySQL
+const MAP_SATUAN: Record<string, string> = {
+    'Unit': 'Unit',
+    'Pcs': 'Pcs',
+    'Set': 'Set',
+}
+
+const MAP_KONDISI: Record<string, string> = {
+    'Bagus': 'Bagus',
+    'Rusak Ringan': 'Rusak Ringan',
+    'Rusak Berat': 'Rusak Berat',
+    'Hilang': 'Hilang',
+}
+
+const MAP_STATUS: Record<string, string> = {
+    'Digunakan': 'Digunakan',
+    'Tersedia': 'Tersedia',
+    'Diperbaiki': 'Diperbaiki',
+}
 
 export function AssetCreateView() {
+    const navigate = useNavigate()
+
     const [formData, setFormData] = useState({
-        namaBarang: 'MacBook Pro M1 13',
-        kategori: 'laptop',
-        merek: 'APPLE',
+        namaBarang: '',
+        kategori: '',  // category_id (number string) - diisi setelah data master dimuat
+        merek: '',     // brand_id (number string)
         jumlah: 1,
         satuan: 'Unit',
         kondisi: 'Bagus',
         status: 'Digunakan',
-        hargaPerolehan: '19519000',
-        tanggalPerolehan: '2026-08-05',
-        lokasi: 'lt3',
+        hargaPerolehan: '',
+        tanggalPerolehan: '',
+        lokasi: '',    // location_id (number string)
         pemegangAset: '',
         keterangan: '',
-        kodeAset: '896/INC-GA/8/26',
+        kodeAset: '',  // Boleh kosong agar di-generate otomatis oleh Go
     })
+
+    const [categories, setCategories] = useState<MasterDataItem[]>([])
+    const [brands, setBrands] = useState<MasterDataItem[]>([])
+    const [locations, setLocations] = useState<MasterDataItem[]>([])
+    const [loadingMasterData, setLoadingMasterData] = useState(true)
 
     const [fotos, setFotos] = useState<File[]>([])
     const [loading, setLoading] = useState(false)
+    const [errorMessage, setErrorMessage] = useState('')
+    const [warningMessage, setWarningMessage] = useState('')
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        const fetchMasterData = async () => {
+            try {
+                const [cats, brds, locs] = await Promise.all([
+                    masterDataService.getCategories(),
+                    masterDataService.getBrands(),
+                    masterDataService.getLocations(),
+                ])
+                setCategories(cats)
+                setBrands(brds)
+                setLocations(locs)
+
+                // set default value ke item pertama, kalau ada
+                setFormData((prev) => ({
+                    ...prev,
+                    kategori: cats.length > 0 ? String(cats[0].id) : '',
+                    lokasi: locs.length > 0 ? String(locs[0].id) : '',
+                }))
+            } catch (err) {
+                console.error('Gagal mengambil data master:', err)
+            } finally {
+                setLoadingMasterData(false)
+            }
+        }
+        fetchMasterData()
+    }, [])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
@@ -41,26 +101,89 @@ export function AssetCreateView() {
     const handleSubmit = async (e: React.FormEvent, keepAdding: boolean = false) => {
         e.preventDefault()
         setLoading(true)
+        setErrorMessage('')
+        setWarningMessage('')
 
         try {
-            const payload = new FormData()
-            Object.entries(formData).forEach(([key, value]) => {
-                payload.append(key, value.toString())
-            })
-            fotos.forEach((file, index) => {
-                payload.append(`foto_${index}`, file)
-            })
 
-            console.log('Payload siap dikirim ke API:', formData, 'Jumlah Foto:', fotos.length)
-            
-            alert(keepAdding ? 'Aset berhasil disimpan! Silakan tambah lagi.' : 'Aset berhasil disimpan!')
-            
-            if (keepAdding) {
-                setFormData((prev) => ({ ...prev, namaBarang: '', keterangan: '' }))
-                setFotos([])
+            let photoUrls: string[] = []
+            if (fotos.length > 0) {
+                photoUrls = await assetService.uploadPhoto(fotos)
             }
-        } catch (error) {
+
+            const payload: CreateAssetPayload = {
+                name: formData.namaBarang,
+                category_id: Number(formData.kategori) || 1,
+                brand_id: formData.merek ? Number(formData.merek) : undefined,
+                quantity: Number(formData.jumlah) || 1,
+                unit: MAP_SATUAN[formData.satuan] || 'Unit',
+                condition: MAP_KONDISI[formData.kondisi] || 'Bagus',
+                status: MAP_STATUS[formData.status] || 'Digunakan',
+                purchase_price: formData.hargaPerolehan ? Number(formData.hargaPerolehan) : undefined,
+                purchase_date: formData.tanggalPerolehan || undefined,
+                location_id: formData.lokasi ? Number(formData.lokasi) : undefined,
+                holder_name: formData.pemegangAset || undefined,
+                notes: formData.keterangan || undefined,
+                asset_code: formData.kodeAset || undefined,
+                photos: photoUrls,
+            }
+
+
+            const res = await assetService.createAsset(payload)
+
+            // 4. Tangkap warning kemiripan nama dari c.command.CreateAsset
+            if (res.warning) {
+                setWarningMessage(res.warning)
+            }
+
+            if (keepAdding) {
+                // FR-C08: Pertahankan kategori, lokasi, dan tanggal perolehan
+                setFormData((prev) => ({
+                    ...prev,
+                    namaBarang: '',
+                    keterangan: '',
+                    pemegangAset: '',
+                    kodeAset: '',
+                }))
+                setFotos([])
+                alert('Aset berhasil disimpan! Silakan tambah aset berikutnya.')
+            } else {
+                alert('Aset berhasil disimpan!')
+                navigate({ to: '/asset' })
+            }
+        } catch (error: any) {
             console.error('Gagal menyimpan aset:', error)
+
+            const rawMsg: string = error.response?.data?.message || error.response?.data?.error || ''
+            let userFriendlyMsg = 'Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.'
+
+            // 1. Filter Validasi Input / Required Field dari Go
+            if (rawMsg.includes("failed on the 'required' tag")) {
+                if (rawMsg.includes("'Name'")) {
+                    userFriendlyMsg = 'Nama barang wajib diisi!'
+                } else if (rawMsg.includes("'Category'")) {
+                    userFriendlyMsg = 'Kategori aset wajib dipilih!'
+                } else if (rawMsg.includes("'Quantity'")) {
+                    userFriendlyMsg = 'Jumlah barang wajib diisi!'
+                } else {
+                    userFriendlyMsg = 'Mohon lengkapi semua field yang wajib diisi (*).'
+                }
+            }
+            // 2. Filter Error Database & System Lainnya
+            else if (rawMsg.includes('asset_photos') || rawMsg.includes('upload')) {
+                userFriendlyMsg = 'Gagal memproses foto aset. Pastikan format file sesuai (JPG/PNG/WEBP).'
+            } else if (rawMsg.includes('nomor urut kode aset sudah pernah digunakan')) {
+                userFriendlyMsg = 'Nomor urut kode aset ini sudah pernah dipakai sebelumnya. Kosongkan agar dibuat otomatis, atau gunakan nomor lain.'
+            } else if (rawMsg.includes('Duplicate entry') || rawMsg.includes('asset_code')) {
+                userFriendlyMsg = 'Kode aset sudah digunakan. Silakan gunakan kode aset lain.'
+            } else if (rawMsg.includes('foreign key constraint fails')) {
+                userFriendlyMsg = 'Kategori, Merek, atau Lokasi yang dipilih tidak valid.'
+            } else if (rawMsg && !rawMsg.includes('Field validation')) {
+                // Hanya pakai rawMsg jika bukan string error internal/validator Go
+                userFriendlyMsg = rawMsg
+            }
+
+            setErrorMessage(userFriendlyMsg)
         } finally {
             setLoading(false)
         }
@@ -69,10 +192,7 @@ export function AssetCreateView() {
     return (
         <form onSubmit={(e) => handleSubmit(e, false)} className="relative min-h-svh flex flex-col justify-between text-[#1C1C1E]">
             <div>
-                {/* STICKY HEADER (z-10 & pl-14 lg:pl-8 untuk ruang burger fixed) */}
                 <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Breadcrumb offset pl-14 di mobile agar bergeser ke kanan tombol burger */}
                     <div className="flex items-center gap-2 text-xs text-neutral-500 pl-14 lg:pl-0">
                         <span>Daftar Aset</span>
                         <span className="text-neutral-300">/</span>
@@ -90,17 +210,31 @@ export function AssetCreateView() {
                         <p className="text-xs text-neutral-500 mt-0.5">Field bertanda * wajib diisi. Validasi dijalankan di klien dan server (FR-C03).</p>
                     </div>
 
+                    {/* Alert Error dari Server */}
+                    {errorMessage && (
+                        <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs text-rose-700">
+                            {errorMessage}
+                        </div>
+                    )}
+
+                    {/* Alert Warning (Aset Mirip) dari Server */}
+                    {warningMessage && (
+                        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-800">
+                            <strong>Peringatan Kemiripan Aset:</strong> {warningMessage}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-6">
                             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
                                 <h2 className="text-sm font-bold text-neutral-900">Identitas barang</h2>
-                                
+
                                 <InputField
                                     label="Nama barang *"
                                     name="namaBarang"
                                     value={formData.namaBarang}
                                     onChange={handleChange}
-                                    errorText="Nama ini sangat mirip dengan 021/INC-GA/1/26 – MacBook Pro M1 13&quot; (Redaksi L3). Pastikan bukan aset yang sama (FR-C07)."
+                                    disabled={loading}
                                 />
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -109,14 +243,20 @@ export function AssetCreateView() {
                                         name="kategori"
                                         value={formData.kategori}
                                         onChange={handleChange}
-                                        options={[{ label: 'Komputer & Laptop', value: 'laptop' }]}
+                                        disabled={loading || loadingMasterData}
+                                        options={categories.map((c) => ({ label: c.name, value: String(c.id) }))}
                                     />
-                                    <InputField
+                                    <SelectedField
                                         label="Merek"
                                         name="merek"
                                         value={formData.merek}
                                         onChange={handleChange}
+                                        disabled={loading || loadingMasterData}
                                         helperText="Boleh dikosongkan. Admin dapat menambah merek baru dari sini."
+                                        options={[
+                                            { label: '- Tidak ada -', value: '' },
+                                            ...brands.map((b) => ({ label: b.name, value: String(b.id) })),
+                                        ]}
                                     />
                                 </div>
 
@@ -127,6 +267,7 @@ export function AssetCreateView() {
                                         name="jumlah"
                                         value={formData.jumlah}
                                         onChange={handleChange}
+                                        disabled={loading}
                                         helperText="Bilangan bulat minimal 1 (BR-03)."
                                     />
                                     <div className="space-y-1">
@@ -136,10 +277,10 @@ export function AssetCreateView() {
                                                 <button
                                                     key={item}
                                                     type="button"
+                                                    disabled={loading}
                                                     onClick={() => setFormData((prev) => ({ ...prev, satuan: item }))}
-                                                    className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition cursor-pointer ${
-                                                        formData.satuan === item ? 'bg-neutral-900 text-white shadow-2xs' : 'text-neutral-600 hover:text-neutral-900'
-                                                    }`}
+                                                    className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition cursor-pointer ${formData.satuan === item ? 'bg-neutral-900 text-white shadow-2xs' : 'text-neutral-600 hover:text-neutral-900'
+                                                        }`}
                                                 >
                                                     {item}
                                                 </button>
@@ -158,12 +299,11 @@ export function AssetCreateView() {
                                         {['Bagus', 'Rusak Ringan', 'Rusak Berat', 'Hilang'].map((kondisi) => (
                                             <span
                                                 key={kondisi}
-                                                onClick={() => setFormData((prev) => ({ ...prev, kondisi }))}
-                                                className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${
-                                                    formData.kondisi === kondisi
-                                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
-                                                        : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
-                                                }`}
+                                                onClick={() => !loading && setFormData((prev) => ({ ...prev, kondisi }))}
+                                                className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${formData.kondisi === kondisi
+                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
+                                                    : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+                                                    }`}
                                             >
                                                 {kondisi}
                                             </span>
@@ -177,12 +317,11 @@ export function AssetCreateView() {
                                         {['Digunakan', 'Tersedia', 'Diperbaiki'].map((status) => (
                                             <span
                                                 key={status}
-                                                onClick={() => setFormData((prev) => ({ ...prev, status }))}
-                                                className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${
-                                                    formData.status === status
-                                                        ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
-                                                        : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
-                                                }`}
+                                                onClick={() => !loading && setFormData((prev) => ({ ...prev, status }))}
+                                                className={`rounded-full px-4 py-1 text-xs font-medium border cursor-pointer transition ${formData.status === status
+                                                    ? 'bg-neutral-900 text-white border-neutral-900 font-semibold'
+                                                    : 'border-neutral-300 text-neutral-600 hover:bg-neutral-100'
+                                                    }`}
                                             >
                                                 {status}
                                             </span>
@@ -197,7 +336,8 @@ export function AssetCreateView() {
                                         name="hargaPerolehan"
                                         value={formData.hargaPerolehan}
                                         onChange={handleChange}
-                                        helperText="Ketik 19519000 – pemisah ribuan ditambahkan otomatis (FR-C04)."
+                                        disabled={loading}
+                                        helperText="Ketik nominal angka murni."
                                     />
                                     <InputField
                                         label="Tanggal perolehan"
@@ -205,6 +345,7 @@ export function AssetCreateView() {
                                         name="tanggalPerolehan"
                                         value={formData.tanggalPerolehan}
                                         onChange={handleChange}
+                                        disabled={loading}
                                         helperText="Tidak boleh melebihi hari ini (BR-05)."
                                     />
                                 </div>
@@ -215,13 +356,15 @@ export function AssetCreateView() {
                                         name="lokasi"
                                         value={formData.lokasi}
                                         onChange={handleChange}
-                                        options={[{ label: 'Redaksi Lantai 3', value: 'lt3' }]}
+                                        disabled={loading || loadingMasterData}
+                                        options={locations.map((l) => ({ label: l.name, value: String(l.id) }))}
                                     />
                                     <InputField
                                         label="Pemegang aset"
                                         name="pemegangAset"
                                         value={formData.pemegangAset}
                                         onChange={handleChange}
+                                        disabled={loading}
                                         placeholder="Nama karyawan atau tim"
                                     />
                                 </div>
@@ -233,8 +376,9 @@ export function AssetCreateView() {
                                         name="keterangan"
                                         value={formData.keterangan}
                                         onChange={handleChange}
+                                        disabled={loading}
                                         placeholder="Spesifikasi, nomor seri, catatan kondisi per unit..."
-                                        className="w-full rounded-xl border border-neutral-300 p-3 text-xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 resize-none"
+                                        className="w-full rounded-xl border border-neutral-300 p-3 text-xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 resize-none disabled:bg-neutral-100"
                                     ></textarea>
                                 </div>
                             </div>
@@ -242,19 +386,17 @@ export function AssetCreateView() {
 
                         <div className="space-y-6">
                             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-3">
-                                <label className="text-xs font-semibold text-neutral-900 block">Kode aset *</label>
+                                <label className="text-xs font-semibold text-neutral-900 block">Kode aset</label>
                                 <input
                                     type="text"
                                     name="kodeAset"
                                     value={formData.kodeAset}
                                     onChange={handleChange}
-                                    className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-xs bg-neutral-50 font-mono text-neutral-800"
+                                    disabled={loading}
+                                    placeholder="Otomatis di-generate jika dikosongkan"
+                                    className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-xs bg-neutral-50 font-mono text-neutral-800 disabled:opacity-50"
                                 />
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-emerald-600 font-medium">Dibuat otomatis</span>
-                                    <button type="button" className="text-blue-600 hover:underline cursor-pointer">Ubah manual</button>
-                                </div>
-                                <p className="text-[10px] text-neutral-400">Format NNN/INC-GA/M/YY – nomor urut berikutnya setelah 095. Wajib unik termasuk terhadap aset yang sudah dihapus (BR-01).</p>
+                                <p className="text-[10px] text-neutral-400">Kosongkan agar dibuat otomatis oleh server dengan format NNN/INC-GA/M/YY (BR-01).</p>
                             </div>
 
                             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
@@ -267,24 +409,26 @@ export function AssetCreateView() {
                                     <div className="text-xs font-medium text-indigo-600">Tarik file ke sini</div>
                                     <div className="text-[10px] text-neutral-400">JPG · PNG · WEBP – maks. 2 MB per file</div>
                                     <input
+                                        ref={fileInputRef}
                                         type="file"
                                         multiple
                                         accept="image/png, image/jpeg, image/webp"
                                         className="hidden"
+                                        disabled={loading}
                                         onChange={handleFileChange}
                                     />
                                 </label>
 
-                                <div className="flex items-center gap-3 pt-1 overflow-x-auto pb-2 no-scrollbar">
+                                <div className="grid grid-cols-3 gap-3 pt-1">
                                     {fotos.map((file, index) => (
-                                        <div key={index} className="relative h-16 w-16 rounded-xl border border-neutral-200 bg-neutral-100 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                                        <div key={index} className="relative aspect-square rounded-xl border border-neutral-200 bg-neutral-100 overflow-hidden flex items-center justify-center shadow-2xs">
                                             <img
                                                 src={URL.createObjectURL(file)}
                                                 alt={`Preview ${index}`}
                                                 className="h-full w-full object-cover"
                                             />
                                             {index === 0 && (
-                                                <span className="absolute bottom-1 left-1 rounded bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-neutral-900 shadow-2xs">
+                                                <span className="absolute bottom-1.5 left-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-neutral-900 shadow-2xs">
                                                     Utama
                                                 </span>
                                             )}
@@ -292,25 +436,18 @@ export function AssetCreateView() {
                                     ))}
 
                                     {fotos.length < 5 && (
-                                        <label className="h-16 w-16 rounded-xl border border-dashed border-neutral-300 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 cursor-pointer shrink-0 transition bg-neutral-50/50">
-                                            <span className="text-lg font-light">+</span>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                accept="image/png, image/jpeg, image/webp"
-                                                className="hidden"
-                                                onChange={handleFileChange}
-                                            />
-                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={loading}
+                                            className="aspect-square rounded-xl border-2 border-dashed border-neutral-300 flex items-center justify-center text-neutral-400 hover:border-indigo-300 hover:text-indigo-500 transition disabled:opacity-50 cursor-pointer"
+                                        >
+                                            <span className="text-xl font-light">+</span>
+                                        </button>
                                     )}
                                 </div>
 
                                 <p className="text-[10px] text-neutral-400">Foto pertama otomatis jadi foto utama (BR-10).</p>
-                            </div>
-
-                            <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4 space-y-1 shadow-2xs">
-                                <span className="text-xs font-semibold text-rose-900 block">Input beruntun</span>
-                                <p className="text-[11px] text-rose-700 leading-relaxed">Mencatat banyak aset sekaligus? Pakai “Simpan & Tambah Lagi” — kategori, lokasi, dan tanggal tetap terisi untuk entri berikutnya (FR-C08).</p>
                             </div>
                         </div>
                     </div>
@@ -320,7 +457,14 @@ export function AssetCreateView() {
             <div className="sticky bottom-0 z-20 flex flex-col sm:flex-row items-center justify-between border-t border-neutral-200/80 bg-white/90 backdrop-blur-md px-6 lg:px-8 py-4 shadow-md gap-4">
                 <span className="text-xs text-neutral-400">Perubahan belum tersimpan</span>
                 <div className="flex flex-wrap gap-3 w-full sm:w-auto justify-end">
-                    <button type="button" className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 cursor-pointer">Batal</button>
+                    <button
+                        type="button"
+                        onClick={() => navigate({ to: '/' })}
+                        disabled={loading}
+                        className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 cursor-pointer"
+                    >
+                        Batal
+                    </button>
                     <button
                         type="button"
                         onClick={(e) => handleSubmit(e, true)}
