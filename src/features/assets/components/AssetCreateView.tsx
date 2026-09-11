@@ -115,7 +115,7 @@ export function AssetCreateView() {
                 name: formData.namaBarang,
                 category_id: Number(formData.kategori) || 1,
                 brand_id: formData.merek ? Number(formData.merek) : undefined,
-                quantity: Number(formData.jumlah) || 1,
+                quantity: Math.max(1, Number(formData.jumlah) || 1),
                 unit: MAP_SATUAN[formData.satuan] || 'Unit',
                 condition: MAP_KONDISI[formData.kondisi] || 'Bagus',
                 status: MAP_STATUS[formData.status] || 'Digunakan',
@@ -157,8 +157,10 @@ export function AssetCreateView() {
             const rawMsg: string = error.response?.data?.message || error.response?.data?.error || ''
             let userFriendlyMsg = 'Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.'
 
-            // 1. Filter Validasi Input / Required Field dari Go
-            if (rawMsg.includes("failed on the 'required' tag")) {
+            // Tangkap error tag 'min' dari Go
+            if (rawMsg.includes("failed on the 'min' tag") || rawMsg.includes("min")) {
+                userFriendlyMsg = 'Jumlah barang minimal harus 1 unit!'
+            } else if (rawMsg.includes("failed on the 'required' tag")) {
                 if (rawMsg.includes("'Name'")) {
                     userFriendlyMsg = 'Nama barang wajib diisi!'
                 } else if (rawMsg.includes("'Category'")) {
@@ -168,18 +170,15 @@ export function AssetCreateView() {
                 } else {
                     userFriendlyMsg = 'Mohon lengkapi semua field yang wajib diisi (*).'
                 }
-            }
-            // 2. Filter Error Database & System Lainnya
-            else if (rawMsg.includes('asset_photos') || rawMsg.includes('upload')) {
+            } else if (rawMsg.includes('asset_photos') || rawMsg.includes('upload')) {
                 userFriendlyMsg = 'Gagal memproses foto aset. Pastikan format file sesuai (JPG/PNG/WEBP).'
             } else if (rawMsg.includes('nomor urut kode aset sudah pernah digunakan')) {
-                userFriendlyMsg = 'Nomor urut kode aset ini sudah pernah dipakai sebelumnya. Kosongkan agar dibuat otomatis, atau gunakan nomor lain.'
+                userFriendlyMsg = 'Nomor urut kode aset ini sudah pernah dipakai sebelumnya.'
             } else if (rawMsg.includes('Duplicate entry') || rawMsg.includes('asset_code')) {
                 userFriendlyMsg = 'Kode aset sudah digunakan. Silakan gunakan kode aset lain.'
             } else if (rawMsg.includes('foreign key constraint fails')) {
                 userFriendlyMsg = 'Kategori, Merek, atau Lokasi yang dipilih tidak valid.'
             } else if (rawMsg && !rawMsg.includes('Field validation')) {
-                // Hanya pakai rawMsg jika bukan string error internal/validator Go
                 userFriendlyMsg = rawMsg
             }
 
