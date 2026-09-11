@@ -1,62 +1,69 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from "axios"
+import { authStorage } from "@/lib/auth-storage"
+import type { ApiResponse, LoginResponse } from "@/types/auth"
+
+type RetryableRequest = AxiosRequestConfig & { _retry?: boolean }
+
+const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:8082/api"
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8082/api',
+  baseURL: apiBaseUrl,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-});
+})
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = authStorage.getAccessToken()
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`
   }
 
-  const apiKey = import.meta.env.VITE_API_KEY;
-  if (apiKey) {
-    config.headers['X-API-KEY'] = apiKey;
-  }
-
-  return config;
-});
-
+  return config
+})
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetryableRequest | undefined
 
     if (
       error.response?.status === 401 &&
+      originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/users/login')
+      !originalRequest.url?.includes("/users/login") &&
+      !originalRequest.url?.includes("/users/refresh-token")
     ) {
-      originalRequest._retry = true;
+      originalRequest._retry = true
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
+        const refreshToken = authStorage.getRefreshToken()
         if (!refreshToken) {
-          throw new Error('Refresh token tidak ditemukan');
+          throw new Error("Refresh token tidak ditemukan")
         }
 
-        const res = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8082/api'}/users/refresh`,
+        const res = await axios.post<ApiResponse<LoginResponse>>(
+          `${apiBaseUrl}/users/refresh-token`,
           { refresh_token: refreshToken }
-        );
+        )
 
-        const newAccessToken = res.data.data.access_token;
-        localStorage.setItem('access_token', newAccessToken);
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return api(originalRequest);
+        const tokens = res.data.data
+        if (!tokens?.access_token || !tokens.refresh_token) {
+          throw new Error("Token tidak ditemukan pada respons refresh")
+        }
+        authStorage.update(tokens)
+        originalRequest.headers = {
+          ...originalRequest.headers,
+          Authorization: `Bearer ${tokens.access_token}`,
+        }
+        return api(originalRequest)
       } catch (refreshError) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+        authStorage.clear()
+        window.location.href = "/login"
+        return Promise.reject(refreshError)
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject(error)
   }
-);
+)
