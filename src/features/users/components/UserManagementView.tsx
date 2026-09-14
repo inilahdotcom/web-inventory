@@ -22,7 +22,7 @@ export function UserManagementView() {
 
         <div className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
           <div className="overflow-x-auto">
-            <div className="min-w-[1000px]">
+            <div className="min-w-250">
               <div className="grid h-10 grid-cols-[1fr_16rem_9rem_8rem_11rem_8rem] items-center gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5">
                 <span className="text-xs font-semibold uppercase tracking-wider text-[#6b6f7e]">Nama</span>
                 <span className="text-xs font-semibold uppercase tracking-wider text-[#6b6f7e]">Email</span>
@@ -126,7 +126,7 @@ export function UserManagementView() {
         <div className="flex flex-col gap-3.5 rounded-2xl border border-[#eef0f3] bg-white p-5">
           <span className="text-base font-semibold">Matriks hak akses</span>
           <div className="overflow-x-auto">
-            <div className="min-w-[600px] grid grid-cols-[1fr_7rem_7rem_7rem] gap-0 text-sm text-[#1c1c1e]">
+            <div className="min-w-150 grid grid-cols-[1fr_7rem_7rem_7rem] gap-0 text-sm text-[#1c1c1e]">
               <span className="border-b border-[#e0e2e8] py-2 text-xs font-semibold uppercase tracking-wider text-[#6b6f7e]">Fitur</span>
               <span className="border-b border-[#e0e2e8] py-2 text-center text-xs font-semibold uppercase tracking-wider text-[#6b6f7e]">Admin</span>
               <span className="border-b border-[#e0e2e8] py-2 text-center text-xs font-semibold uppercase tracking-wider text-[#6b6f7e]">Staff GA</span>
