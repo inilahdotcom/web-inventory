@@ -25,6 +25,7 @@
     "@base-ui/react": "^1.7.0",
     "@tailwindcss/vite": "^4",
     "@tanstack/react-router": "^1.170.19",
+    "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.28.0",

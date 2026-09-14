@@ -7,6 +7,7 @@ export function AssetMutationView() {
   const [reason, setReason] = useState("Kebutuhan liputan tim redaksi")
   const [printReceipt, setPrintReceipt] = useState(true)
   const [notice, setNotice] = useState("")
+
   const reset = () => {
     setLocation("Redaksi Lantai 3")
     setHolder("Aditya Pratama")
@@ -14,6 +15,7 @@ export function AssetMutationView() {
     setReason("Kebutuhan liputan tim redaksi")
     setPrintReceipt(true)
   }
+
   return (
     <div className="min-h-svh bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="flex h-16 items-center overflow-hidden border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 text-[13px] text-[#8e91a0] sm:pr-6 lg:px-6">
@@ -23,7 +25,7 @@ export function AssetMutationView() {
         <span className="px-2">/</span>
         <span className="text-[#1c1c1e]">Mutasi</span>
       </header>
-      <main className="mx-auto flex w-full max-w-[876px] flex-col gap-[18px] p-4 py-7 sm:p-7">
+      <main className="mx-auto flex w-full max-w-219 flex-col gap-4.5 p-4 py-7 sm:p-7">
         <div>
           <h1 className="text-[28px] font-semibold tracking-[-.6px]">
             Mutasi &amp; serah terima aset
@@ -34,8 +36,8 @@ export function AssetMutationView() {
             yang punya riwayat mutasi tidak dapat dihapus permanen (BR-11).
           </p>
         </div>
-        <section className="flex flex-col gap-5 rounded-[20px] border border-[#eef0f3] bg-white p-5 sm:p-[22px]">
-          <div className="flex items-center gap-[14px] border-b border-[#eef0f3] pb-[18px]">
+        <section className="flex flex-col gap-5 rounded-[20px] border border-[#eef0f3] bg-white p-5 sm:p-5.5">
+          <div className="flex items-center gap-3.5 border-b border-[#eef0f3] pb-4.5">
             <div className="size-14 rounded-xl border border-[#e0e2e8] bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)]" />
             <div>
               <p className="font-mono text-[12px] text-[#4262ff]">
@@ -121,6 +123,7 @@ export function AssetMutationView() {
     </div>
   )
 }
+
 function LocationCard({
   title,
   tone,
@@ -132,7 +135,7 @@ function LocationCard({
 }) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl p-[18px] ${tone === "target" ? "bg-[#c3faf5]" : "bg-[#f7f8fa]"}`}
+      className={`flex flex-col gap-3 rounded-2xl p-4.5 ${tone === "target" ? "bg-[#c3faf5]" : "bg-[#f7f8fa]"}`}
     >
       <span
         className={`text-[11px] font-semibold tracking-[.5px] uppercase ${tone === "target" ? "text-[#187574]" : "text-[#6b6f7e]"}`}
@@ -143,6 +146,7 @@ function LocationCard({
     </div>
   )
 }
+
 function Data({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -151,6 +155,7 @@ function Data({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
+
 function Field({
   label,
   value,
@@ -163,12 +168,12 @@ function Field({
   mono?: boolean
 }) {
   return (
-    <label className="flex flex-col gap-[6px]">
+    <label className="flex flex-col gap-1.5">
       <span className="text-[11.5px] text-[#6b6f7e]">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`h-11 rounded-lg border border-[#c7cad5] bg-white px-[13px] text-[14px] outline-none ${mono ? "font-mono" : ""}`}
+        className={`h-11 rounded-lg border border-[#c7cad5] bg-white px-3.25 text-[14px] outline-none ${mono ? "font-mono" : ""}`}
       />
     </label>
   )

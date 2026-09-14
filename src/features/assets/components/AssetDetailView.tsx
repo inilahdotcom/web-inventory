@@ -81,7 +81,7 @@ export function AssetDetailView() {
             053/INC-GA/1/26
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-[10px]">
+        <div className="ml-auto flex items-center gap-2.5">
           <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
             ?
           </span>
@@ -91,23 +91,23 @@ export function AssetDetailView() {
         </div>
       </header>
 
-      <main className="flex flex-col gap-[18px] px-4 py-6 pb-7 sm:px-7">
+      <main className="flex flex-col gap-4.5 px-4 py-6 pb-7 sm:px-7">
         <section className="flex flex-col gap-4 xl:flex-row xl:items-start">
-          <div className="flex flex-col gap-[9px]">
+          <div className="flex flex-col gap-2.25">
             <span className="font-mono text-[13px] text-[#4262ff]">
               053/INC-GA/1/26
             </span>
             <h1 className="text-[28px] leading-none font-semibold tracking-[-0.8px] sm:text-[32px]">
               {asset.name}
             </h1>
-            <div className="flex flex-wrap gap-[7px]">
+            <div className="flex flex-wrap gap-1.75">
               <Badge tone="danger">Rusak Berat</Badge>
               <Badge tone="repair">Diperbaiki</Badge>
               <Badge>{asset.category}</Badge>
               <Badge>{asset.quantity}</Badge>
             </div>
           </div>
-          <div className="flex flex-wrap gap-[9px] xl:ml-auto xl:flex-nowrap">
+          <div className="flex flex-wrap gap-2.25 xl:ml-auto xl:flex-nowrap">
             <ActionButton
               variant="outline"
               onClick={() => setNotice("Mutasi aset siap diproses (simulasi).")}
@@ -130,10 +130,10 @@ export function AssetDetailView() {
 
         {notice && <Notice onClose={() => setNotice("")}>{notice}</Notice>}
 
-        <div className="grid gap-[18px] xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)]">
-          <div className="flex flex-col gap-[18px]">
+        <div className="grid gap-4.5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)]">
+          <div className="flex flex-col gap-4.5">
             <SectionCard>
-              <div className="flex items-baseline gap-[9px]">
+              <div className="flex items-baseline gap-2.25">
                 <h2 className="text-[16px] font-semibold">Foto aset</h2>
                 <span className="text-[11.5px] text-[#8e91a0]">
                   {photos.length} dari 5 terunggah
@@ -210,7 +210,7 @@ export function AssetDetailView() {
                   onChange={(value) => updateAsset("description", value)}
                 />
               </div>
-              <div className="flex flex-col gap-3 rounded-xl bg-[#fff8e0] px-[14px] py-3 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-3 rounded-xl bg-[#fff8e0] px-3.5 py-3 sm:flex-row sm:items-center">
                 <span className="text-[12.5px] leading-[1.45] text-[#746019]">
                   Kondisi campuran dalam satu record. Sesuai BR-09, pecah
                   menjadi dua record agar 1 unit rusak dan 3 unit bagus tercatat
@@ -232,7 +232,7 @@ export function AssetDetailView() {
             </SectionCard>
           </div>
 
-          <div className="flex flex-col gap-[18px]">
+          <div className="flex flex-col gap-4.5">
             <CompletenessCard />
             <SectionCard>
               <Heading title="Riwayat mutasi" detail="3 catatan" />
@@ -263,7 +263,7 @@ export function AssetDetailView() {
                   setNotice("Semua log audit dibuka (simulasi). ")
                 }
               />
-              <div className="mt-4 flex flex-col gap-[11px]">
+              <div className="mt-4 flex flex-col gap-2.75">
                 <AuditItem
                   title="Kondisi diubah"
                   detail={
@@ -289,11 +289,12 @@ export function AssetDetailView() {
 
 function SectionCard({ children }: { children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-[16px] rounded-[20px] border border-[#eef0f3] bg-white p-5">
+    <section className="flex flex-col gap-4 rounded-[20px] border border-[#eef0f3] bg-white p-5">
       {children}
     </section>
   )
 }
+
 function Badge({
   children,
   tone = "default",
@@ -309,12 +310,13 @@ function Badge({
   }
   return (
     <span
-      className={`rounded-full px-3 py-[5px] text-[12px] font-semibold ${tones[tone]}`}
+      className={`rounded-full px-3 py-1.25 text-[12px] font-semibold ${tones[tone]}`}
     >
       {children}
     </span>
   )
 }
+
 function ActionButton({
   children,
   onClick,
@@ -332,12 +334,13 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-fit shrink-0 items-center rounded-full font-semibold ${small ? "h-8 px-[14px] text-[12.5px]" : "h-10 px-4 text-[13.5px]"} ${variant === "dark" ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white text-[#1c1c1e]"} ${className}`}
+      className={`flex w-fit shrink-0 items-center rounded-full font-semibold ${small ? "h-8 px-3.5 text-[12.5px]" : "h-10 px-4 text-[13.5px]"} ${variant === "dark" ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white text-[#1c1c1e]"} ${className}`}
     >
       {children}
     </button>
   )
 }
+
 function Notice({
   children,
   onClose,
@@ -355,6 +358,7 @@ function Notice({
     </button>
   )
 }
+
 function PhotoSlot({
   image,
   label,
@@ -370,7 +374,7 @@ function PhotoSlot({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex ${main ? "h-[220px] rounded-[14px]" : "min-h-[104px] flex-1 rounded-xl"} items-center justify-center overflow-hidden border border-dashed border-[#c7cad5] bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)] text-[#8e91a0]`}
+      className={`relative flex ${main ? "h-55 rounded-[14px]" : "min-h-26 flex-1 rounded-xl"} items-center justify-center overflow-hidden border border-dashed border-[#c7cad5] bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)] text-[#8e91a0]`}
     >
       {image ? (
         <img src={image} alt={label} className="size-full object-cover" />
@@ -391,6 +395,7 @@ function PhotoSlot({
     </button>
   )
 }
+
 function InfoField({
   label,
   value,
@@ -410,7 +415,7 @@ function InfoField({
 }) {
   return (
     <label
-      className={`flex flex-col gap-[3px] border-b border-[#eef0f3] pb-3 ${wide ? "sm:col-span-2 sm:border-b-0 sm:pb-0" : ""}`}
+      className={`flex flex-col gap-0.75 border-b border-[#eef0f3] pb-3 ${wide ? "sm:col-span-2 sm:border-b-0 sm:pb-0" : ""}`}
     >
       <span className="text-[11.5px] text-[#6b6f7e]">{label}</span>
       {editing && onChange ? (
@@ -429,6 +434,7 @@ function InfoField({
     </label>
   )
 }
+
 function Heading({
   title,
   detail,
@@ -441,7 +447,7 @@ function Heading({
   onAction?: () => void
 }) {
   return (
-    <div className="flex items-baseline gap-[9px]">
+    <div className="flex items-baseline gap-2.25">
       <h2 className="text-[16px] font-semibold">{title}</h2>
       {detail && <span className="text-[11.5px] text-[#8e91a0]">{detail}</span>}
       {action && (
@@ -456,6 +462,7 @@ function Heading({
     </div>
   )
 }
+
 function CompletenessCard() {
   return (
     <section className="flex flex-col gap-3 rounded-[20px] bg-[#c3faf5] p-5">
@@ -468,7 +475,7 @@ function CompletenessCard() {
         </span>
         <span className="text-[13px] text-[#187574]">dari 10 field terisi</span>
       </div>
-      <span className="h-[7px] overflow-hidden rounded-full bg-[#187574]/20">
+      <span className="h-1.75 overflow-hidden rounded-full bg-[#187574]/20">
         <span className="block h-full w-[70%] rounded-full bg-[#187574]" />
       </span>
       <div className="flex flex-wrap gap-1.5">
@@ -479,6 +486,7 @@ function CompletenessCard() {
     </section>
   )
 }
+
 function TimelineItem({
   title,
   subtitle,
@@ -494,10 +502,10 @@ function TimelineItem({
 }) {
   return (
     <div
-      className={`relative ml-[5px] border-l-2 border-[#eef0f3] pl-4 ${last ? "" : "pb-4"}`}
+      className={`relative ml-1.25 border-l-2 border-[#eef0f3] pl-4 ${last ? "" : "pb-4"}`}
     >
       <span
-        className={`absolute top-0.5 -left-[6px] size-[10px] rounded-full ${active ? "bg-[#1c1c1e]" : "bg-[#c7cad5]"}`}
+        className={`absolute top-0.5 -left-1.5 size-2.5 rounded-full ${active ? "bg-[#1c1c1e]" : "bg-[#c7cad5]"}`}
       />
       <div className="flex flex-col gap-0.5">
         <span className="text-[13px] font-semibold">{title}</span>
@@ -509,6 +517,7 @@ function TimelineItem({
     </div>
   )
 }
+
 function AuditItem({
   title,
   detail,
@@ -519,7 +528,7 @@ function AuditItem({
   meta: string
 }) {
   return (
-    <div className="flex flex-col gap-[3px] border-b border-[#eef0f3] pb-[11px] last:border-0 last:pb-0">
+    <div className="flex flex-col gap-0.75 border-b border-[#eef0f3] pb-2.75 last:border-0 last:pb-0">
       <span className="text-[12.5px] font-semibold">{title}</span>
       <span className="text-[12px] text-[#6b6f7e]">{detail}</span>
       <span className="text-[11px] text-[#8e91a0]">{meta}</span>
