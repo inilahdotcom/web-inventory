@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/button'
+import { markLoginSuccess } from '@/lib/auth-storage'
 import { authService } from '@/services/authServices'
 
 export function LoginForm() {
@@ -16,16 +17,14 @@ export function LoginForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-
         setLoading(true)
         setErrorMessage('')
 
         try {
-            await authService.login({ email, password })
-            navigate({ to: '/' })
+            await authService.login({ email, password }, rememberMe)
+            markLoginSuccess()
+            await navigate({ to: '/' })
         } catch (error: any) {
-            console.error('Login gagal:', error)
-
             const resData = error.response?.data
             const status = error.response?.status
             const rawMsg = resData?.message || resData?.error || resData?.details
@@ -46,7 +45,7 @@ export function LoginForm() {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             {errorMessage && (
-                <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                     {errorMessage}
                 </div>
             )}

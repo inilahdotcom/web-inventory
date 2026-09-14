@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Route } from '@/routes/_app/asset/$id.edit'
+import { Route } from '@/routes/_app/asset/$id/edit'
 import { InputField } from '@/components/ui/InputField'
 import { SelectedField } from '@/components/ui/SelectedField'
 import { assetService, type UpdateAssetPayload, type AssetAttr, type AssetPhoto } from '@/services/assetService'

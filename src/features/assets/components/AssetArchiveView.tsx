@@ -34,17 +34,31 @@ export function AssetArchiveView() {
     setErrorMessage("")
     try {
       const data = await assetService.getArchivedAssets()
-      
-      const formattedAssets: ArchivedAsset[] = (data || []).map((item: any) => ({
-        id: item.id,
-        code: item.asset_code || item.code || "-",
-        name: item.name || "-",
-        reason: item.notes || item.reason || "Dihapus dari inventaris",
-        deletedAt: item.deleted_at ? new Date(item.deleted_at).toLocaleDateString('id-ID') : "-",
-        deletedBy: item.updated_by || item.deleted_by || "Admin",
-        hasMovementHistory: item.has_movement_history || false,
-      }))
-      
+
+      const formattedAssets: ArchivedAsset[] = (data || []).map((item: any) => {
+        // Ambil objek attributes jika backend dibungkus format JSON API
+        const attr = item.attributes || item
+
+        return {
+          id: item.id || attr.id,
+          // Ambil kode aset dari attr.code / attr.asset_code
+          code: attr.code || attr.asset_code || item.code || "-",
+          name: attr.name || item.name || "-",
+          // Ambil alasan penghapusan dari attr
+          reason:
+            attr.deleteReason ||
+            attr.delete_reason ||
+            attr.notes ||
+            attr.reason ||
+            "Dihapus dari inventaris",
+          deletedAt: attr.deletedAt || attr.deleted_at
+            ? new Date(attr.deletedAt || attr.deleted_at).toLocaleDateString("id-ID")
+            : "-",
+          deletedBy: attr.deletedBy || attr.deleted_by || "Admin",
+          hasMovementHistory: attr.has_movement_history || false,
+        }
+      })
+
       setAssets(formattedAssets)
     } catch (error: any) {
       console.error("Gagal mengambil arsip aset:", error)
@@ -74,7 +88,7 @@ export function AssetArchiveView() {
     setErrorMessage("")
     try {
       await assetService.restoreAsset(asset.id)
-      
+
       // Filter aset yang berhasil dipulihkan dari state
       setAssets((current) => current.filter((item) => item.id !== asset.id))
       setNotice(`Aset ${asset.code} (${asset.name}) berhasil dipulihkan ke daftar aktif!`)
