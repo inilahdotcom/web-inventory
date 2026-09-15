@@ -159,7 +159,7 @@ export function AssetArchiveView() {
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:pr-6 lg:px-6">
-        <label className="flex h-10 w-full max-w-75 min-w-0 items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px]">
+        <label className="flex h-10 w-full max-w-75 min-w-0 items-center gap-2.25 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25">
           <span className="text-[13px] text-[#a5a8b5]">⌕</span>
           <input
             value={query}
@@ -169,18 +169,18 @@ export function AssetArchiveView() {
             className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[#a5a8b5]"
           />
         </label>
-        <span className="ml-auto hidden rounded-full bg-[#1c1c1e] px-[13px] py-[6px] text-[12px] font-semibold text-white sm:block">
+        <span className="ml-auto hidden rounded-full bg-[#1c1c1e] px-3.25 py-1.5 text-[12px] font-semibold text-white sm:block">
           Halaman khusus Admin
         </span>
       </header>
 
-      <main className="flex flex-col gap-[18px] px-4 py-6 sm:px-7">
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-[14px]">
+      <main className="flex flex-col gap-4.5 px-4 py-6 sm:px-7">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-3.5">
           <div>
             <h1 className="text-[28px] font-semibold tracking-[-.6px]">
               Arsip aset
             </h1>
-            <p className="mt-[5px] text-[13px] text-[#6b6f7e]">
+            <p className="mt-1.25 text-[13px] text-[#6b6f7e]">
               Aset yang dihapus tidak hilang -{" "}
               <span className="font-mono text-[12px]">deleted_at</span> terisi
               dan record tetap tersimpan (FR-X01).
@@ -264,7 +264,7 @@ function ArchiveTable({
       <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
         {tableIsActive && (
           <>
-            <div className="hidden min-w-[1020px] grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] gap-[14px] border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-[13px] text-[10.5px] font-semibold tracking-[.4px] text-[#6b6f7e] uppercase md:grid">
+            <div className="hidden min-w-255 grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-3.25 text-[10.5px] font-semibold tracking-[.4px] text-[#6b6f7e] uppercase md:grid">
               <span>Kode</span>
               <span>Nama barang</span>
               <span>Alasan penghapusan</span>
@@ -401,7 +401,7 @@ function ArchiveRow({
   onDelete: (asset: ArchivedAsset) => void
 }) {
   return (
-    <div className="grid min-w-[1020px] grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] items-center gap-[14px] border-b border-[#eef0f3] px-5 py-[14px] last:border-0">
+    <div className="grid min-w-255 grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] items-center gap-3.5 border-b border-[#eef0f3] px-5 py-3.5 last:border-0">
       <span className="font-mono text-[12.5px] text-[#4262ff]">
         {asset.code}
       </span>
@@ -467,13 +467,13 @@ function ArchiveActions({
 }) {
   return (
     <div
-      className={`flex min-h-8 items-center gap-[7px] ${mobile ? "mt-4 flex-wrap" : compact ? "" : "justify-end"}`}
+      className={`flex min-h-8 items-center gap-1.75 ${mobile ? "mt-4 flex-wrap" : compact ? "" : "justify-end"}`}
     >
       <button
         type="button"
         disabled={isRestoring}
         onClick={() => onRestore(asset)}
-        className="h-8 shrink-0 rounded-full border border-[#c7cad5] bg-white px-[11px] text-[11.5px] font-semibold whitespace-nowrap sm:px-[13px] sm:text-[12.5px] cursor-pointer hover:bg-neutral-100 disabled:opacity-50"
+        className="h-8 shrink-0 rounded-full border border-[#c7cad5] bg-white px-2.75 text-[11.5px] font-semibold whitespace-nowrap sm:px-3.25 sm:text-[12.5px] cursor-pointer hover:bg-neutral-100 disabled:opacity-50"
       >
         {isRestoring ? "Memulihkan..." : "Pulihkan"}
       </button>
@@ -485,7 +485,7 @@ function ArchiveActions({
           type="button"
           disabled={isRestoring}
           onClick={() => onDelete(asset)}
-          className="h-8 shrink-0 rounded-full bg-[#ffc6c6] px-[11px] text-[11.5px] font-semibold whitespace-nowrap text-[#600000] sm:px-[13px] sm:text-[12.5px] cursor-pointer hover:bg-[#ffb0b0] disabled:opacity-50"
+          className="h-8 shrink-0 rounded-full bg-[#ffc6c6] px-2.75 text-[11.5px] font-semibold whitespace-nowrap text-[#600000] sm:px-3.25 sm:text-[12.5px] cursor-pointer hover:bg-[#ffb0b0] disabled:opacity-50"
         >
           Hapus permanen
         </button>
@@ -517,9 +517,9 @@ function PermanentDeleteDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-title"
-        className="flex w-full max-w-[468px] flex-col gap-[15px] rounded-[20px] bg-white p-5 shadow-[0_16px_48px_-8px_rgba(5,0,56,.12)] sm:p-[26px]"
+        className="flex w-full max-w-117 flex-col gap-3.75 rounded-[20px] bg-white p-5 shadow-[0_16px_48px_-8px_rgba(5,0,56,.12)] sm:p-6.5"
       >
-        <span className="w-fit rounded-full bg-[#ffc6c6] px-3 py-[5px] text-[12px] font-semibold text-[#600000]">
+        <span className="w-fit rounded-full bg-[#ffc6c6] px-3 py-1.25 text-[12px] font-semibold text-[#600000]">
           Tidak dapat dibatalkan
         </span>
         <h2
@@ -536,17 +536,17 @@ function PermanentDeleteDialog({
           beserta fotonya akan dihapus dari basis data. Audit log tetap
           menyimpan jejak penghapusan.
         </p>
-        <label className="flex flex-col gap-[7px] text-[13px] font-semibold">
+        <label className="flex flex-col gap-1.75 text-[13px] font-semibold">
           Ketik ulang kode aset untuk konfirmasi
           <input
             value={confirmationCode}
             disabled={isDeleting}
             onChange={(event) => onChange(event.target.value)}
             placeholder={asset.code}
-            className="h-11 rounded-lg border-2 border-[#4262ff] px-[14px] font-mono text-[14px] outline-none disabled:opacity-50"
+            className="h-11 rounded-lg border-2 border-[#4262ff] px-3.5 font-mono text-[14px] outline-none disabled:opacity-50"
           />
         </label>
-        <div className="flex justify-end gap-[10px] pt-1">
+        <div className="flex justify-end gap-2.5 pt-1">
           <button
             type="button"
             disabled={isDeleting}
@@ -559,7 +559,7 @@ function PermanentDeleteDialog({
             type="button"
             disabled={!canDelete}
             onClick={onConfirm}
-            className="h-11 rounded-full bg-[#1c1c1e] px-[22px] text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer hover:bg-black"
+            className="h-11 rounded-full bg-[#1c1c1e] px-5.5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer hover:bg-black"
           >
             {isDeleting ? "Menghapus..." : "Hapus permanen"}
           </button>
