@@ -81,15 +81,16 @@ function toAsset(item: AssetListItem): Asset {
     status: attr.status,
     location: attr.location || "—",
     price:
-      attr.acquisitionPrice !== null && attr.acquisitionPrice !== undefined
-        ? formatNumber.format(attr.acquisitionPrice)
+      attr.acquisitionPrice !== null &&
+        attr.acquisitionPrice !== undefined &&
+        attr.acquisitionPrice > 0
+        ? `Rp. ${formatNumber.format(attr.acquisitionPrice)}`
         : undefined,
     priceValue,
     attention: attr.condition !== "Bagus",
     hasPhoto,
   }
 }
-
 const tableColumns =
   "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
 
@@ -132,7 +133,7 @@ export function AssetListView() {
     const maximum = priceMax ? Number(priceMax) : undefined
 
     return assets.filter((asset) => {
-      // 1. Filter Rentang Harga (Min & Max)
+
       const matchMin = minimum === undefined || asset.priceValue >= minimum
       const matchMax = maximum === undefined || asset.priceValue <= maximum
       if (!matchMin || !matchMax) return false
@@ -1040,7 +1041,7 @@ function AssetCard({
             </span>
             <span>
               <b className="block text-[#1c1c1e]">Harga</b>
-              {asset.price ? `Rp ${asset.price}` : "Belum diisi"}
+              {asset.price ?? "Belum diisi"}
             </span>
           </div>
         </div>

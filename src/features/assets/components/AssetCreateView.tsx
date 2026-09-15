@@ -56,6 +56,14 @@ export function AssetCreateView() {
     const [warningMessage, setWarningMessage] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    const formatNumber = new Intl.NumberFormat("id-ID")
+    const rupiahInput = (value: string) => {
+        if (!value) return ""
+        const cleanNumber = value.replace(/\D/g, "")
+        return cleanNumber ? `Rp. ${formatNumber.format(Number(cleanNumber))}` : ""
+    }
+    const numericValue = (value: string) => value.replace(/\D/g, "")
+
     useEffect(() => {
         const fetchMasterData = async () => {
             try {
@@ -137,23 +145,23 @@ export function AssetCreateView() {
                 setWarningMessage(res.warning)
             }
 
-           if (keepAdding) {
-    // FR-C08: Pertahankan kategori, lokasi, dan tanggal perolehan
-    setFormData((prev) => ({
-        ...prev,
-        namaBarang: '',
-        keterangan: '',
-        pemegangAset: '',
-        kodeAset: '',
-    }))
-    setFotos([])
-    toast.success('Aset berhasil disimpan!', {
-        description: 'Silakan tambah aset berikutnya.',
-    })
-} else {
-    toast.success('Aset berhasil disimpan!')
-    navigate({ to: '/asset' })
-}
+            if (keepAdding) {
+                // FR-C08: Pertahankan kategori, lokasi, dan tanggal perolehan
+                setFormData((prev) => ({
+                    ...prev,
+                    namaBarang: '',
+                    keterangan: '',
+                    pemegangAset: '',
+                    kodeAset: '',
+                }))
+                setFotos([])
+                toast.success('Aset berhasil disimpan!', {
+                    description: 'Silakan tambah aset berikutnya.',
+                })
+            } else {
+                toast.success('Aset berhasil disimpan!')
+                navigate({ to: '/asset' })
+            }
         } catch (error: any) {
             console.error('Gagal menyimpan aset:', error)
 
@@ -232,9 +240,10 @@ export function AssetCreateView() {
                                 <h2 className="text-sm font-bold text-neutral-900">Identitas barang</h2>
 
                                 <InputField
-                                    label="Nama barang *"
+                                    label="Nama barang"
                                     name="namaBarang"
                                     value={formData.namaBarang}
+                                    placeholder="Masukan nama barang"
                                     onChange={handleChange}
                                     disabled={loading}
                                 />
@@ -336,10 +345,14 @@ export function AssetCreateView() {
                                     <InputField
                                         label="Harga perolehan"
                                         name="hargaPerolehan"
-                                        value={formData.hargaPerolehan}
-                                        onChange={handleChange}
+                                        value={rupiahInput(formData.hargaPerolehan)}
+                                        onChange={(e) => {
+                                            const rawNumber = numericValue(e.target.value)
+                                            setFormData((prev) => ({ ...prev, hargaPerolehan: rawNumber }))
+                                        }}
                                         disabled={loading}
-                                        helperText="Ketik nominal angka murni."
+                                        placeholder="Masukan angka harga"
+                                        helperText="Ketik nominal angka, format Rp. otomatis disesuaikan."
                                     />
                                     <InputField
                                         label="Tanggal perolehan"
@@ -367,7 +380,7 @@ export function AssetCreateView() {
                                         value={formData.pemegangAset}
                                         onChange={handleChange}
                                         disabled={loading}
-                                        placeholder="Nama karyawan atau tim"
+                                        placeholder="Masukan nama karyawan atau tim"
                                     />
                                 </div>
 
