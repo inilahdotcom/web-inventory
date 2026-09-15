@@ -1,6 +1,7 @@
 import { LayoutGrid, Table2 } from "lucide-react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { assetService } from "@/services/assetService"
+import { assetService } from "@/services/assetServices"
+import { toast } from "sonner"
 
 type ArchivedAsset = {
   id: string
@@ -48,7 +49,6 @@ export function AssetArchiveView() {
           reason:
             attr.deleteReason ||
             attr.delete_reason ||
-            attr.notes ||
             attr.reason ||
             "Dihapus dari inventaris",
           deletedAt: attr.deletedAt || attr.deleted_at
@@ -82,7 +82,6 @@ export function AssetArchiveView() {
     )
   }, [assets, query])
 
-  // 2. Eksekusi Restore / Pemulihan Aset
   const restoreAsset = async (asset: ArchivedAsset) => {
     setRestoringId(asset.id)
     setErrorMessage("")
@@ -91,11 +90,11 @@ export function AssetArchiveView() {
 
       // Filter aset yang berhasil dipulihkan dari state
       setAssets((current) => current.filter((item) => item.id !== asset.id))
-      setNotice(`Aset ${asset.code} (${asset.name}) berhasil dipulihkan ke daftar aktif!`)
+      toast.success(`Aset ${asset.code} (${asset.name}) berhasil dipulihkan ke daftar aktif!`)
     } catch (error: any) {
       console.error("Gagal memulihkan aset:", error)
       const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
-      alert(rawMsg || "Gagal memulihkan aset dari arsip.")
+      toast.error(rawMsg || "Gagal memulihkan aset dari arsip.")
     } finally {
       setRestoringId(null)
     }
@@ -113,7 +112,6 @@ export function AssetArchiveView() {
     setDeleteReason("")
   }
 
-  // 3. Eksekusi Hapus Permanen ke Backend
   const deletePermanently = async () => {
     if (!deleteTarget || confirmationCode !== deleteTarget.code) return
 
@@ -161,7 +159,7 @@ export function AssetArchiveView() {
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:pr-6 lg:px-6">
-        <label className="flex h-10 w-full max-w-[300px] min-w-0 items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px]">
+        <label className="flex h-10 w-full max-w-75 min-w-0 items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px]">
           <span className="text-[13px] text-[#a5a8b5]">⌕</span>
           <input
             value={query}

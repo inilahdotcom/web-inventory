@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { InputField } from '@/components/ui/InputField'
 import { SelectedField } from '@/components/ui/SelectedField'
-import { assetService, type CreateAssetPayload } from '@/services/assetService'
+import { assetService, type CreateAssetPayload } from '@/services/assetServices'
 import { masterDataService, type MasterDataItem } from '@/services/masterDataService'
+import { toast } from "sonner"
 
 // Map UI pilihan ke nilai ENUM database MySQL
 const MAP_SATUAN: Record<string, string> = {
@@ -136,21 +137,23 @@ export function AssetCreateView() {
                 setWarningMessage(res.warning)
             }
 
-            if (keepAdding) {
-                // FR-C08: Pertahankan kategori, lokasi, dan tanggal perolehan
-                setFormData((prev) => ({
-                    ...prev,
-                    namaBarang: '',
-                    keterangan: '',
-                    pemegangAset: '',
-                    kodeAset: '',
-                }))
-                setFotos([])
-                alert('Aset berhasil disimpan! Silakan tambah aset berikutnya.')
-            } else {
-                alert('Aset berhasil disimpan!')
-                navigate({ to: '/asset' })
-            }
+           if (keepAdding) {
+    // FR-C08: Pertahankan kategori, lokasi, dan tanggal perolehan
+    setFormData((prev) => ({
+        ...prev,
+        namaBarang: '',
+        keterangan: '',
+        pemegangAset: '',
+        kodeAset: '',
+    }))
+    setFotos([])
+    toast.success('Aset berhasil disimpan!', {
+        description: 'Silakan tambah aset berikutnya.',
+    })
+} else {
+    toast.success('Aset berhasil disimpan!')
+    navigate({ to: '/asset' })
+}
         } catch (error: any) {
             console.error('Gagal menyimpan aset:', error)
 

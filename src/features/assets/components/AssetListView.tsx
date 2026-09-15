@@ -2,12 +2,18 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
+import { toast } from "sonner"
 import type {
   AssetCondition,
   AssetListItem,
+  AssetListData,
   AssetMasterItem,
   AssetPagination,
 } from "@/types/asset"
+
+const formatNumber = new Intl.NumberFormat("id-ID")
+const rupiahInput = (value: string) => (value ? formatNumber.format(Number(value)) : "")
+const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
   id: string
@@ -25,6 +31,7 @@ type Asset = {
   price?: string
   priceValue: number
   attention?: boolean
+  hasPhoto: boolean
 }
 
 type QuickFilter =
@@ -47,10 +54,6 @@ const emptyPagination: AssetPagination = {
   nextCursor: "",
 }
 
-const formatNumber = new Intl.NumberFormat("id-ID")
-const rupiahInput = (value: string) =>
-  value ? formatNumber.format(Number(value)) : ""
-const numericInput = (value: string) => value.replace(/\D/g, "")
 const conditionOptions: AssetCondition[] = [
   "Bagus",
   "Rusak Ringan",
@@ -60,28 +63,30 @@ const conditionOptions: AssetCondition[] = [
 const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
 
 function toAsset(item: AssetListItem): Asset {
-  const attributes = item.attributes
-  const priceValue = attributes.acquisitionPrice ?? 0
+  const attr = (item.attributes || item) as AssetListData
+  const priceValue = attr.acquisitionPrice ?? 0
+  const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
 
   return {
-    id: item.id || (attributes as any)?.id || "",
-    slug: attributes.slug,
-    code: attributes.code,
-    name: attributes.name,
-    detail: attributes.holder || attributes.status,
-    category: attributes.category || "—",
-    brand: attributes.brand || "—",
-    quantity: attributes.quantity,
-    unit: attributes.unit,
-    condition: attributes.condition,
-    status: attributes.status,
-    location: attributes.location || "—",
+    id: item.id || "",
+    slug: attr.slug || "",
+    code: attr.code || "",
+    name: attr.name || "",
+    detail: attr.holder || attr.status || "",
+    category: attr.category || "—",
+    brand: attr.brand || "—",
+    quantity: attr.quantity ?? 1,
+    unit: attr.unit || "Unit",
+    condition: attr.condition,
+    status: attr.status,
+    location: attr.location || "—",
     price:
-      attributes.acquisitionPrice !== null
-        ? formatNumber.format(attributes.acquisitionPrice)
+      attr.acquisitionPrice !== null && attr.acquisitionPrice !== undefined
+        ? formatNumber.format(attr.acquisitionPrice)
         : undefined,
     priceValue,
-    attention: attributes.condition !== "Bagus",
+    attention: attr.condition !== "Bagus",
+    hasPhoto,
   }
 }
 
@@ -106,8 +111,8 @@ export function AssetListView() {
   const [categories, setCategories] = useState<AssetMasterItem[]>([])
   const [locations, setLocations] = useState<AssetMasterItem[]>([])
   const [openFilter, setOpenFilter] = useState<string | null>(null)
-  type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc";
-  const [sort, setSort] = useState<SortOption>("code:asc");
+  type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
+  const [sort, setSort] = useState<SortOption>("code:asc")
   const [assets, setAssets] = useState<Asset[]>([])
   const [pagination, setPagination] = useState<AssetPagination>(emptyPagination)
   const [cursor, setCursor] = useState("")
@@ -126,12 +131,38 @@ export function AssetListView() {
     const minimum = priceMin ? Number(priceMin) : undefined
     const maximum = priceMax ? Number(priceMax) : undefined
 
-    return assets.filter(
-      (asset) =>
-        (minimum === undefined || asset.priceValue >= minimum) &&
-        (maximum === undefined || asset.priceValue <= maximum)
-    )
-  }, [assets, priceMax, priceMin])
+    return assets.filter((asset) => {
+      // 1. Filter Rentang Harga (Min & Max)
+      const matchMin = minimum === undefined || asset.priceValue >= minimum
+      const matchMax = maximum === undefined || asset.priceValue <= maximum
+      if (!matchMin || !matchMax) return false
+
+      // 2. Filter Quick Filter Chips
+      if (quickFilter === "needsAttention") {
+        return asset.attention || asset.condition !== "Bagus"
+      }
+
+      if (quickFilter === "withoutPrice") {
+        return asset.priceValue === 0 || asset.price === undefined
+      }
+
+      // 🚀 PENGECEKAN PERSISI TANPA FOTO:
+      if (quickFilter === "withoutPhoto") {
+        return !asset.hasPhoto
+      }
+
+      if (quickFilter === "duplicateCondition") {
+        return assets.some(
+          (other) =>
+            other.code !== asset.code &&
+            other.condition === asset.condition &&
+            other.name === asset.name
+        )
+      }
+
+      return true
+    })
+  }, [assets, priceMax, priceMin, quickFilter])
 
   const pageSummary = useMemo(
     () => ({
@@ -172,6 +203,39 @@ export function AssetListView() {
         ? new Set()
         : new Set(visibleAssets.map((asset) => asset.code))
     )
+
+  const handleBulkDelete = async () => {
+    const idsToDelete = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (idsToDelete.length === 0) {
+      toast.error("Tidak ada aset valid yang bisa dihapus.")
+      return
+    }
+
+    const reason = window.prompt(
+      `${idsToDelete.length} aset akan dipindahkan ke Arsip. Masukkan alasan:`,
+      "Dihapus massal dari daftar aset"
+    )
+    if (reason === null || reason.trim() === "") return
+
+    try {
+      await assetService.bulkDelete({
+        asset_ids: idsToDelete,
+        reason,
+      })
+      toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
+
+      setSelectedCodes(new Set())
+      setReloadKey((value) => value + 1)
+    } catch (error: any) {
+      toast.error(
+        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+      )
+    }
+  }
 
   const resetPagination = () => {
     setCursor("")
@@ -247,9 +311,7 @@ export function AssetListView() {
         setCategories(categoryData)
         setLocations(locationData)
       })
-      .catch(() => {
-        // Filter data utama tetap dapat digunakan bila master data gagal dimuat.
-      })
+      .catch(() => { })
 
     return () => {
       isCurrent = false
@@ -291,7 +353,8 @@ export function AssetListView() {
             needsAttention: quickFilter === "needsAttention" || undefined,
             withoutPrice: quickFilter === "withoutPrice" || undefined,
             withoutPhoto: quickFilter === "withoutPhoto" || undefined,
-            duplicateCondition: quickFilter === "duplicateCondition" || undefined,
+            duplicateCondition:
+              quickFilter === "duplicateCondition" || undefined,
             cursor: cursor || undefined,
           },
           controller.signal
@@ -377,7 +440,7 @@ export function AssetListView() {
             <Pill className="h-10 px-4 text-sm">Export Excel</Pill>
             <button
               type="button"
-              onClick={() => navigate({ to : '/asset/new'})}
+              onClick={() => navigate({ to: "/asset/new" })}
               className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
             >
               + Tambah Aset
@@ -565,7 +628,7 @@ export function AssetListView() {
                 </button>
               ))}
               <button
-                onClick={() => setSelectedCodes(new Set())}
+                onClick={handleBulkDelete}
                 className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
               >
                 Hapus
@@ -804,20 +867,17 @@ function ActionMenu({ asset }: { asset: Asset }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // ... useEffect menuRef tetap sama ...
-
   const goToEdit = () => {
     setOpen(false)
 
-    // Validasi penanganan ID agar tidak pernah terkirim string "undefined"
     if (!asset.id) {
       alert("ID Aset tidak valid atau tidak ditemukan.")
       return
     }
 
     navigate({
-      to: '/asset/$id/edit',
-      params: { id: String(asset.id) }
+      to: "/asset/$id/edit",
+      params: { id: String(asset.id) },
     })
   }
 
@@ -837,7 +897,9 @@ function ActionMenu({ asset }: { asset: Asset }) {
       window.location.reload()
     } catch (error: any) {
       console.error("Detail Error Delete:", error?.response || error)
-      alert(`Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`)
+      alert(
+        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+      )
     }
   }
 
@@ -858,7 +920,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
           role="menu"
           className="absolute right-0 top-8 z-30 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
         >
-             <button
+          <button
             type="button"
             role="menuitem"
             onClick={goToEdit}
@@ -887,6 +949,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
     </div>
   )
 }
+
 function MobileAssetRow({
   asset,
   selected,

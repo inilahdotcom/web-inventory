@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner' // 1. Import Sonner
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/button'
 import { markLoginSuccess } from '@/lib/auth-storage'
@@ -23,6 +24,12 @@ export function LoginForm() {
         try {
             await authService.login({ email, password }, rememberMe)
             markLoginSuccess()
+
+            // 🚀 2. Panggil toast sukses di sini
+            toast.success("Login berhasil", {
+                description: "Selamat datang di INC Inventaris.",
+            })
+
             await navigate({ to: '/' })
         } catch (error: any) {
             const resData = error.response?.data
@@ -30,13 +37,19 @@ export function LoginForm() {
             const rawMsg = resData?.message || resData?.error || resData?.details
             const cleanMsg = rawMsg?.toLowerCase() || ''
 
+            let msg = ''
             if (rawMsg && cleanMsg !== 'bad_request' && cleanMsg !== 'unauthorized') {
-                setErrorMessage(rawMsg)
+                msg = rawMsg
             } else if (status === 401 || status === 400) {
-                setErrorMessage('Email atau password salah. Silakan periksa kembali.')
+                msg = 'Email atau password salah. Silakan periksa kembali.'
             } else {
-                setErrorMessage('Terjadi kesalahan pada server. Silakan coba lagi nanti.')
+                msg = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.'
             }
+
+            setErrorMessage(msg)
+            
+            // 🚀 3. Panggil toast error (opsional)
+            toast.error("Gagal Masuk", { description: msg })
         } finally {
             setLoading(false)
         }

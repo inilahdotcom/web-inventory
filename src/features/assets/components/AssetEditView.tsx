@@ -3,7 +3,8 @@ import { useNavigate } from '@tanstack/react-router'
 import { Route } from '@/routes/_app/asset/$id/edit'
 import { InputField } from '@/components/ui/InputField'
 import { SelectedField } from '@/components/ui/SelectedField'
-import { assetService, type UpdateAssetPayload, type AssetAttr, type AssetPhoto } from '@/services/assetService'
+import { assetService, type UpdateAssetPayload, type AssetAttr, type AssetPhoto } from '@/services/assetServices'
+import { toast } from "sonner"
 
 export function AssetEditView() {
     const { id } = Route.useParams()
@@ -67,6 +68,7 @@ export function AssetEditView() {
         try {
             await assetService.setPrimaryPhoto(id, photoId)
             setPhotos((prev) => prev.map((p) => ({ ...p, isPrimary: p.id === photoId })))
+            toast.success('Foto utama diperbarui')
         } catch (err: any) {
             setPhotoError(err.response?.data?.message || 'Gagal menjadikan foto utama')
         }
@@ -77,6 +79,7 @@ export function AssetEditView() {
         try {
             await assetService.deletePhoto(photoId)
             setPhotos((prev) => prev.filter((p) => p.id !== photoId))
+            toast.success('Foto berhasil dihapus')
         } catch (err: any) {
             setPhotoError(err.response?.data?.message || 'Gagal menghapus foto')
         }
@@ -122,7 +125,7 @@ export function AssetEditView() {
 
         try {
             await assetService.updateAsset(id, payload)
-            alert('Perubahan berhasil disimpan!')
+            toast.success('Perubahan berhasil disimpan!')
             navigate({ to: '/asset' })
         } catch (err: any) {
             setError(err.response?.data?.message || 'Gagal menyimpan perubahan')
