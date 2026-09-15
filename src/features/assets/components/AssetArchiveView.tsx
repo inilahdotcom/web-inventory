@@ -1,7 +1,10 @@
 import { LayoutGrid, Table2 } from "lucide-react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { assetService } from "@/services/assetServices"
+import { toast } from "sonner"
 
 type ArchivedAsset = {
+  id: string
   code: string
   name: string
   reason: string
@@ -10,41 +13,65 @@ type ArchivedAsset = {
   hasMovementHistory?: boolean
 }
 
-const initialArchivedAssets: ArchivedAsset[] = [
-  {
-    code: "047/INC-GA/1/26",
-    name: 'Macbook Pro M1 13"',
-    reason: "Duplikat baris 41-51 hasil migrasi Excel",
-    deletedAt: "05/08/2026",
-    deletedBy: "Rizky Saputra",
-  },
-  {
-    code: "048/INC-GA/1/26",
-    name: "MSI GF65 Thin 10UE",
-    reason: "Duplikat baris 41-51 hasil migrasi Excel",
-    deletedAt: "05/08/2026",
-    deletedBy: "Rizky Saputra",
-  },
-  {
-    code: "012/INC-GA/1/26",
-    name: "Printer Epson L3110",
-    reason: "Aset dilelang, sudah keluar dari inventaris",
-    deletedAt: "28/07/2026",
-    deletedBy: "Rizky Saputra",
-    hasMovementHistory: true,
-  },
-]
-
 export function AssetArchiveView() {
   const [query, setQuery] = useState("")
-  const [assets, setAssets] = useState(initialArchivedAssets)
+  const [assets, setAssets] = useState<ArchivedAsset[]>([])
+  const [loading, setLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<ArchivedAsset | null>(null)
   const [confirmationCode, setConfirmationCode] = useState("")
+  const [deleteReason, setDeleteReason] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
   const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 767px)").matches
   )
+
+  // 1. Fetch data arsip dari backend Go
+  const fetchArchivedAssets = async () => {
+    setLoading(true)
+    setErrorMessage("")
+    try {
+      const data = await assetService.getArchivedAssets()
+
+      const formattedAssets: ArchivedAsset[] = (data || []).map((item: any) => {
+        // Ambil objek attributes jika backend dibungkus format JSON API
+        const attr = item.attributes || item
+
+        return {
+          id: item.id || attr.id,
+          // Ambil kode aset dari attr.code / attr.asset_code
+          code: attr.code || attr.asset_code || item.code || "-",
+          name: attr.name || item.name || "-",
+          // Ambil alasan penghapusan dari attr
+          reason:
+            attr.deleteReason ||
+            attr.delete_reason ||
+            attr.reason ||
+            "Dihapus dari inventaris",
+          deletedAt: attr.deletedAt || attr.deleted_at
+            ? new Date(attr.deletedAt || attr.deleted_at).toLocaleDateString("id-ID")
+            : "-",
+          deletedBy: attr.deletedBy || attr.deleted_by || "Admin",
+          hasMovementHistory: attr.has_movement_history || false,
+        }
+      })
+
+      setAssets(formattedAssets)
+    } catch (error: any) {
+      console.error("Gagal mengambil arsip aset:", error)
+      const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
+      setErrorMessage(rawMsg || "Gagal memuat data arsip dari server.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchArchivedAssets()
+  }, [])
 
   const filteredAssets = useMemo(() => {
     const keyword = query.toLowerCase()
@@ -55,28 +82,67 @@ export function AssetArchiveView() {
     )
   }, [assets, query])
 
-  const restoreAsset = (asset: ArchivedAsset) => {
-    setAssets((current) => current.filter((item) => item.code !== asset.code))
-    setNotice(`${asset.code} dipulihkan ke daftar aset (simulasi).`)
+  const restoreAsset = async (asset: ArchivedAsset) => {
+    setRestoringId(asset.id)
+    setErrorMessage("")
+    try {
+      await assetService.restoreAsset(asset.id)
+
+      // Filter aset yang berhasil dipulihkan dari state
+      setAssets((current) => current.filter((item) => item.id !== asset.id))
+      toast.success(`Aset ${asset.code} (${asset.name}) berhasil dipulihkan ke daftar aktif!`)
+    } catch (error: any) {
+      console.error("Gagal memulihkan aset:", error)
+      const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
+      toast.error(rawMsg || "Gagal memulihkan aset dari arsip.")
+    } finally {
+      setRestoringId(null)
+    }
   }
 
   const openDeleteDialog = (asset: ArchivedAsset) => {
     setDeleteTarget(asset)
     setConfirmationCode("")
+    setDeleteReason("Penghapusan permanen dari arsip")
   }
 
   const closeDeleteDialog = () => {
     setDeleteTarget(null)
     setConfirmationCode("")
+    setDeleteReason("")
   }
 
-  const deletePermanently = () => {
+  const deletePermanently = async () => {
     if (!deleteTarget || confirmationCode !== deleteTarget.code) return
-    setAssets((current) =>
-      current.filter((asset) => asset.code !== deleteTarget.code)
-    )
-    setNotice(`${deleteTarget.code} dihapus permanen (simulasi).`)
-    closeDeleteDialog()
+
+    setIsDeleting(true)
+    setErrorMessage("")
+    try {
+      await assetService.permanentDeleteAsset(deleteTarget.id, {
+        asset_code: confirmationCode,
+        reason: deleteReason,
+      })
+
+      setAssets((current) =>
+        current.filter((asset) => asset.id !== deleteTarget.id)
+      )
+      setNotice(`Aset ${deleteTarget.code} berhasil dihapus permanen.`)
+      closeDeleteDialog()
+    } catch (error: any) {
+      console.error("Gagal hapus permanen:", error)
+      const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
+
+      let userMsg = "Gagal menghapus aset secara permanen."
+      if (rawMsg.includes("mismatch") || rawMsg.includes("asset_code")) {
+        userMsg = "Kode aset yang dimasukkan tidak cocok!"
+      } else if (rawMsg) {
+        userMsg = rawMsg
+      }
+
+      alert(userMsg)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   useEffect(() => {
@@ -93,7 +159,7 @@ export function AssetArchiveView() {
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:pr-6 lg:px-6">
-        <label className="flex h-10 w-full max-w-[300px] min-w-0 items-center gap-[9px] rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-[13px]">
+        <label className="flex h-10 w-full max-w-75 min-w-0 items-center gap-2.25 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25">
           <span className="text-[13px] text-[#a5a8b5]">⌕</span>
           <input
             value={query}
@@ -103,18 +169,18 @@ export function AssetArchiveView() {
             className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[#a5a8b5]"
           />
         </label>
-        <span className="ml-auto hidden rounded-full bg-[#1c1c1e] px-[13px] py-[6px] text-[12px] font-semibold text-white sm:block">
+        <span className="ml-auto hidden rounded-full bg-[#1c1c1e] px-3.25 py-1.5 text-[12px] font-semibold text-white sm:block">
           Halaman khusus Admin
         </span>
       </header>
 
-      <main className="flex flex-col gap-[18px] px-4 py-6 sm:px-7">
-        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-[14px]">
+      <main className="flex flex-col gap-4.5 px-4 py-6 sm:px-7">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-3.5">
           <div>
             <h1 className="text-[28px] font-semibold tracking-[-.6px]">
               Arsip aset
             </h1>
-            <p className="mt-[5px] text-[13px] text-[#6b6f7e]">
+            <p className="mt-1.25 text-[13px] text-[#6b6f7e]">
               Aset yang dihapus tidak hilang -{" "}
               <span className="font-mono text-[12px]">deleted_at</span> terisi
               dan record tetap tersimpan (FR-X01).
@@ -122,29 +188,43 @@ export function AssetArchiveView() {
           </div>
           <ActionButton
             className="sm:ml-auto"
-            onClick={() => setNotice("Arsip diekspor (simulasi).")}
+            onClick={() => setNotice("Fitur ekspor arsip akan datang.")}
           >
             Export arsip
           </ActionButton>
         </section>
 
+        {errorMessage && (
+          <div className="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-[13px] text-rose-700">
+            {errorMessage}
+          </div>
+        )}
+
         {notice && <Notice onClose={() => setNotice("")}>{notice}</Notice>}
 
-        <ArchiveTable
-          assets={filteredAssets}
-          onRestore={restoreAsset}
-          onDelete={openDeleteDialog}
-          tableIsActive={tableIsActive}
-          cardIsActive={cardIsActive}
-          onSelectTable={() => setViewMode("table")}
-          onSelectCard={() => setViewMode("card")}
-        />
+        {loading ? (
+          <div className="rounded-2xl border border-[#eef0f3] bg-white p-12 text-center text-[13px] text-[#6b6f7e]">
+            Memuat data arsip...
+          </div>
+        ) : (
+          <ArchiveTable
+            assets={filteredAssets}
+            restoringId={restoringId}
+            onRestore={restoreAsset}
+            onDelete={openDeleteDialog}
+            tableIsActive={tableIsActive}
+            cardIsActive={cardIsActive}
+            onSelectTable={() => setViewMode("table")}
+            onSelectCard={() => setViewMode("card")}
+          />
+        )}
       </main>
 
       {deleteTarget && (
         <PermanentDeleteDialog
           asset={deleteTarget}
           confirmationCode={confirmationCode}
+          isDeleting={isDeleting}
           onChange={setConfirmationCode}
           onCancel={closeDeleteDialog}
           onConfirm={deletePermanently}
@@ -156,6 +236,7 @@ export function AssetArchiveView() {
 
 function ArchiveTable({
   assets,
+  restoringId,
   onRestore,
   onDelete,
   tableIsActive,
@@ -164,6 +245,7 @@ function ArchiveTable({
   onSelectCard,
 }: {
   assets: ArchivedAsset[]
+  restoringId: string | null
   onRestore: (asset: ArchivedAsset) => void
   onDelete: (asset: ArchivedAsset) => void
   tableIsActive: boolean
@@ -182,7 +264,7 @@ function ArchiveTable({
       <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
         {tableIsActive && (
           <>
-            <div className="hidden min-w-[1020px] grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] gap-[14px] border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-[13px] text-[10.5px] font-semibold tracking-[.4px] text-[#6b6f7e] uppercase md:grid">
+            <div className="hidden min-w-255 grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-3.25 text-[10.5px] font-semibold tracking-[.4px] text-[#6b6f7e] uppercase md:grid">
               <span>Kode</span>
               <span>Nama barang</span>
               <span>Alasan penghapusan</span>
@@ -193,8 +275,9 @@ function ArchiveTable({
             <div className="hidden overflow-x-auto md:block">
               {assets.map((asset) => (
                 <ArchiveRow
-                  key={asset.code}
+                  key={asset.id}
                   asset={asset}
+                  isRestoring={restoringId === asset.id}
                   onRestore={onRestore}
                   onDelete={onDelete}
                 />
@@ -203,8 +286,9 @@ function ArchiveTable({
             <div className="space-y-3 p-3 md:hidden">
               {assets.map((asset) => (
                 <ArchiveCompactRow
-                  key={asset.code}
+                  key={asset.id}
                   asset={asset}
+                  isRestoring={restoringId === asset.id}
                   onRestore={onRestore}
                   onDelete={onDelete}
                 />
@@ -216,8 +300,9 @@ function ArchiveTable({
           <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
             {assets.map((asset) => (
               <ArchiveCard
-                key={asset.code}
+                key={asset.id}
                 asset={asset}
+                isRestoring={restoringId === asset.id}
                 onRestore={onRestore}
                 onDelete={onDelete}
               />
@@ -271,10 +356,12 @@ function ViewToggle({
 
 function ArchiveCompactRow({
   asset,
+  isRestoring,
   onRestore,
   onDelete,
 }: {
   asset: ArchivedAsset
+  isRestoring: boolean
   onRestore: (asset: ArchivedAsset) => void
   onDelete: (asset: ArchivedAsset) => void
 }) {
@@ -293,6 +380,7 @@ function ArchiveCompactRow({
         </span>
         <ArchiveActions
           asset={asset}
+          isRestoring={isRestoring}
           onRestore={onRestore}
           onDelete={onDelete}
         />
@@ -303,15 +391,17 @@ function ArchiveCompactRow({
 
 function ArchiveRow({
   asset,
+  isRestoring,
   onRestore,
   onDelete,
 }: {
   asset: ArchivedAsset
+  isRestoring: boolean
   onRestore: (asset: ArchivedAsset) => void
   onDelete: (asset: ArchivedAsset) => void
 }) {
   return (
-    <div className="grid min-w-[1020px] grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] items-center gap-[14px] border-b border-[#eef0f3] px-5 py-[14px] last:border-0">
+    <div className="grid min-w-255 grid-cols-[140px_250px_minmax(230px,1fr)_150px_170px_230px] items-center gap-3.5 border-b border-[#eef0f3] px-5 py-3.5 last:border-0">
       <span className="font-mono text-[12.5px] text-[#4262ff]">
         {asset.code}
       </span>
@@ -321,6 +411,7 @@ function ArchiveRow({
       <span className="text-[12.5px] text-[#555a6a]">{asset.deletedBy}</span>
       <ArchiveActions
         asset={asset}
+        isRestoring={isRestoring}
         onRestore={onRestore}
         onDelete={onDelete}
         compact
@@ -331,10 +422,12 @@ function ArchiveRow({
 
 function ArchiveCard({
   asset,
+  isRestoring,
   onRestore,
   onDelete,
 }: {
   asset: ArchivedAsset
+  isRestoring: boolean
   onRestore: (asset: ArchivedAsset) => void
   onDelete: (asset: ArchivedAsset) => void
 }) {
@@ -348,6 +441,7 @@ function ArchiveCard({
       </p>
       <ArchiveActions
         asset={asset}
+        isRestoring={isRestoring}
         onRestore={onRestore}
         onDelete={onDelete}
         mobile
@@ -358,12 +452,14 @@ function ArchiveCard({
 
 function ArchiveActions({
   asset,
+  isRestoring,
   onRestore,
   onDelete,
   mobile = false,
   compact = false,
 }: {
   asset: ArchivedAsset
+  isRestoring: boolean
   onRestore: (asset: ArchivedAsset) => void
   onDelete: (asset: ArchivedAsset) => void
   mobile?: boolean
@@ -371,22 +467,25 @@ function ArchiveActions({
 }) {
   return (
     <div
-      className={`flex min-h-8 items-center gap-[7px] ${mobile ? "mt-4 flex-wrap" : compact ? "" : "justify-end"}`}
+      className={`flex min-h-8 items-center gap-1.75 ${mobile ? "mt-4 flex-wrap" : compact ? "" : "justify-end"}`}
     >
       <button
         type="button"
+        disabled={isRestoring}
         onClick={() => onRestore(asset)}
-        className="h-8 shrink-0 rounded-full border border-[#c7cad5] bg-white px-[11px] text-[11.5px] font-semibold whitespace-nowrap sm:px-[13px] sm:text-[12.5px]"
+        className="h-8 shrink-0 rounded-full border border-[#c7cad5] bg-white px-2.75 text-[11.5px] font-semibold whitespace-nowrap sm:px-3.25 sm:text-[12.5px] cursor-pointer hover:bg-neutral-100 disabled:opacity-50"
       >
-        Pulihkan
+        {isRestoring ? "Memulihkan..." : "Pulihkan"}
       </button>
+
       {asset.hasMovementHistory ? (
         <span className="text-[11.5px] text-[#8e91a0]">Ada riwayat mutasi</span>
       ) : (
         <button
           type="button"
+          disabled={isRestoring}
           onClick={() => onDelete(asset)}
-          className="h-8 shrink-0 rounded-full bg-[#ffc6c6] px-[11px] text-[11.5px] font-semibold whitespace-nowrap text-[#600000] sm:px-[13px] sm:text-[12.5px]"
+          className="h-8 shrink-0 rounded-full bg-[#ffc6c6] px-2.75 text-[11.5px] font-semibold whitespace-nowrap text-[#600000] sm:px-3.25 sm:text-[12.5px] cursor-pointer hover:bg-[#ffb0b0] disabled:opacity-50"
         >
           Hapus permanen
         </button>
@@ -398,17 +497,19 @@ function ArchiveActions({
 function PermanentDeleteDialog({
   asset,
   confirmationCode,
+  isDeleting,
   onChange,
   onCancel,
   onConfirm,
 }: {
   asset: ArchivedAsset
   confirmationCode: string
+  isDeleting: boolean
   onChange: (value: string) => void
   onCancel: () => void
   onConfirm: () => void
 }) {
-  const canDelete = confirmationCode === asset.code
+  const canDelete = confirmationCode === asset.code && !isDeleting
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-[#050038]/42 p-4">
@@ -416,9 +517,9 @@ function PermanentDeleteDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-title"
-        className="flex w-full max-w-[468px] flex-col gap-[15px] rounded-[20px] bg-white p-5 shadow-[0_16px_48px_-8px_rgba(5,0,56,.12)] sm:p-[26px]"
+        className="flex w-full max-w-117 flex-col gap-3.75 rounded-[20px] bg-white p-5 shadow-[0_16px_48px_-8px_rgba(5,0,56,.12)] sm:p-6.5"
       >
-        <span className="w-fit rounded-full bg-[#ffc6c6] px-3 py-[5px] text-[12px] font-semibold text-[#600000]">
+        <span className="w-fit rounded-full bg-[#ffc6c6] px-3 py-1.25 text-[12px] font-semibold text-[#600000]">
           Tidak dapat dibatalkan
         </span>
         <h2
@@ -435,19 +536,22 @@ function PermanentDeleteDialog({
           beserta fotonya akan dihapus dari basis data. Audit log tetap
           menyimpan jejak penghapusan.
         </p>
-        <label className="flex flex-col gap-[7px] text-[13px] font-semibold">
+        <label className="flex flex-col gap-1.75 text-[13px] font-semibold">
           Ketik ulang kode aset untuk konfirmasi
           <input
             value={confirmationCode}
+            disabled={isDeleting}
             onChange={(event) => onChange(event.target.value)}
-            className="h-11 rounded-lg border-2 border-[#4262ff] px-[14px] font-mono text-[14px] outline-none"
+            placeholder={asset.code}
+            className="h-11 rounded-lg border-2 border-[#4262ff] px-3.5 font-mono text-[14px] outline-none disabled:opacity-50"
           />
         </label>
-        <div className="flex justify-end gap-[10px] pt-1">
+        <div className="flex justify-end gap-2.5 pt-1">
           <button
             type="button"
+            disabled={isDeleting}
             onClick={onCancel}
-            className="h-11 rounded-full border border-[#c7cad5] px-5 text-[14px] font-semibold"
+            className="h-11 rounded-full border border-[#c7cad5] px-5 text-[14px] font-semibold hover:bg-neutral-100 disabled:opacity-50 cursor-pointer"
           >
             Batal
           </button>
@@ -455,9 +559,9 @@ function PermanentDeleteDialog({
             type="button"
             disabled={!canDelete}
             onClick={onConfirm}
-            className="h-11 rounded-full bg-[#1c1c1e] px-[22px] text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45"
+            className="h-11 rounded-full bg-[#1c1c1e] px-5.5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer hover:bg-black"
           >
-            Hapus permanen
+            {isDeleting ? "Menghapus..." : "Hapus permanen"}
           </button>
         </div>
       </section>
@@ -478,7 +582,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`h-10 rounded-full border border-[#c7cad5] bg-white px-4 text-[13.5px] font-semibold ${className}`}
+      className={`h-10 rounded-full border border-[#c7cad5] bg-white px-4 text-[13.5px] font-semibold ${className} hover:bg-neutral-50 cursor-pointer`}
     >
       {children}
     </button>
@@ -496,7 +600,7 @@ function Notice({
     <button
       type="button"
       onClick={onClose}
-      className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574]"
+      className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574] cursor-pointer"
     >
       {children} ×
     </button>

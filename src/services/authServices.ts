@@ -7,9 +7,15 @@ export const authService = {
     payload: LoginRequest,
     rememberMe: boolean
   ): Promise<LoginResponse> => {
+    // Tambahkan header X-API-KEY / x-api-key di opsi request
     const response = await api.post<ApiResponse<LoginResponse>>(
       "/users/login",
-      payload
+      payload,
+      {
+        headers: {
+          "x-api-key": import.meta.env.VITE_API_KEY || "API_KEY",
+        },
+      }
     )
     const data = response.data.data
 

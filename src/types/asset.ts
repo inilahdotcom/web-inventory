@@ -1,5 +1,13 @@
 export type AssetCondition = "Bagus" | "Rusak Ringan" | "Rusak Berat" | "Hilang"
 
+export type AssetPhoto = {
+  id: number
+  url: string
+  caption: string | null
+  isPrimary: boolean
+  sortOrder: number
+}
+
 export type AssetListData = {
   code: string
   slug: string
@@ -19,6 +27,7 @@ export type AssetListData = {
   status: string
   createdAt: string | null
   updatedAt: string | null
+  photos?: AssetPhoto[]
 }
 
 export type AssetListItem = {

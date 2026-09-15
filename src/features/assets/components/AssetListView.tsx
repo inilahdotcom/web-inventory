@@ -1,12 +1,19 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { ChevronDown, LayoutGrid, Table2, X } from "lucide-react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useNavigate } from "@tanstack/react-router"
+import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
+import { toast } from "sonner"
 import type {
   AssetCondition,
   AssetListItem,
+  AssetListData,
   AssetMasterItem,
   AssetPagination,
 } from "@/types/asset"
+
+const formatNumber = new Intl.NumberFormat("id-ID")
+const rupiahInput = (value: string) => (value ? `Rp. ${formatNumber.format(Number(value))}` : "")
+const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
   id: string
@@ -24,6 +31,7 @@ type Asset = {
   price?: string
   priceValue: number
   attention?: boolean
+  hasPhoto: boolean
 }
 
 type QuickFilter =
@@ -46,10 +54,6 @@ const emptyPagination: AssetPagination = {
   nextCursor: "",
 }
 
-const formatNumber = new Intl.NumberFormat("id-ID")
-const rupiahInput = (value: string) =>
-  value ? formatNumber.format(Number(value)) : ""
-const numericInput = (value: string) => value.replace(/\D/g, "")
 const conditionOptions: AssetCondition[] = [
   "Bagus",
   "Rusak Ringan",
@@ -59,28 +63,32 @@ const conditionOptions: AssetCondition[] = [
 const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
 
 function toAsset(item: AssetListItem): Asset {
-  const attributes = item.attributes
-  const priceValue = attributes.acquisitionPrice ?? 0
+  const attr = (item.attributes || item) as AssetListData
+  const priceValue = attr.acquisitionPrice ?? 0
+  const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
 
   return {
-    id: item.id,
-    slug: attributes.slug,
-    code: attributes.code,
-    name: attributes.name,
-    detail: attributes.holder || attributes.status,
-    category: attributes.category || "—",
-    brand: attributes.brand || "—",
-    quantity: attributes.quantity,
-    unit: attributes.unit,
-    condition: attributes.condition,
-    status: attributes.status,
-    location: attributes.location || "—",
+    id: item.id || "",
+    slug: attr.slug || "",
+    code: attr.code || "",
+    name: attr.name || "",
+    detail: attr.holder || attr.status || "",
+    category: attr.category || "—",
+    brand: attr.brand || "—",
+    quantity: attr.quantity ?? 1,
+    unit: attr.unit || "Unit",
+    condition: attr.condition,
+    status: attr.status,
+    location: attr.location || "—",
     price:
-      attributes.acquisitionPrice !== null
-        ? formatNumber.format(attributes.acquisitionPrice)
+      attr.acquisitionPrice !== null &&
+      attr.acquisitionPrice !== undefined &&
+      attr.acquisitionPrice > 0
+        ? `Rp. ${formatNumber.format(attr.acquisitionPrice)}`
         : undefined,
     priceValue,
-    attention: attributes.condition !== "Bagus",
+    attention: attr.condition !== "Bagus",
+    hasPhoto,
   }
 }
 
@@ -88,6 +96,7 @@ const tableColumns =
   "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
 
 export function AssetListView() {
+  const navigate = useNavigate()
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [condition, setCondition] = useState<AssetCondition | "">("")
@@ -104,9 +113,8 @@ export function AssetListView() {
   const [categories, setCategories] = useState<AssetMasterItem[]>([])
   const [locations, setLocations] = useState<AssetMasterItem[]>([])
   const [openFilter, setOpenFilter] = useState<string | null>(null)
-  const [sort, setSort] = useState<
-    "code:asc" | "code:desc" | "name:asc" | "name:desc"
-  >("code:asc")
+  type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
+  const [sort, setSort] = useState<SortOption>("code:asc")
   const [assets, setAssets] = useState<Asset[]>([])
   const [pagination, setPagination] = useState<AssetPagination>(emptyPagination)
   const [cursor, setCursor] = useState("")
@@ -125,12 +133,35 @@ export function AssetListView() {
     const minimum = priceMin ? Number(priceMin) : undefined
     const maximum = priceMax ? Number(priceMax) : undefined
 
-    return assets.filter(
-      (asset) =>
-        (minimum === undefined || asset.priceValue >= minimum) &&
-        (maximum === undefined || asset.priceValue <= maximum)
-    )
-  }, [assets, priceMax, priceMin])
+    return assets.filter((asset) => {
+      const matchMin = minimum === undefined || asset.priceValue >= minimum
+      const matchMax = maximum === undefined || asset.priceValue <= maximum
+      if (!matchMin || !matchMax) return false
+
+      if (quickFilter === "needsAttention") {
+        return asset.attention || asset.condition !== "Bagus"
+      }
+
+      if (quickFilter === "withoutPrice") {
+        return asset.priceValue === 0 || asset.price === undefined
+      }
+
+      if (quickFilter === "withoutPhoto") {
+        return !asset.hasPhoto
+      }
+
+      if (quickFilter === "duplicateCondition") {
+        return assets.some(
+          (other) =>
+            other.code !== asset.code &&
+            other.condition === asset.condition &&
+            other.name === asset.name
+        )
+      }
+
+      return true
+    })
+  }, [assets, priceMax, priceMin, quickFilter])
 
   const pageSummary = useMemo(
     () => ({
@@ -171,6 +202,39 @@ export function AssetListView() {
         ? new Set()
         : new Set(visibleAssets.map((asset) => asset.code))
     )
+
+  const handleBulkDelete = async () => {
+    const idsToDelete = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (idsToDelete.length === 0) {
+      toast.error("Tidak ada aset valid yang bisa dihapus.")
+      return
+    }
+
+    const reason = window.prompt(
+      `${idsToDelete.length} aset akan dipindahkan ke Arsip. Masukkan alasan:`,
+      "Dihapus massal dari daftar aset"
+    )
+    if (reason === null || reason.trim() === "") return
+
+    try {
+      await assetService.bulkDelete({
+        asset_ids: idsToDelete,
+        reason,
+      })
+      toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
+
+      setSelectedCodes(new Set())
+      setReloadKey((value) => value + 1)
+    } catch (error: any) {
+      toast.error(
+        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+      )
+    }
+  }
 
   const resetPagination = () => {
     setCursor("")
@@ -246,9 +310,7 @@ export function AssetListView() {
         setCategories(categoryData)
         setLocations(locationData)
       })
-      .catch(() => {
-        // Filter data utama tetap dapat digunakan bila master data gagal dimuat.
-      })
+      .catch(() => { })
 
     return () => {
       isCurrent = false
@@ -290,7 +352,8 @@ export function AssetListView() {
             needsAttention: quickFilter === "needsAttention" || undefined,
             withoutPrice: quickFilter === "withoutPrice" || undefined,
             withoutPhoto: quickFilter === "withoutPhoto" || undefined,
-            duplicateCondition: quickFilter === "duplicateCondition" || undefined,
+            duplicateCondition:
+              quickFilter === "duplicateCondition" || undefined,
             cursor: cursor || undefined,
           },
           controller.signal
@@ -376,7 +439,7 @@ export function AssetListView() {
             <Pill className="h-10 px-4 text-sm">Export Excel</Pill>
             <button
               type="button"
-              onClick={() => setNotice("Form tambah aset belum tersedia.")}
+              onClick={() => navigate({ to: "/asset/new" })}
               className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
             >
               + Tambah Aset
@@ -564,7 +627,7 @@ export function AssetListView() {
                 </button>
               ))}
               <button
-                onClick={() => setSelectedCodes(new Set())}
+                onClick={handleBulkDelete}
                 className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
               >
                 Hapus
@@ -681,13 +744,12 @@ export function AssetListView() {
           )}
 
         <section
-          className={`${
-            loading || errorMessage || visibleAssets.length === 0
+          className={`${loading || errorMessage || visibleAssets.length === 0
+            ? "hidden"
+            : viewMode === "card"
               ? "hidden"
-              : viewMode === "card"
-                ? "hidden"
-                : "hidden md:block"
-          } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
+              : "hidden md:block"
+            } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
         >
           <div className="min-w-250">
             <div
@@ -794,7 +856,95 @@ function AssetRow({
       >
         {asset.price ?? "Belum diisi"}
       </span>
-      <span className="text-center text-sm text-[#8e91a0]">&#8943;</span>
+      <ActionMenu asset={asset} />
+    </div>
+  )
+}
+
+function ActionMenu({ asset }: { asset: Asset }) {
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const goToEdit = () => {
+    setOpen(false)
+
+    if (!asset.id) {
+      alert("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id/edit",
+      params: { id: String(asset.id) },
+    })
+  }
+
+  const handleSoftDelete = async () => {
+    setOpen(false)
+
+    const reason = window.prompt(
+      `Masukkan alasan penghapusan aset "${asset.name}":`,
+      "Dihapus dari daftar aset"
+    )
+
+    if (reason === null) return
+
+    try {
+      await assetService.delete(asset.id, reason)
+      alert("Aset berhasil diarsipkan.")
+      window.location.reload()
+    } catch (error: any) {
+      console.error("Detail Error Delete:", error?.response || error)
+      alert(
+        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+      )
+    }
+  }
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="Menu aksi"
+        aria-expanded={open}
+        className="grid size-7 place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3]"
+      >
+        <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-8 z-30 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={goToEdit}
+            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+          >
+            Detail
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={goToEdit}
+            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleSoftDelete}
+            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
+          >
+            Hapus (Arsipkan)
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -889,7 +1039,7 @@ function AssetCard({
             </span>
             <span>
               <b className="block text-[#1c1c1e]">Harga</b>
-              {asset.price ? `Rp ${asset.price}` : "Belum diisi"}
+              {asset.price ?? "Belum diisi"}
             </span>
           </div>
         </div>
@@ -1142,7 +1292,7 @@ function PriceRangeFilter({
   onChange: (min: string, max: string) => void
 }) {
   const label = value
-    ? `Rp ${rupiahInput(min || "0")} – ${max ? rupiahInput(max) : "∞"}`
+    ? `${rupiahInput(min || "0")} – ${max ? rupiahInput(max) : "∞"}`
     : "Rentang harga"
 
   return (
@@ -1184,7 +1334,7 @@ function PriceRangeFilter({
               onChange={(event) =>
                 onChange(numericInput(event.target.value), max)
               }
-              placeholder="Contoh: 20.000.000"
+              placeholder="Rp. 20.000.000"
               className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>
