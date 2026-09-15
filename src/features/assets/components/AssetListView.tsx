@@ -12,7 +12,7 @@ import type {
 } from "@/types/asset"
 
 const formatNumber = new Intl.NumberFormat("id-ID")
-const rupiahInput = (value: string) => (value ? formatNumber.format(Number(value)) : "")
+const rupiahInput = (value: string) => (value ? `Rp. ${formatNumber.format(Number(value))}` : "")
 const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
@@ -82,8 +82,8 @@ function toAsset(item: AssetListItem): Asset {
     location: attr.location || "—",
     price:
       attr.acquisitionPrice !== null &&
-        attr.acquisitionPrice !== undefined &&
-        attr.acquisitionPrice > 0
+      attr.acquisitionPrice !== undefined &&
+      attr.acquisitionPrice > 0
         ? `Rp. ${formatNumber.format(attr.acquisitionPrice)}`
         : undefined,
     priceValue,
@@ -91,6 +91,7 @@ function toAsset(item: AssetListItem): Asset {
     hasPhoto,
   }
 }
+
 const tableColumns =
   "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
 
@@ -133,12 +134,10 @@ export function AssetListView() {
     const maximum = priceMax ? Number(priceMax) : undefined
 
     return assets.filter((asset) => {
-
       const matchMin = minimum === undefined || asset.priceValue >= minimum
       const matchMax = maximum === undefined || asset.priceValue <= maximum
       if (!matchMin || !matchMax) return false
 
-      // 2. Filter Quick Filter Chips
       if (quickFilter === "needsAttention") {
         return asset.attention || asset.condition !== "Bagus"
       }
@@ -147,7 +146,6 @@ export function AssetListView() {
         return asset.priceValue === 0 || asset.price === undefined
       }
 
-      // 🚀 PENGECEKAN PERSISI TANPA FOTO:
       if (quickFilter === "withoutPhoto") {
         return !asset.hasPhoto
       }
@@ -1294,7 +1292,7 @@ function PriceRangeFilter({
   onChange: (min: string, max: string) => void
 }) {
   const label = value
-    ? `Rp ${rupiahInput(min || "0")} – ${max ? rupiahInput(max) : "∞"}`
+    ? `${rupiahInput(min || "0")} – ${max ? rupiahInput(max) : "∞"}`
     : "Rentang harga"
 
   return (
@@ -1336,7 +1334,7 @@ function PriceRangeFilter({
               onChange={(event) =>
                 onChange(numericInput(event.target.value), max)
               }
-              placeholder="Contoh: 20.000.000"
+              placeholder="Rp. 20.000.000"
               className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>

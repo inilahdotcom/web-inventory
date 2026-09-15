@@ -163,8 +163,6 @@ export const assetService = {
     return response.data?.data || response.data || []
   },
 
-  
-
   // 2. Fetch Paginated Asset List
   list: async (
     params: AssetListParams,
@@ -243,7 +241,7 @@ export const assetService = {
     return res.data?.data?.photo_urls || []
   },
 
-delete: async (id: string, reason: string): Promise<void> => {
+  delete: async (id: string, reason: string): Promise<void> => {
     await api.delete(`/assets/delete/${id}`, { data: { reason } })
   },
 
@@ -252,7 +250,7 @@ delete: async (id: string, reason: string): Promise<void> => {
     return response.data?.data || response.data || []
   },
 
-    bulkDelete: async (payload: BulkDeletePayload): Promise<BulkDeleteResponse> => {
+  bulkDelete: async (payload: BulkDeletePayload): Promise<BulkDeleteResponse> => {
     const response = await api.post('/assets/bulk-delete', payload)
     return response.data?.data || response.data
   },
@@ -268,4 +266,3 @@ delete: async (id: string, reason: string): Promise<void> => {
     return response.data?.data || response.data
   },
 }
-

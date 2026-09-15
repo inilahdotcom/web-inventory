@@ -48,6 +48,7 @@ export function LoginView() {
                     </div>
 
                     <LoginForm />
+
                     <p className="text-xs text-neutral-500 text-center pt-2">
                         Akun dibuat oleh Admin GA. Hubungi{' '}
                         <a href="mailto:it@inc.co.id" className="text-blue-600 hover:underline">
