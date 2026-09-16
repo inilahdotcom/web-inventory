@@ -26,6 +26,10 @@ const MAP_STATUS: Record<string, string> = {
     'Diperbaiki': 'Diperbaiki',
 }
 
+const MAX_PHOTOS = 5
+const MAX_PHOTO_SIZE = 2 * 1024 * 1024
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 export function AssetCreateView() {
     const navigate = useNavigate()
 
@@ -96,15 +100,50 @@ export function AssetCreateView() {
         setFormData((prev) => ({ ...prev, [name]: value }))
     }
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const uploadedFiles = Array.from(e.target.files)
-            if (fotos.length + uploadedFiles.length <= 5) {
-                setFotos((prev) => [...prev, ...uploadedFiles])
-            } else {
-                alert('Maksimal 5 foto aset!')
-            }
+    const addPhotos = (files: FileList | File[]) => {
+        const uploadedFiles = Array.from(files)
+        const unsupportedFiles = uploadedFiles.filter((file) => !ALLOWED_PHOTO_TYPES.includes(file.type))
+        const oversizedFiles = uploadedFiles.filter((file) => file.size > MAX_PHOTO_SIZE)
+        const validFiles = uploadedFiles.filter(
+            (file) => ALLOWED_PHOTO_TYPES.includes(file.type) && file.size <= MAX_PHOTO_SIZE,
+        )
+
+        if (unsupportedFiles.length > 0) {
+            toast.error('Format foto tidak didukung.', {
+                description: 'Gunakan file JPG, PNG, atau WEBP.',
+            })
         }
+
+        if (oversizedFiles.length > 0) {
+            toast.error('Ukuran foto terlalu besar.', {
+                description: 'Setiap foto maksimal berukuran 2 MB.',
+            })
+        }
+
+        if (validFiles.length === 0) return
+
+        const remainingSlots = MAX_PHOTOS - fotos.length
+        const filesToAdd = validFiles.slice(0, Math.max(remainingSlots, 0))
+
+        if (filesToAdd.length > 0) {
+            setFotos((prev) => [...prev, ...filesToAdd])
+        }
+
+        if (validFiles.length > filesToAdd.length) {
+            toast.error('Maksimal 5 foto aset.', {
+                description: 'Hapus salah satu foto sebelum menambahkan foto baru.',
+            })
+        }
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) addPhotos(e.target.files)
+        e.target.value = ''
+    }
+
+    const handlePhotoDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault()
+        if (!loading) addPhotos(e.dataTransfer.files)
     }
 
     const handleSubmit = async (e: React.FormEvent, keepAdding: boolean = false) => {
@@ -417,10 +456,14 @@ export function AssetCreateView() {
                             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
                                 <div className="flex justify-between items-center">
                                     <label className="text-xs font-semibold text-neutral-900">Foto aset</label>
-                                    <span className="text-xs text-neutral-400">{fotos.length} dari 5</span>
+                                    <span className="text-xs text-neutral-400">{fotos.length} dari {MAX_PHOTOS}</span>
                                 </div>
 
-                                <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 p-6 text-center space-y-1 cursor-pointer hover:bg-indigo-50/50 transition">
+                                <label
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={handlePhotoDrop}
+                                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 p-6 text-center space-y-1 cursor-pointer hover:bg-indigo-50/50 transition"
+                                >
                                     <div className="text-xs font-medium text-indigo-600">Tarik file ke sini</div>
                                     <div className="text-[10px] text-neutral-400">JPG · PNG · WEBP – maks. 2 MB per file</div>
                                     <input
@@ -450,7 +493,7 @@ export function AssetCreateView() {
                                         </div>
                                     ))}
 
-                                    {fotos.length < 5 && (
+                                    {fotos.length < MAX_PHOTOS && (
                                         <button
                                             type="button"
                                             onClick={() => fileInputRef.current?.click()}
