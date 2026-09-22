@@ -28,15 +28,6 @@ export function AssetMutationView() {
     [assetId, assets]
   )
 
-  const movableAssets = useMemo(
-    () =>
-      assets.filter((asset) => {
-        const locationId = asset.attributes.locationId
-        return typeof locationId === "number" && locationId > 0
-      }),
-    [assets]
-  )
-
   const destinationLocation = useMemo(
     () => locations.find((location) => location.id === toLocationId) ?? null,
     [locations, toLocationId]
@@ -57,14 +48,9 @@ export function AssetMutationView() {
 
         if (!isMounted) return
 
-        const assetsWithLocation = assetResult.assets.filter((asset) => {
-          const locationId = asset.attributes.locationId
-          return typeof locationId === "number" && locationId > 0
-        })
-
         setAssets(assetResult.assets)
         setLocations(locationResult)
-        const firstAsset = assetsWithLocation[0]
+        const firstAsset = assetResult.assets[0]
         const firstDestination = locationResult.find(
           (location) => location.id !== firstAsset?.attributes.locationId
         ) ?? locationResult[0]
@@ -119,13 +105,6 @@ export function AssetMutationView() {
   const handleSave = async () => {
     if (!selectedAsset) {
       setError("Pilih aset yang akan dimutasi.")
-      return
-    }
-
-    if (!selectedAsset.attributes.locationId) {
-      setError(
-        "Aset ini belum memiliki lokasi asal. Tentukan lokasi aset terlebih dahulu sebelum melakukan mutasi."
-      )
       return
     }
 
@@ -237,21 +216,15 @@ export function AssetMutationView() {
             label="Aset yang dimutasi *"
             value={assetId}
             onChange={handleAssetChange}
-            disabled={isLoading || isSaving || movableAssets.length === 0}
+            disabled={isLoading || isSaving || assets.length === 0}
           >
             <option value="">Pilih aset</option>
-            {movableAssets.map((asset) => (
+            {assets.map((asset) => (
               <option key={asset.id} value={asset.id}>
                 {asset.attributes.code} — {asset.attributes.name}
               </option>
             ))}
           </SelectField>
-
-          {!isLoading && assets.length > 0 && movableAssets.length === 0 && (
-            <p className="-mt-2 text-[12px] text-[#6b6f7e]">
-              Belum ada aset dengan lokasi asal yang dapat dimutasi.
-            </p>
-          )}
 
           {assetDetail ? (
             <>
