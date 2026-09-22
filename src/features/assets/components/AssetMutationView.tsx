@@ -26,6 +26,15 @@ export function AssetMutationView() {
     [assetId, assets]
   )
 
+  const movableAssets = useMemo(
+    () =>
+      assets.filter((asset) => {
+        const locationId = asset.attributes.locationId
+        return typeof locationId === "number" && locationId > 0
+      }),
+    [assets]
+  )
+
   const destinationLocation = useMemo(
     () => locations.find((location) => location.id === toLocationId) ?? null,
     [locations, toLocationId]
@@ -46,9 +55,14 @@ export function AssetMutationView() {
 
         if (!isMounted) return
 
+        const assetsWithLocation = assetResult.assets.filter((asset) => {
+          const locationId = asset.attributes.locationId
+          return typeof locationId === "number" && locationId > 0
+        })
+
         setAssets(assetResult.assets)
         setLocations(locationResult)
-        const firstAsset = assetResult.assets[0]
+        const firstAsset = assetsWithLocation[0]
         const firstDestination = locationResult.find(
           (location) => location.id !== firstAsset?.attributes.locationId
         ) ?? locationResult[0]
@@ -108,6 +122,13 @@ export function AssetMutationView() {
       return
     }
 
+    if (!selectedAsset.attributes.locationId) {
+      setError(
+        "Aset ini belum memiliki lokasi asal. Tentukan lokasi aset terlebih dahulu sebelum melakukan mutasi."
+      )
+      return
+    }
+
     if (!toLocationId) {
       setError("Lokasi tujuan wajib dipilih.")
       return
@@ -150,11 +171,19 @@ export function AssetMutationView() {
       setReason("")
     } catch (err: unknown) {
       const apiError = err as {
-        response?: { data?: { message?: string; error?: string } }
+        response?: { data?: { message?: unknown; error?: unknown } }
       }
+      const serverMessage = [
+        apiError.response?.data?.message,
+        apiError.response?.data?.error,
+      ].find(
+        (message): message is string =>
+          typeof message === "string" &&
+          message.trim().length > 0 &&
+          message.trim().toLowerCase() !== "error"
+      )
       const message =
-        apiError.response?.data?.message ||
-        apiError.response?.data?.error ||
+        serverMessage ||
         "Mutasi gagal disimpan. Pastikan lokasi, tanggal, dan alasan sudah benar."
       setError(message)
     } finally {
@@ -216,15 +245,21 @@ export function AssetMutationView() {
             label="Aset yang dimutasi *"
             value={assetId}
             onChange={handleAssetChange}
-            disabled={isLoading || isSaving || assets.length === 0}
+            disabled={isLoading || isSaving || movableAssets.length === 0}
           >
             <option value="">Pilih aset</option>
-            {assets.map((asset) => (
+            {movableAssets.map((asset) => (
               <option key={asset.id} value={asset.id}>
                 {asset.attributes.code} — {asset.attributes.name}
               </option>
             ))}
           </SelectField>
+
+          {!isLoading && assets.length > 0 && movableAssets.length === 0 && (
+            <p className="-mt-2 text-[12px] text-[#6b6f7e]">
+              Belum ada aset dengan lokasi asal yang dapat dimutasi.
+            </p>
+          )}
 
           {assetDetail ? (
             <>
