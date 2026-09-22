@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { toast } from "sonner"
 import { assetService } from "@/services/assetServices"
 import {
   masterDataService,
@@ -20,7 +21,6 @@ export function AssetMutationView() {
   const [reason, setReason] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [notice, setNotice] = useState("")
   const [error, setError] = useState("")
 
   const selectedAsset = useMemo(
@@ -99,7 +99,6 @@ export function AssetMutationView() {
     setHolder(nextAsset?.attributes.holder ?? "")
     setReason("")
     setError("")
-    setNotice("")
   }
 
   const reset = () => {
@@ -115,7 +114,6 @@ export function AssetMutationView() {
     setMovementDate(today)
     setReason("")
     setError("")
-    setNotice("")
   }
 
   const handleSave = async () => {
@@ -143,7 +141,6 @@ export function AssetMutationView() {
 
     setIsSaving(true)
     setError("")
-    setNotice("")
 
     try {
       await assetService.moveAsset(selectedAsset.id, {
@@ -169,11 +166,10 @@ export function AssetMutationView() {
             : asset
         )
       )
-      setNotice("Mutasi " + selectedAsset.attributes.name + " berhasil disimpan.")
       setReason("")
+      toast.success(`Mutasi ${selectedAsset.attributes.name} berhasil disimpan.`)
       await navigate({
-        to: "/asset/$id",
-        params: { id: selectedAsset.id },
+        to: "/asset",
       })
     } catch (err: unknown) {
       const apiError = err as {
@@ -225,16 +221,6 @@ export function AssetMutationView() {
             Mutasi memperbarui lokasi atau pemegang aset dan tercatat di riwayat mutasi.
           </p>
         </div>
-
-        {notice && (
-          <button
-            type="button"
-            onClick={() => setNotice("")}
-            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574]"
-          >
-            {notice} ×
-          </button>
-        )}
 
         {error && (
           <button
