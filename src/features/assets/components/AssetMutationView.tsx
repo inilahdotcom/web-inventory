@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { assetService } from "@/services/assetServices"
 import {
   masterDataService,
@@ -9,6 +10,7 @@ import type { AssetListItem } from "@/types/asset"
 const today = new Date().toISOString().slice(0, 10)
 
 export function AssetMutationView() {
+  const navigate = useNavigate()
   const [assets, setAssets] = useState<AssetListItem[]>([])
   const [locations, setLocations] = useState<MasterDataItem[]>([])
   const [assetId, setAssetId] = useState("")
@@ -169,6 +171,10 @@ export function AssetMutationView() {
       )
       setNotice("Mutasi " + selectedAsset.attributes.name + " berhasil disimpan.")
       setReason("")
+      await navigate({
+        to: "/asset/$id",
+        params: { id: selectedAsset.id },
+      })
     } catch (err: unknown) {
       const apiError = err as {
         response?: { data?: { message?: unknown; error?: unknown } }
