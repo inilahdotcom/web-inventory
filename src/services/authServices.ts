@@ -28,6 +28,6 @@ export const authService = {
 
   logout: () => {
     authStorage.clear()
-    window.location.href = "/login"
+    window.location.href = "/auth/login"
   },
 }
