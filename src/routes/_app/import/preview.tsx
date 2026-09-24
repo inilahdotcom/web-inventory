@@ -1,10 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AssetImportPreviewView } from '@/features/import/components/AssetImportPreviewView'
+import AssetImportPage from '@/features/import/components/AssetImportPreviewPage'
 
 export const Route = createFileRoute('/_app/import/preview')({
-  component: RouteComponent,
+  component: AssetImportPage,
 })
-
-function RouteComponent() {
-  return <AssetImportPreviewView />
-}
