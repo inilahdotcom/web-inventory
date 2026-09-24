@@ -1,15 +1,33 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { useNavigate } from "@tanstack/react-router"
+import { useMemo, useRef, useState, type ReactNode } from "react"
+import { useNavigate, useSearch } from "@tanstack/react-router"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
 import { toast } from "sonner"
 import type {
   AssetCondition,
   AssetListItem,
-  AssetListData,
-  AssetMasterItem,
   AssetPagination,
 } from "@/types/asset"
+
+const SAVED_VIEW_KEY = "asset_list_saved_view"
+const PAGE_SIZE_KEY = "asset_list_page_size"
+
+type SavedView = {
+  query: string
+  condition: AssetCondition | ""
+  status: string
+  brandId: number | undefined
+  categoryId: number | undefined
+  locationId: number | undefined
+  purchaseDateFrom: string
+  purchaseDateTo: string
+  priceMin: string
+  priceMax: string
+  quickFilter: QuickFilter
+  sort: SortOption
+  pageSize?: number
+}
 
 const formatNumber = new Intl.NumberFormat("id-ID")
 const rupiahInput = (value: string) => (value ? `Rp. ${formatNumber.format(Number(value))}` : "")
@@ -41,6 +59,8 @@ type QuickFilter =
   | "withoutPhoto"
   | "duplicateCondition"
 
+type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
+
 const conditionClass: Record<AssetCondition, string> = {
   Bagus: "bg-[#c3faf5] text-[#187574]",
   "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
@@ -63,31 +83,31 @@ const conditionOptions: AssetCondition[] = [
 const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
 
 function toAsset(item: AssetListItem): Asset {
-  const attr = (item.attributes || item) as AssetListData
-  const priceValue = attr.acquisitionPrice ?? 0
+  const attr = (item.attributes || item) as any
+
+  const priceValue = Number(attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0)
   const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
+  const holderName = attr.holder || attr.holderName || attr.holder_name || ""
 
   return {
-    id: item.id || "",
-    slug: attr.slug || "",
-    code: attr.code || "",
-    name: attr.name || "",
-    detail: attr.holder || attr.status || "",
-    category: attr.category || "—",
-    brand: attr.brand || "—",
-    quantity: attr.quantity ?? 1,
+    id: item.id || attr.id || "",
+    slug: attr.slug || attr.code || attr.assetCode || "",
+    code: attr.assetCode || attr.code || attr.asset_code || "—",
+    name: attr.name || attr.assetName || attr.asset_name || "Tanpa Nama",
+    detail: holderName,
+    category: attr.categoryName || attr.category || attr.category_name || "—",
+    brand: attr.brandName || attr.brand || attr.brand_name || "—",
+    location: attr.locationName || attr.location || attr.location_name || "—",
+    quantity: attr.quantity ?? attr.qty ?? 1,
     unit: attr.unit || "Unit",
-    condition: attr.condition,
-    status: attr.status,
-    location: attr.location || "—",
+    condition: attr.condition || "Bagus",
+    status: attr.status || "Tersedia",
     price:
-      attr.acquisitionPrice !== null &&
-      attr.acquisitionPrice !== undefined &&
-      attr.acquisitionPrice > 0
-        ? `Rp. ${formatNumber.format(attr.acquisitionPrice)}`
+      priceValue > 0
+        ? `Rp. ${formatNumber.format(priceValue)}`
         : undefined,
     priceValue,
-    attention: attr.condition !== "Bagus",
+    attention: (attr.condition || "Bagus") !== "Bagus",
     hasPhoto,
   }
 }
@@ -97,37 +117,178 @@ const tableColumns =
 
 export function AssetListView() {
   const navigate = useNavigate()
-  const [query, setQuery] = useState("")
-  const [debouncedQuery, setDebouncedQuery] = useState("")
-  const [condition, setCondition] = useState<AssetCondition | "">("")
-  const [status, setStatus] = useState("")
-  const [brandId, setBrandId] = useState<number>()
-  const [categoryId, setCategoryId] = useState<number>()
-  const [locationId, setLocationId] = useState<number>()
-  const [purchaseDateFrom, setPurchaseDateFrom] = useState("")
-  const [purchaseDateTo, setPurchaseDateTo] = useState("")
-  const [priceMin, setPriceMin] = useState("")
-  const [priceMax, setPriceMax] = useState("")
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("")
-  const [brands, setBrands] = useState<AssetMasterItem[]>([])
-  const [categories, setCategories] = useState<AssetMasterItem[]>([])
-  const [locations, setLocations] = useState<AssetMasterItem[]>([])
+  const queryClient = useQueryClient()
+
+  const searchParam = useSearch({ strict: false }) as { highlight?: string; newCount?: string | number }
+  const [highlightedCodes, setHighlightedCodes] = useState<string[]>([])
+  const [highlightedCount, setHighlightedCount] = useState<number>(0)
+
+  const getInitialSavedView = (): SavedView | null => {
+    try {
+      const saved = localStorage.getItem(SAVED_VIEW_KEY)
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  }
+
+  const getInitialPageSize = (): number => {
+    try {
+      const savedSize = localStorage.getItem(PAGE_SIZE_KEY)
+      if (savedSize) return Number(savedSize)
+
+      const savedView = getInitialSavedView()
+      if (savedView?.pageSize) return savedView.pageSize
+    } catch {
+      // fallback
+    }
+    return 25
+  }
+
+  const initialSavedView = getInitialSavedView()
+
+  const [query, setQuery] = useState(initialSavedView?.query ?? "")
+  const [debouncedQuery, setDebouncedQuery] = useState(initialSavedView?.query ?? "")
+  const [condition, setCondition] = useState<AssetCondition | "">(initialSavedView?.condition ?? "")
+  const [status, setStatus] = useState(initialSavedView?.status ?? "")
+  const [brandId, setBrandId] = useState<number | undefined>(initialSavedView?.brandId)
+  const [categoryId, setCategoryId] = useState<number | undefined>(initialSavedView?.categoryId)
+  const [locationId, setLocationId] = useState<number | undefined>(initialSavedView?.locationId)
+  const [purchaseDateFrom, setPurchaseDateFrom] = useState(initialSavedView?.purchaseDateFrom ?? "")
+  const [purchaseDateTo, setPurchaseDateTo] = useState(initialSavedView?.purchaseDateTo ?? "")
+  const [priceMin, setPriceMin] = useState(initialSavedView?.priceMin ?? "")
+  const [priceMax, setPriceMax] = useState(initialSavedView?.priceMax ?? "")
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialSavedView?.quickFilter ?? "")
+  const [sort, setSort] = useState<SortOption>(initialSavedView?.sort ?? "code:asc")
+
+  const [pageSize, setPageSize] = useState<number>(getInitialPageSize)
+  const [hasSavedPreset, setHasSavedPreset] = useState<boolean>(Boolean(initialSavedView))
+
   const [openFilter, setOpenFilter] = useState<string | null>(null)
-  type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
-  const [sort, setSort] = useState<SortOption>("code:asc")
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [pagination, setPagination] = useState<AssetPagination>(emptyPagination)
   const [cursor, setCursor] = useState("")
   const [cursorHistory, setCursorHistory] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState("")
-  const [reloadKey, setReloadKey] = useState(0)
   const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 767px)").matches
   )
   const [selectedCodes, setSelectedCodes] = useState(() => new Set<string>())
   const [notice, setNotice] = useState("")
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    localStorage.setItem(PAGE_SIZE_KEY, String(newSize))
+    resetPagination()
+  }
+
+  // Sinkronisasi ukuran layar secara responsif
+  useState(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)")
+    const syncViewport = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mediaQuery.addEventListener("change", syncViewport)
+    return () => mediaQuery.removeEventListener("change", syncViewport)
+  })
+
+  // Sinkronisasi penanda / highlight baris baru dari URL
+  useState(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const rawHighlight = searchParam?.highlight || urlParams.get("highlight")
+    const rawCount = searchParam?.newCount || urlParams.get("newCount")
+
+    if (rawHighlight) {
+      const codes = decodeURIComponent(rawHighlight)
+        .split(",")
+        .map((c) => c.trim().toLowerCase())
+        .filter(Boolean)
+      setHighlightedCodes(codes)
+    }
+
+    if (rawCount) {
+      setHighlightedCount(Number(rawCount))
+    }
+
+    if (rawHighlight || rawCount) {
+      const timer = setTimeout(() => {
+        setHighlightedCodes([])
+        setHighlightedCount(0)
+      }, 10000)
+
+      return () => clearTimeout(timer)
+    }
+  })
+
+  // Ambil Master Data Merek, Kategori, Lokasi menggunakan React Query
+  const { data: brandData = [] } = useQuery({
+    queryKey: ['masters', 'brands'],
+    queryFn: () => assetService.masters("brands"),
+  })
+
+  const { data: categoryData = [] } = useQuery({
+    queryKey: ['masters', 'categories'],
+    queryFn: () => assetService.masters("categories"),
+  })
+
+  const { data: locationData = [] } = useQuery({
+    queryKey: ['masters', 'locations'],
+    queryFn: () => assetService.masters("locations"),
+  })
+
+  // Ambil Data Utama Aset menggunakan React Query
+  const { data: assetData, isLoading: loading, error } = useQuery({
+    queryKey: [
+      'assets',
+      {
+        pageSize,
+        sort,
+        debouncedQuery,
+        condition,
+        status,
+        brandId,
+        categoryId,
+        locationId,
+        purchaseDateFrom,
+        purchaseDateTo,
+        priceMin,
+        priceMax,
+        quickFilter,
+        cursor,
+        searchNewCount: searchParam?.newCount,
+      },
+    ],
+    queryFn: async () => {
+      const result = await assetService.list({
+        pageSize,
+        sort,
+        search: debouncedQuery || undefined,
+        condition: condition || undefined,
+        status: status || undefined,
+        brandId,
+        categoryId,
+        locationId,
+        purchaseDateFrom: purchaseDateFrom || undefined,
+        purchaseDateTo: purchaseDateTo || undefined,
+        priceMin: priceMin ? Number(priceMin) : undefined,
+        priceMax: priceMax ? Number(priceMax) : undefined,
+        needsAttention: quickFilter === "needsAttention" || undefined,
+        cursor: cursor || undefined,
+      })
+      return result
+    },
+  })
+
+  const assets = useMemo(() => (assetData?.assets ? assetData.assets.map(toAsset) : []), [assetData])
+  const pagination = assetData?.pagination || emptyPagination
+  const errorMessage = error ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi." : ""
+
+  const isNewItem = (index: number, code: string, totalVisible: number) => {
+    if (code && highlightedCodes.includes(code.toLowerCase())) return true
+
+    if (highlightedCount > 0) {
+      const startIndex = Math.max(0, totalVisible - highlightedCount)
+      return index >= startIndex
+    }
+
+    return false
+  }
 
   const visibleAssets = useMemo(() => {
     const minimum = priceMin ? Number(priceMin) : undefined
@@ -143,7 +304,12 @@ export function AssetListView() {
       }
 
       if (quickFilter === "withoutPrice") {
-        return asset.priceValue === 0 || asset.price === undefined
+        return (
+          !asset.priceValue ||
+          asset.priceValue === 0 ||
+          asset.price === undefined ||
+          asset.price === "Belum diisi"
+        )
       }
 
       if (quickFilter === "withoutPhoto") {
@@ -228,7 +394,7 @@ export function AssetListView() {
       toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
 
       setSelectedCodes(new Set())
-      setReloadKey((value) => value + 1)
+      queryClient.invalidateQueries({ queryKey: ['assets'] })
     } catch (error: any) {
       toast.error(
         `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
@@ -242,7 +408,11 @@ export function AssetListView() {
   }
 
   const resetFilters = () => {
+    localStorage.removeItem(SAVED_VIEW_KEY)
+    setHasSavedPreset(false)
+
     setQuery("")
+    setDebouncedQuery("")
     setCondition("")
     setStatus("")
     setBrandId(undefined)
@@ -256,6 +426,34 @@ export function AssetListView() {
     setSort("code:asc")
     setOpenFilter(null)
     resetPagination()
+  }
+
+  const handleSaveView = () => {
+    const currentView: SavedView = {
+      query,
+      condition,
+      status,
+      brandId,
+      categoryId,
+      locationId,
+      purchaseDateFrom,
+      purchaseDateTo,
+      priceMin,
+      priceMax,
+      quickFilter,
+      sort,
+      pageSize,
+    }
+
+    localStorage.setItem(SAVED_VIEW_KEY, JSON.stringify(currentView))
+    localStorage.setItem(PAGE_SIZE_KEY, String(pageSize))
+    setHasSavedPreset(true)
+    toast.success("Tampilan filter berhasil disimpan sebagai tampilan bawaan!")
+  }
+
+  const handleClearSavedView = () => {
+    resetFilters()
+    toast.info("Tampilan tersimpan berhasil dihapus.")
   }
 
   const hasActiveFilters = Boolean(
@@ -288,110 +486,6 @@ export function AssetListView() {
   const tableIsActive =
     viewMode === "table" || (viewMode === "auto" && !isMobile)
   const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)")
-    const syncViewport = () => setIsMobile(mediaQuery.matches)
-    mediaQuery.addEventListener("change", syncViewport)
-    return () => mediaQuery.removeEventListener("change", syncViewport)
-  }, [])
-
-  useEffect(() => {
-    let isCurrent = true
-
-    void Promise.all([
-      assetService.masters("brands"),
-      assetService.masters("categories"),
-      assetService.masters("locations"),
-    ])
-      .then(([brandData, categoryData, locationData]) => {
-        if (!isCurrent) return
-        setBrands(brandData)
-        setCategories(categoryData)
-        setLocations(locationData)
-      })
-      .catch(() => { })
-
-    return () => {
-      isCurrent = false
-    }
-  }, [])
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedQuery(query.trim())
-      setCursor("")
-      setCursorHistory([])
-    }, 350)
-
-    return () => window.clearTimeout(timeout)
-  }, [query])
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    const loadAssets = async () => {
-      setLoading(true)
-      setErrorMessage("")
-
-      try {
-        const result = await assetService.list(
-          {
-            pageSize: 25,
-            sort,
-            search: debouncedQuery || undefined,
-            condition: condition || undefined,
-            status: status || undefined,
-            brandId,
-            categoryId,
-            locationId,
-            purchaseDateFrom: purchaseDateFrom || undefined,
-            purchaseDateTo: purchaseDateTo || undefined,
-            priceMin: priceMin ? Number(priceMin) : undefined,
-            priceMax: priceMax ? Number(priceMax) : undefined,
-            needsAttention: quickFilter === "needsAttention" || undefined,
-            withoutPrice: quickFilter === "withoutPrice" || undefined,
-            withoutPhoto: quickFilter === "withoutPhoto" || undefined,
-            duplicateCondition:
-              quickFilter === "duplicateCondition" || undefined,
-            cursor: cursor || undefined,
-          },
-          controller.signal
-        )
-        setAssets(result.assets.map(toAsset))
-        setPagination(result.pagination)
-        setSelectedCodes(new Set())
-      } catch {
-        if (!controller.signal.aborted) {
-          setAssets([])
-          setPagination(emptyPagination)
-          setErrorMessage(
-            "Daftar aset gagal dimuat. Periksa koneksi backend lalu coba lagi."
-          )
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }
-
-    void loadAssets()
-    return () => controller.abort()
-  }, [
-    brandId,
-    categoryId,
-    condition,
-    cursor,
-    debouncedQuery,
-    locationId,
-    priceMax,
-    priceMin,
-    purchaseDateFrom,
-    purchaseDateTo,
-    quickFilter,
-    reloadKey,
-    sort,
-    status,
-  ])
 
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
@@ -426,7 +520,7 @@ export function AssetListView() {
               Daftar Aset
             </h1>
             <span className="text-sm text-[#6b6f7e]">
-              {assets.length} aset di halaman ini &middot; {pageSummary.units}{" "}
+              {visibleAssets.length} aset ditampilkan &middot; {pageSummary.units}{" "}
               unit &middot; nilai tercatat Rp{" "}
               {formatNumber.format(pageSummary.value)}
             </span>
@@ -440,7 +534,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={() => navigate({ to: "/asset/new" })}
-              className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
+              className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto cursor-pointer"
             >
               + Tambah Aset
             </button>
@@ -453,6 +547,7 @@ export function AssetListView() {
               Semua{" "}
               <span className="text-[10px] opacity-75">{assets.length}</span>
             </Pill>
+
             <ReferenceChip
               active={quickFilter === "needsAttention"}
               onClick={() => {
@@ -464,6 +559,7 @@ export function AssetListView() {
             >
               Perlu tindakan
             </ReferenceChip>
+
             <ReferenceChip
               active={quickFilter === "withoutPrice"}
               onClick={() => {
@@ -475,6 +571,7 @@ export function AssetListView() {
             >
               Tanpa harga
             </ReferenceChip>
+
             <ReferenceChip
               active={quickFilter === "withoutPhoto"}
               onClick={() => {
@@ -486,6 +583,7 @@ export function AssetListView() {
             >
               Tanpa foto
             </ReferenceChip>
+
             <ReferenceChip
               active={quickFilter === "duplicateCondition"}
               onClick={() => {
@@ -497,20 +595,38 @@ export function AssetListView() {
             >
               Kondisi duplikat
             </ReferenceChip>
-            <button
-              type="button"
-              onClick={() => setNotice("Simpan tampilan akan tersedia segera.")}
-              className="h-8.5 rounded-full px-3 text-xs font-semibold text-[#8e91a0] transition hover:text-[#555a6a]"
-            >
-              + Simpan tampilan ini
-            </button>
+
+            {hasActiveFilters && !hasSavedPreset && (
+              <button
+                type="button"
+                onClick={handleSaveView}
+                className="h-8.5 rounded-full px-3 text-xs font-semibold text-[#4262ff] hover:bg-[#f0efff] transition cursor-pointer"
+              >
+                + Simpan tampilan ini
+              </button>
+            )}
+
+            {hasSavedPreset && (
+              <div className="flex items-center gap-1.5 rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#4262ff]">
+                <span>✓ Tampilan tersimpan</span>
+                <button
+                  type="button"
+                  onClick={handleClearSavedView}
+                  title="Hapus tampilan tersimpan default"
+                  className="ml-1 text-[11px] text-[#6b6f7e] hover:text-[#600000] cursor-pointer"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
           </div>
+
           <div className="flex flex-wrap items-center gap-1.5">
             <FilterMenu
               id="brand"
               label="Merek"
               value={brandId}
-              options={brands}
+              options={brandData}
               openFilter={openFilter}
               onOpenChange={setOpenFilter}
               onChange={(value) => {
@@ -534,7 +650,7 @@ export function AssetListView() {
               id="category"
               label="Kategori"
               value={categoryId}
-              options={categories}
+              options={categoryData}
               openFilter={openFilter}
               onOpenChange={setOpenFilter}
               onChange={(value) => {
@@ -558,7 +674,7 @@ export function AssetListView() {
               id="location"
               label="Lokasi"
               value={locationId}
-              options={locations}
+              options={locationData}
               openFilter={openFilter}
               onOpenChange={setOpenFilter}
               onChange={(value) => {
@@ -595,7 +711,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={resetFilters}
-              className="ml-1 h-8.5 px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5]"
+              className="ml-1 h-8.5 px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5] cursor-pointer"
               disabled={!hasActiveFilters}
             >
               Reset Filter
@@ -621,24 +737,25 @@ export function AssetListView() {
                     setNotice(`${label} siap diproses untuk aset terpilih.`)
                   }
                   key={label}
-                  className="flex h-8 flex-1 items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none"
+                  className="flex h-8 flex-1 items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none cursor-pointer"
                 >
                   {label}
                 </button>
               ))}
               <button
                 onClick={handleBulkDelete}
-                className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
+                className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none cursor-pointer"
               >
                 Hapus
               </button>
             </div>
           </section>
         )}
+
         {notice && (
           <button
             onClick={() => setNotice("")}
-            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
+            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574] cursor-pointer"
           >
             {notice} &times;
           </button>
@@ -651,7 +768,7 @@ export function AssetListView() {
               aria-label="Tampilan tabel"
               title="Tampilan tabel"
               aria-pressed={tableIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <Table2 size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -660,7 +777,7 @@ export function AssetListView() {
               aria-label="Tampilan kartu"
               title="Tampilan kartu"
               aria-pressed={cardIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -683,8 +800,8 @@ export function AssetListView() {
             <p className="text-sm text-[#600000]">{errorMessage}</p>
             <button
               type="button"
-              onClick={() => setReloadKey((value) => value + 1)}
-              className="h-9 rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['assets'] })}
+              className="h-9 rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white cursor-pointer"
             >
               Coba lagi
             </button>
@@ -711,11 +828,12 @@ export function AssetListView() {
           }
         >
           <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0 xl:grid-cols-3">
-            {visibleAssets.map((asset) => (
+            {visibleAssets.map((asset, index) => (
               <AssetCard
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
+                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -732,11 +850,12 @@ export function AssetListView() {
                 <span>Kondisi</span>
                 <span className="text-right">Harga</span>
               </div>
-              {visibleAssets.map((asset) => (
+              {visibleAssets.map((asset, index) => (
                 <MobileAssetRow
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
+                  isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
                   onToggle={() => toggleSelection(asset.code)}
                 />
               ))}
@@ -767,11 +886,12 @@ export function AssetListView() {
               <span className="text-right">Harga</span>
               <span />
             </div>
-            {visibleAssets.map((asset) => (
+            {visibleAssets.map((asset, index) => (
               <AssetRow
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
+                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -782,9 +902,10 @@ export function AssetListView() {
               {cursorHistory.length + 1}
             </span>
             <div className="ml-auto flex items-center gap-2">
-              <Pill className="h-8 px-3.25">
-                {pagination.pageSize} / halaman
-              </Pill>
+              <PageSizeMenu
+                pageSize={pageSize}
+                onChange={handlePageSizeChange}
+              />
               <Page
                 bordered
                 disabled={cursorHistory.length === 0}
@@ -808,21 +929,79 @@ export function AssetListView() {
   )
 }
 
+function PageSizeMenu({
+  pageSize,
+  onChange,
+}: {
+  pageSize: number
+  onChange: (size: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-8 items-center gap-1.5 rounded-full border border-[#e0e2e8] bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5] cursor-pointer"
+      >
+        <span>{pageSize} / halaman</span>
+        <ChevronDown size={13} strokeWidth={2.5} />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-10 right-0 z-20 w-32 rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+          {[10, 25, 100].map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => {
+                onChange(size)
+                setOpen(false)
+              }}
+              className={`flex w-full rounded-lg px-3 py-1.5 text-left text-xs font-medium hover:bg-[#f5f6f8] cursor-pointer ${
+                pageSize === size ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"
+              }`}
+            >
+              {size} / halaman
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AssetRow({
   asset,
   selected,
+  isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isNewImport?: boolean
   onToggle: () => void
 }) {
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 last:border-b-0 transition-colors duration-1000 ${
+        isNewImport
+          ? "bg-emerald-50/80 border-l-4 border-l-emerald-500 font-medium"
+          : selected
+            ? "bg-[#f5f3ff]"
+            : "bg-white"
+      }`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
-      <span className="font-mono text-xs text-[#4262ff]">{asset.code}</span>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="font-mono text-xs text-[#4262ff] truncate">{asset.code}</span>
+        {isNewImport && (
+          <span className="rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800 shrink-0 animate-pulse">
+            Baru
+          </span>
+        )}
+      </div>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">
           {asset.name}
@@ -863,6 +1042,7 @@ function AssetRow({
 
 function ActionMenu({ asset }: { asset: Asset }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -870,7 +1050,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
     setOpen(false)
 
     if (!asset.id) {
-      alert("ID Aset tidak valid atau tidak ditemukan.")
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
       return
     }
 
@@ -892,11 +1072,11 @@ function ActionMenu({ asset }: { asset: Asset }) {
 
     try {
       await assetService.delete(asset.id, reason)
-      alert("Aset berhasil diarsipkan.")
-      window.location.reload()
+      toast.success("Aset berhasil diarsipkan.")
+      queryClient.invalidateQueries({ queryKey: ['assets'] })
     } catch (error: any) {
       console.error("Detail Error Delete:", error?.response || error)
-      alert(
+      toast.error(
         `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
       )
     }
@@ -909,7 +1089,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Menu aksi"
         aria-expanded={open}
-        className="grid size-7 place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3]"
+        className="grid size-7 place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3] cursor-pointer"
       >
         <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
       </button>
@@ -923,7 +1103,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
             type="button"
             role="menuitem"
             onClick={goToEdit}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
           >
             Detail
           </button>
@@ -931,7 +1111,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
             type="button"
             role="menuitem"
             onClick={goToEdit}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
           >
             Edit
           </button>
@@ -939,7 +1119,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
             type="button"
             role="menuitem"
             onClick={handleSoftDelete}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
+            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2] cursor-pointer"
           >
             Hapus (Arsipkan)
           </button>
@@ -952,15 +1132,23 @@ function ActionMenu({ asset }: { asset: Asset }) {
 function MobileAssetRow({
   asset,
   selected,
+  isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isNewImport?: boolean
   onToggle: () => void
 }) {
   return (
     <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 transition-colors duration-1000 ${
+        isNewImport
+          ? "bg-emerald-50/80 border-l-4 border-l-emerald-500 font-medium"
+          : selected
+            ? "bg-[#f5f3ff]"
+            : "bg-white"
+      }`}
     >
       <div className="flex min-w-0 items-center gap-2">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -968,8 +1156,15 @@ function MobileAssetRow({
           <span className="block truncate text-xs font-semibold">
             {asset.name}
           </span>
-          <span className="block truncate font-mono text-[10px] text-[#4262ff]">
-            {asset.code}
+          <span className="flex items-center gap-1">
+            <span className="block truncate font-mono text-[10px] text-[#4262ff]">
+              {asset.code}
+            </span>
+            {isNewImport && (
+              <span className="rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800 animate-pulse">
+                Baru
+              </span>
+            )}
           </span>
         </span>
       </div>
@@ -995,23 +1190,38 @@ function MobileAssetRow({
 function AssetCard({
   asset,
   selected,
+  isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isNewImport?: boolean
   onToggle: () => void
 }) {
   return (
     <article
-      className={`rounded-2xl border p-4 ${selected ? "border-[#d8d2ff] bg-[#f5f3ff]" : "border-[#eef0f3] bg-white"}`}
+      className={`rounded-2xl border p-4 transition-colors duration-1000 ${
+        isNewImport
+          ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
+          : selected
+            ? "border-[#d8d2ff] bg-[#f5f3ff]"
+            : "border-[#eef0f3] bg-white"
+      }`}
     >
       <div className="flex items-start gap-3">
         <CheckBox selected={selected} onClick={onToggle} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <span className="font-mono text-xs text-[#4262ff]">
-              {asset.code}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-xs text-[#4262ff]">
+                {asset.code}
+              </span>
+              {isNewImport && (
+                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 animate-pulse">
+                  Baru
+                </span>
+              )}
+            </div>
             <span
               className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
             >
@@ -1058,7 +1268,7 @@ function CheckBox({
   return (
     <button
       onClick={onClick}
-      className={`grid size-4 place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
+      className={`grid size-4 place-items-center rounded border text-[10px] cursor-pointer ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
     </button>
@@ -1079,7 +1289,7 @@ function Pill({
   return (
     <button
       onClick={onClick}
-      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
+      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold cursor-pointer ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
     >
       {children}
     </button>
@@ -1100,7 +1310,7 @@ function ReferenceChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex h-8.5 items-center rounded-full border px-3.75 text-xs font-semibold transition ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
+      className={`flex h-8.5 items-center rounded-full border px-3.75 text-xs font-semibold transition cursor-pointer ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
     >
       {children}
     </button>
@@ -1143,7 +1353,7 @@ function FilterMenu<T extends string | number>({
           onClick={() => onOpenChange(isOpen ? null : id)}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
-          className="flex h-full items-center gap-1.5 px-3.25"
+          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
         >
           <span>{isActive ? `${label}: ${selected.name}` : label}</span>
           {!isActive && (
@@ -1158,7 +1368,7 @@ function FilterMenu<T extends string | number>({
               onOpenChange(null)
             }}
             aria-label={`Hapus filter ${label}`}
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15"
+            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
           >
             <X size={13} strokeWidth={2.5} aria-hidden="true" />
           </button>
@@ -1178,7 +1388,7 @@ function FilterMenu<T extends string | number>({
               onChange(undefined)
               onOpenChange(null)
             }}
-            className="flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            className="flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
           >
             Semua
           </button>
@@ -1192,7 +1402,7 @@ function FilterMenu<T extends string | number>({
                 onChange(option.id)
                 onOpenChange(null)
               }}
-              className={`flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
+              className={`flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] cursor-pointer ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
             >
               {option.name}
             </button>
@@ -1230,7 +1440,7 @@ function DateRangeFilter({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25"
+          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1243,7 +1453,7 @@ function DateRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter tanggal perolehan"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15"
+            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -1304,7 +1514,7 @@ function PriceRangeFilter({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25"
+          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1317,7 +1527,7 @@ function PriceRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter rentang harga"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15"
+            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -1375,7 +1585,7 @@ function Page({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`grid size-8 place-items-center rounded-full text-xs disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
+      className={`grid size-8 place-items-center rounded-full text-xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
     >
       {children}
     </button>
