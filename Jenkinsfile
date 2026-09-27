@@ -1,6 +1,6 @@
 // Pipeline CI/CD web-inventory: bangun image frontend (Vite + nginx) dari branch
 // develop, dorong ke Harbor, lalu jalankan di VM tujuan lewat SSH. Domain
-// diarahkan ke container ini oleh nginx di VM (reverse proxy -> 127.0.0.1:PORT).
+// diarahkan ke container ini oleh nginx di VM (reverse proxy -> VM:PORT).
 //
 // Tiap build mendorong dua tag:
 //   <nomor build>-<commit 7 karakter>   contoh :12-9517f1a  tetap, untuk dilacak balik ke kode
@@ -42,7 +42,7 @@ pipeline {
 
         VM   = '12.105.0.1'
         PORT = '5000'             // port di VM; nginx reverse proxy menembak ke sini
-        BIND = '127.0.0.1'        // hanya nginx di VM yang boleh akses. Ganti 0.0.0.0 kalau nginx ada di mesin lain
+        BIND = '0.0.0.0'          // semua interface, agar reverse proxy dari mesin lain bisa menjangkau
         APP  = 'web-inventory'    // nama container di VM tujuan
     }
 
