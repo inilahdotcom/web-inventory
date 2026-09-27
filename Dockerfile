@@ -5,8 +5,10 @@ WORKDIR /usr/src/app
 # ---- Install dependencies (di-cache selama package.json & bun.lock tidak berubah) ----
 FROM base AS install
 COPY package.json bun.lock ./
+# --ignore-scripts: lewati `prepare` (husky) - git hooks tidak berguna di image,
+# dan di agent Jenkins proses ini menggantung tanpa output
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install --frozen-lockfile --ignore-scripts
 
 # ---- Build ----
 FROM base AS build
