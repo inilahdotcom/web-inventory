@@ -1,5 +1,6 @@
 import { LayoutGrid, Table2 } from "lucide-react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { assetService } from "@/services/assetServices"
 import { toast } from "sonner"
 
@@ -14,6 +15,7 @@ type ArchivedAsset = {
 }
 
 export function AssetArchiveView() {
+  const navigate = useNavigate()
   const [query, setQuery] = useState("")
   const [assets, setAssets] = useState<ArchivedAsset[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,14 +24,13 @@ export function AssetArchiveView() {
   const [deleteReason, setDeleteReason] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
-  const [notice, setNotice] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
   const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 767px)").matches
   )
 
-  // 1. Fetch data arsip dari backend Go
+  // Fetch data arsip dari backend Go
   const fetchArchivedAssets = async () => {
     setLoading(true)
     setErrorMessage("")
@@ -37,15 +38,12 @@ export function AssetArchiveView() {
       const data = await assetService.getArchivedAssets()
 
       const formattedAssets: ArchivedAsset[] = (data || []).map((item: any) => {
-        // Ambil objek attributes jika backend dibungkus format JSON API
         const attr = item.attributes || item
 
         return {
           id: item.id || attr.id,
-          // Ambil kode aset dari attr.code / attr.asset_code
           code: attr.code || attr.asset_code || item.code || "-",
           name: attr.name || item.name || "-",
-          // Ambil alasan penghapusan dari attr
           reason:
             attr.deleteReason ||
             attr.delete_reason ||
@@ -82,15 +80,28 @@ export function AssetArchiveView() {
     )
   }, [assets, query])
 
+  // FUNGSI MEMULIHKAN ASET + HIGHLIGHT ASET DI DAFTAR LIST
   const restoreAsset = async (asset: ArchivedAsset) => {
     setRestoringId(asset.id)
     setErrorMessage("")
     try {
       await assetService.restoreAsset(asset.id)
 
-      // Filter aset yang berhasil dipulihkan dari state
+      // 1. Hapus aset dari state lokal arsip
       setAssets((current) => current.filter((item) => item.id !== asset.id))
-      toast.success(`Aset ${asset.code} (${asset.name}) berhasil dipulihkan ke daftar aktif!`)
+
+      // 2. Beri notifikasi toast sukses
+      toast.success(
+        `Aset ${asset.code} (${asset.name}) berhasil dipulihkan!`
+      )
+
+      // 3. Pindah ke halaman list aset & bawa kode aset untuk di-highlight hijau
+      navigate({
+        to: "/asset",
+        search: {
+          highlight: asset.code,
+        },
+      })
     } catch (error: any) {
       console.error("Gagal memulihkan aset:", error)
       const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
@@ -126,7 +137,8 @@ export function AssetArchiveView() {
       setAssets((current) =>
         current.filter((asset) => asset.id !== deleteTarget.id)
       )
-      setNotice(`Aset ${deleteTarget.code} berhasil dihapus permanen.`)
+
+      toast.success(`Aset ${deleteTarget.code} berhasil dihapus permanen.`)
       closeDeleteDialog()
     } catch (error: any) {
       console.error("Gagal hapus permanen:", error)
@@ -139,7 +151,7 @@ export function AssetArchiveView() {
         userMsg = rawMsg
       }
 
-      alert(userMsg)
+      toast.error(userMsg)
     } finally {
       setIsDeleting(false)
     }
@@ -188,7 +200,7 @@ export function AssetArchiveView() {
           </div>
           <ActionButton
             className="sm:ml-auto"
-            onClick={() => setNotice("Fitur ekspor arsip akan datang.")}
+            onClick={() => toast.info("Fitur ekspor arsip akan datang.")}
           >
             Export arsip
           </ActionButton>
@@ -199,8 +211,6 @@ export function AssetArchiveView() {
             {errorMessage}
           </div>
         )}
-
-        {notice && <Notice onClose={() => setNotice("")}>{notice}</Notice>}
 
         {loading ? (
           <div className="rounded-2xl border border-[#eef0f3] bg-white p-12 text-center text-[13px] text-[#6b6f7e]">
@@ -585,24 +595,6 @@ function ActionButton({
       className={`h-10 rounded-full border border-[#c7cad5] bg-white px-4 text-[13.5px] font-semibold ${className} hover:bg-neutral-50 cursor-pointer`}
     >
       {children}
-    </button>
-  )
-}
-
-function Notice({
-  children,
-  onClose,
-}: {
-  children: ReactNode
-  onClose: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574] cursor-pointer"
-    >
-      {children} ×
     </button>
   )
 }

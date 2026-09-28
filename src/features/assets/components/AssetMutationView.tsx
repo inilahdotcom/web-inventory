@@ -43,7 +43,7 @@ export function AssetMutationView() {
       try {
         const [assetResult, locationResult] = await Promise.all([
           assetService.list({ pageSize: 100, sort: "name:asc" }),
-          masterDataService.getLocations(),
+          masterDataService.getMutationLocations(),
         ])
 
         if (!isMounted) return

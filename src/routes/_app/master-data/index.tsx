@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { MasterDataView } from "@/features/master-data/components/MasterDataView"
+import MasterDataPage from "@/features/master-data/components/MasterDataPage"
 
 export const Route = createFileRoute("/_app/master-data/")({
-  component: MasterDataView,
+  component: MasterDataPage,
 })
