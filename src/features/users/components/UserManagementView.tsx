@@ -330,7 +330,7 @@ export function UserManagementView() {
             setFormError("")
             setCreateOpen(true)
           }}
-          className="ml-auto h-10 shrink-0 bg-[#1c1c1e] px-4 text-white sm:px-5"
+          className="ml-auto h-10 shrink-0 bg-[#1c1c1e] px-4 text-white transition-none hover:bg-[#1c1c1e] active:bg-[#1c1c1e] sm:px-5"
         >
           <span className="sm:hidden">+</span>
           <span className="hidden sm:inline">+ Tambah pengguna</span>
