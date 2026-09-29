@@ -75,7 +75,7 @@ export function AssetReportView() {
 function CategoryTable({ rows }: { rows: CategoryRow[] }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
-      <div className="hidden min-w-[45rem] grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-3 text-[10.5px] font-semibold tracking-wide text-[#6b6f7e] uppercase md:grid">
+      <div className="hidden min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-3 text-[10.5px] font-semibold tracking-wide text-[#6b6f7e] uppercase md:grid">
         <span>Kategori</span><span className="text-right">Jenis</span><span className="text-right">Unit</span><span className="text-right">Total nilai</span><span className="text-right">Kelengkapan</span>
       </div>
       <div className="hidden md:block">{rows.map((row) => <CategoryRow key={row.name} row={row} />)}<TotalRow /></div>
@@ -85,11 +85,11 @@ function CategoryTable({ rows }: { rows: CategoryRow[] }) {
 }
 
 function CategoryRow({ row }: { row: CategoryRow }) {
-  return <div className="grid min-w-[45rem] grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 border-b border-[#eef0f3] px-5 py-4"><span className="text-sm font-semibold">{row.name}</span><Mono>{row.types}</Mono><Mono>{row.units}</Mono><Mono>{row.value}</Mono><span className="text-right"><Completion tone={row.tone}>{row.completeness}</Completion></span></div>
+  return <div className="grid min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 border-b border-[#eef0f3] px-5 py-4"><span className="text-sm font-semibold">{row.name}</span><Mono>{row.types}</Mono><Mono>{row.units}</Mono><Mono>{row.value}</Mono><span className="text-right"><Completion tone={row.tone}>{row.completeness}</Completion></span></div>
 }
 
 function TotalRow() {
-  return <div className="grid min-w-[45rem] grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 bg-[#1c1c1e] px-5 py-4 text-white"><span className="text-sm font-semibold">Total</span><Mono>95</Mono><Mono>213</Mono><Mono yellow>1.421.870.000</Mono><span className="text-right"><span className="rounded-full bg-[#ffd02f] px-2.5 py-1 text-xs font-semibold text-[#1c1c1e]">35%</span></span></div>
+  return <div className="grid min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 bg-[#1c1c1e] px-5 py-4 text-white"><span className="text-sm font-semibold">Total</span><Mono>95</Mono><Mono>213</Mono><Mono yellow>1.421.870.000</Mono><span className="text-right"><span className="rounded-full bg-[#ffd02f] px-2.5 py-1 text-xs font-semibold text-[#1c1c1e]">35%</span></span></div>
 }
 
 function CategoryCard({ row }: { row: CategoryRow }) {

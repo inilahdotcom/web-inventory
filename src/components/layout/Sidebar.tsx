@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 
 const primaryItems = [
   ["/", "Dashboard"],
-  ["/aset", "Daftar Aset", "95"],
+  ["/asset", "Daftar Aset", "95"],
   ["/mutasi", "Mutasi Aset"],
   ["/import/preview", "Import Data"],
   ["/laporan", "Laporan"],
@@ -84,7 +84,7 @@ export function Sidebar({
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
-          <aside className="relative h-svh w-[232px] bg-[#1c1c1e] text-white shadow-2xl">
+          <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
             <SidebarContent onNavigate={() => setOpen(false)} onCollapse={() => setOpen(false)} />
           </aside>
         </div>
