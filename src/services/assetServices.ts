@@ -112,6 +112,24 @@ export interface AssetListResult {
   pagination: AssetPagination
 }
 
+export interface MoveAssetPayload {
+  to_location_id: number
+  to_holder?: string
+  movement_date: string
+  reason: string
+}
+
+export interface MoveAssetResponse {
+  id: number
+  assetId: string
+  fromLocationId: number
+  toLocationId: number
+  fromHolder: string | null
+  toHolder: string | null
+  movementDate: string
+  reason: string
+}
+
 // ===== ASSET SERVICE =====
 export const assetService = {
   masters: async (type: string): Promise<AssetMasterItem[]> => {
@@ -155,6 +173,11 @@ export const assetService = {
 
   getAssetDetail: async (id: string): Promise<AssetAttr> => {
     const response = await api.get(`/assets/${id}`)
+    return response.data?.data || response.data
+  },
+
+  moveAsset: async (id: string, payload: MoveAssetPayload): Promise<MoveAssetResponse> => {
+    const response = await api.post(`/assets/${id}/movements`, payload)
     return response.data?.data || response.data
   },
 

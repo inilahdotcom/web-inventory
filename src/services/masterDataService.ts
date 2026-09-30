@@ -25,6 +25,10 @@ export interface UpdateMasterDataPayload {
 }
 
 export const masterDataService = {
+  getMutationLocations: async (): Promise<MasterDataItem[]> => {
+    const res = await api.get('/masters/locations')
+    return res.data?.data || []
+  },
 
   getCategories: async (): Promise<MasterDataItem[]> => {
     const res = await api.get('/categories')
