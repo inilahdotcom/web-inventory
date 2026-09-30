@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
-import { masterDataService } from "@/services/masterDataService"
 import { reportService } from "@/services/reportService"
 import {
   createExportTable,
@@ -55,7 +54,7 @@ export function AssetReportView() {
   const [exporting, setExporting] = useState(false)
   const locationsQuery = useQuery({
     queryKey: ["report-locations"],
-    queryFn: masterDataService.getMutationLocations,
+    queryFn: reportService.locations,
   })
   const locations = locationsQuery.data ?? []
   const locationId = locations.find((item) => item.name === location)?.id
