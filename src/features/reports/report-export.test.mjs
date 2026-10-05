@@ -18,8 +18,25 @@ const categories = [
 test("rekap laporan memakai angka BE, bukan data contoh", () => {
   const table = createExportTable("Rekap per kategori", categories)
   assert.deepEqual(table.rows, [["Komputer & Laptop", 2, 3, 1500000, "50%"]])
+  assert.deepEqual(table.totalRow, ["Total", 2, 3, 1500000, "50%"])
   assert.equal(table.pricedCount, 1)
   assert.equal(table.assetCount, 2)
+})
+
+test("total rekap menjumlahkan kategori dan menimbang kelengkapan harga", () => {
+  const table = createExportTable("Rekap per kategori", [
+    ...categories,
+    {
+      id: 2,
+      name: "Furniture",
+      assetTypes: 1,
+      units: 2,
+      totalValue: 500000,
+      pricedAssetTypes: 1,
+      priceCompletenessPercent: 100,
+    },
+  ])
+  assert.deepEqual(table.totalRow, ["Total", 3, 5, 2000000, "67%"])
 })
 
 test("empat tab laporan memiliki kolom dan baris ekspor sesuai data", () => {
@@ -104,10 +121,22 @@ test("Excel berisi laporan dan filter yang dipilih", async () => {
     await workbook.xlsx.load(await downloadedBlob.arrayBuffer())
     const sheet = workbook.getWorksheet("Laporan")
     assert.equal(
+      sheet.views?.some((view) => view.state === "frozen") ?? false,
+      false
+    )
+    assert.equal(
       sheet.getRow(3).getCell(1).value,
       "Periode: Agustus 2026 | Lokasi: Studio"
     )
     assert.equal(sheet.getRow(6).getCell(1).value, "Komputer & Laptop")
+    const amount = sheet.getRow(6).getCell(4)
+    assert.equal(amount.value, 1500000)
+    assert.equal(amount.numFmt, "#,##0")
+    const header = sheet.getRow(5)
+    for (let column = 1; column <= 5; column += 1) {
+      assert.equal(header.getCell(column).fill.fgColor.argb, "FF1C1C1E")
+    }
+    assert.equal(header.getCell(6).fill, undefined)
   } finally {
     globalThis.document = originalDocument
     globalThis.window = originalWindow
@@ -124,4 +153,6 @@ test("PDF yang dibuat memiliki header dan tabel", async () => {
   const output = doc.output()
   assert.match(output, /^%PDF-/)
   assert.match(output, /Komputer & Laptop/)
+  assert.deepEqual(doc.lastAutoTable.foot[0].cells[0].text, ["Total"])
+  assert.deepEqual(doc.lastAutoTable.foot[0].cells[3].text, ["1.500.000"])
 })

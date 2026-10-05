@@ -4,6 +4,7 @@ export interface ExportTable {
   title: string
   columns: string[]
   rows: Array<Array<string | number>>
+  totalRow?: Array<string | number>
   pricedCount?: number
   assetCount?: number
 }
@@ -27,6 +28,15 @@ export function createExportTable<T extends ReportTab>(
   switch (tab) {
     case "Rekap per kategori": {
       const rows = data as ReportData["Rekap per kategori"]
+      const totals = rows.reduce(
+        (current, row) => ({
+          types: current.types + row.assetTypes,
+          units: current.units + row.units,
+          value: current.value + row.totalValue,
+          priced: current.priced + row.pricedAssetTypes,
+        }),
+        { types: 0, units: 0, value: 0, priced: 0 }
+      )
       return {
         title: "Rekap aset per kategori",
         columns: [
@@ -43,11 +53,15 @@ export function createExportTable<T extends ReportTab>(
           row.totalValue,
           `${number(row.priceCompletenessPercent)}%`,
         ]),
-        pricedCount: rows.reduce(
-          (total, row) => total + row.pricedAssetTypes,
-          0
-        ),
-        assetCount: rows.reduce((total, row) => total + row.assetTypes, 0),
+        totalRow: [
+          "Total",
+          totals.types,
+          totals.units,
+          totals.value,
+          `${totals.types ? Math.round((totals.priced * 100) / totals.types) : 0}%`,
+        ],
+        pricedCount: totals.priced,
+        assetCount: totals.types,
       }
     }
     case "Aset rusak": {
@@ -148,22 +162,32 @@ export async function exportExcel(
 ) {
   const { default: ExcelJS } = await import("exceljs")
   const workbook = new ExcelJS.Workbook()
-  const sheet = workbook.addWorksheet("Laporan", {
-    views: [{ state: "frozen", ySplit: 5 }],
-  })
+  const sheet = workbook.addWorksheet("Laporan")
 
   sheet.addRow(["PT. INDONESIA NEWS CENTER"])
   sheet.addRow([table.title])
   sheet.addRow([`Periode: ${period} | Lokasi: ${location}`])
   sheet.addRow([])
   const header = sheet.addRow(table.columns)
-  header.font = { bold: true, color: { argb: "FFFFFFFF" } }
-  header.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF1C1C1E" },
-  }
-  table.rows.forEach((row) => sheet.addRow(row))
+  table.columns.forEach((_, index) => {
+    const cell = header.getCell(index + 1)
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } }
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1C1C1E" },
+    }
+  })
+  const rupiahColumns = table.columns
+    .map((column, index) => (column.endsWith("(Rp)") ? index : -1))
+    .filter((index) => index >= 0)
+  table.rows.forEach((row) => {
+    const excelRow = sheet.addRow(row)
+    rupiahColumns.forEach((index) => {
+      const cell = excelRow.getCell(index + 1)
+      if (typeof cell.value === "number") cell.numFmt = "#,##0"
+    })
+  })
   if (table.assetCount !== undefined) {
     sheet.addRow([])
     sheet.addRow([
@@ -173,7 +197,11 @@ export async function exportExcel(
   sheet.columns.forEach((column, index) => {
     const longest = Math.max(
       table.columns[index]?.length ?? 0,
-      ...table.rows.map((row) => String(row[index] ?? "").length)
+      ...table.rows.map((row) =>
+        typeof row[index] === "number" && rupiahColumns.includes(index)
+          ? number(row[index]).length
+          : String(row[index] ?? "").length
+      )
     )
     column.width = Math.min(Math.max(longest + 3, 14), 42)
   })
@@ -233,6 +261,14 @@ export async function buildPdf(
     body: table.rows.map((row) =>
       row.map((cell) => (typeof cell === "number" ? number(cell) : cell))
     ),
+    foot: table.totalRow
+      ? [
+          table.totalRow.map((cell) =>
+            typeof cell === "number" ? number(cell) : cell
+          ),
+        ]
+      : undefined,
+    showFoot: "lastPage",
     theme: "grid",
     styles: {
       font: "helvetica",
@@ -241,6 +277,7 @@ export async function buildPdf(
       overflow: "linebreak",
     },
     headStyles: { fillColor: [28, 28, 30], textColor: [255, 255, 255] },
+    footStyles: { fillColor: [28, 28, 30], textColor: [255, 255, 255] },
     margin: { left: 14, right: 14 },
   })
 
