@@ -1,177 +1,264 @@
-
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { auditLogService } from "@/services/auditLogServices"
 
 export interface AuditLogItem {
-    id: string | number
-    type: 'UPDATE' | 'DELETE' | 'CREATE' | 'IMPORT'
-    user: {
-        name: string
-        role: string
-        ip: string
-    }
-    timestamp: string
-    target: string
-    oldValues?: Record<string, any>
-    newValues?: Record<string, any>
-    description?: string
+  id: string | number
+  type: "UPDATE" | "DELETE" | "CREATE" | "IMPORT" | "RESTORE" | string
+  user: {
+    name: string
+    role: string
+    ip: string
+  }
+  timestamp: string
+  target: string
+  oldValues?: Record<string, unknown>
+  newValues?: Record<string, unknown>
+  description?: string
 }
 
 interface AuditLogViewProps {
-    totalRecord?: number
-    logs?: AuditLogItem[]
-    onExport?: () => void
+  onExport?: () => void
 }
 
-export function AuditLogView({
-    totalRecord = 1284,
-    logs = [
-        {
-            id: 1,
-            type: 'UPDATE',
-            user: { name: 'Dewi Anggraini', role: 'Staff GA', ip: '192.168.1.24' },
-            timestamp: '05/08/2026 08:47:12',
-            target: 'assets · 0853/INC-GA/1/26',
-            oldValues: { condition: 'Bagus', status: 'Digunakan' },
-            newValues: { condition: 'Rusak Berat', status: 'Diperbaiki' }
-        },
-        {
-            id: 2,
-            type: 'DELETE',
-            user: { name: 'Rizky Saputra', role: 'Admin', ip: '192.168.1.10' },
-            timestamp: '05/08/2026 10:47:12',
-            target: 'assets · 0447/INC-GA/1/26',
-            description: 'Soft delete. Alasan: duplikat baris 41-51 hasil migrasi Excel. Record dipindahkan ke arsip, deleted_at = 2026-08-05T08:20:44Z.'
-        },
-        {
-            id: 3,
-            type: 'CREATE',
-            user: { name: 'Rizky Saputra', role: 'Admin', ip: '192.168.1.10' },
-            timestamp: '05/08/2026 11:47:12',
-            target: 'assets · 0447/INC-GA/1/26',
-            description: 'Monitor LG 24MK430H · 2 Unit · Elektronik Kantor · Redaksi L3 · harga Rp 1.750.000'
-        },
-        {
-            id: 4,
-            type: 'IMPORT',
-            user: { name: 'Rizky Saputra', role: 'Admin', ip: '192.168.1.10' },
-            timestamp: '05/08/2026 15:47:12',
-            target: 'assets · migrasi awal',
-            description: '88 baris tersimpan · 4 gagal · 3 baris header diabaikan · 33 harga dinormalkan dari teks ke numerik. File: ASET_PT_INDONESIA_NEWS_CENTER_1_Sheet1.xlsx'
-        },
+export function AuditLogView({ onExport }: AuditLogViewProps) {
+  // State Filter Interaktif
+  const [selectedEntity, setSelectedEntity] = useState<string>("assets")
+  const [selectedAction, setSelectedAction] = useState<string>("")
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+
+  // Fetching Data dari Backend Go memakai TanStack Query
+  const {
+    data: logs = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "audit-logs",
+      selectedEntity,
+      selectedAction,
+      startDate,
+      endDate,
     ],
-    onExport
-}: AuditLogViewProps) {
+    queryFn: () =>
+      auditLogService.getLogs({
+        entity: selectedEntity || undefined,
+        action: selectedAction || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        pageSize: 50,
+      }),
+  })
 
-    const getBadgeStyle = (type: string) => {
-        switch (type) {
-            case 'UPDATE': return 'bg-amber-100 text-amber-800 border-amber-200'
-            case 'DELETE': return 'bg-rose-100 text-rose-800 border-rose-200'
-            case 'CREATE': return 'bg-emerald-100 text-emerald-800 border-emerald-200'
-            case 'IMPORT': return 'bg-blue-100 text-blue-800 border-blue-200'
-            default: return 'bg-neutral-100 text-neutral-800 border-neutral-200'
-        }
+  // Style badge warna sesuai Figma
+  const getBadgeStyle = (type: string) => {
+    switch (type.toUpperCase()) {
+      case "UPDATE":
+        return "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]"
+      case "DELETE":
+      case "PERMANENT_DELETE":
+        return "bg-[#FEE2E2] text-[#991B1B] border-[#FCA5A5]"
+      case "CREATE":
+        return "bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]"
+      case "IMPORT":
+      case "RESTORE":
+        return "bg-[#DBEAFE] text-[#1E40AF] border-[#BFDBFE]"
+      default:
+        return "bg-neutral-100 text-neutral-800 border-neutral-200"
     }
+  }
 
-    return (
-        <div className="min-h-screen w-full text-[#1C1C1E] bg-neutral-50/50">
-            {/* STICKY HEADER FILTER (z-10 & pl-14 lg:pl-0 untuk ruang tombol burger fixed) */}
-            <div className="sticky top-0 z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-neutral-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-2xs">
-                
-                {/* Pl-14 khusus mobile/tablet agar filter bergeser memberi ruang untuk burger */}
-                <div className="w-full overflow-x-auto pb-1 xl:pb-0 no-scrollbar pl-14 lg:pl-0">
-                    <div className="flex items-center gap-2 text-xs min-w-max">
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-500">Pengguna:</span>
-                            <span className="text-neutral-900 font-semibold">Semua</span>
-                            <span className="text-neutral-400">▾</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-500">Entitas:</span>
-                            <span className="text-neutral-900 font-semibold">assets</span>
-                            <span className="text-neutral-400 cursor-pointer">×</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-500">Aksi:</span>
-                            <span className="text-neutral-900 font-semibold">Semua</span>
-                            <span className="text-neutral-400">▾</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-900 font-semibold">01/08/2026 - 05/08/2026</span>
-                            <span className="text-neutral-400">▾</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-[#FFFBEB] border border-[#FDE68A] text-[#78350F] px-4 py-2 rounded-xl text-xs font-medium shadow-2xs flex items-center gap-2 shrink-0 w-fit">
-                    Hanya baca — log tidak dapat diubah atau dihapus
-                </div>
+  return (
+    <div className="min-h-screen w-full bg-neutral-50/50 text-[#1C1C1E]">
+      {/* STICKY HEADER FILTER */}
+      <div className="sticky top-0 z-10 mb-6 flex w-full flex-col justify-between gap-4 border-b border-neutral-200/80 bg-white/90 px-4 py-3 shadow-2xs backdrop-blur-md sm:px-6 lg:px-8 xl:flex-row xl:items-center">
+        <div className="no-scrollbar w-full overflow-x-auto pb-1 pl-14 lg:pl-0 xl:pb-0">
+          <div className="flex min-w-max items-center gap-2 text-xs">
+            {/* Filter Entitas */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
+              <span className="text-neutral-500">Entitas:</span>
+              <select
+                value={selectedEntity}
+                onChange={(e) => setSelectedEntity(e.target.value)}
+                className="cursor-pointer bg-transparent font-semibold text-neutral-900 outline-none"
+              >
+                <option value="">Semua</option>
+                <option value="assets">assets</option>
+                <option value="categories">categories</option>
+                <option value="brands">brands</option>
+                <option value="locations">locations</option>
+              </select>
             </div>
 
-            <div className="w-full space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8 pt-2">
-                <div className="flex items-center justify-between pt-2">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Audit log</h1>
-                        <p className="text-xs text-neutral-400 mt-0.5">
-                            {totalRecord.toLocaleString()} catatan · menampilkan 5 terbaru pada filter aktif
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={onExport}
-                        className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs cursor-pointer"
-                    >
-                        Export log
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {logs.map((log) => (
-                        <div
-                            key={log.id}
-                            className="rounded-2xl bg-white p-5 shadow-2xs space-y-3 border border-neutral-200/60"
-                        >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
-                                <div className="flex items-center gap-3">
-                                    <span
-                                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider border ${getBadgeStyle(log.type)}`}
-                                    >{log.type}</span>
-                                    <div className="text-xs">
-                                        <span className="font-semibold text-neutral-900">{log.user.name}</span>
-                                        <span className="text-neutral-400 mx-1.5">·</span>
-                                        <span className="text-neutral-500">{log.user.role} ({log.user.ip})</span>
-                                        <span className="text-neutral-400 ml-1.5">{log.timestamp}</span>
-                                    </div>
-                                </div>
-                                <div className="text-xs font-mono text-neutral-600">
-                                    {log.target}
-                                </div>
-                            </div>
-                            {log.oldValues && log.newValues ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                                    <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 font-mono text-[11px] text-neutral-700 space-y-1">
-                                        <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">OLD_VALUES</div>
-                                        <pre className="whitespace-pre-wrap text-neutral-600">
-                                            {JSON.stringify(log.oldValues, null, 2)}
-                                        </pre>
-                                    </div>
-                                    <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 font-mono text-[11px] text-neutral-700 space-y-1">
-                                        <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">NEW_VALUES</div>
-                                        <pre
-                                            className="whitespace-pre-wrap text-neutral-600"
-                                        >
-                                            {JSON.stringify(log.newValues, null, 2)}
-                                        </pre>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-xs text-neutral-600 pt-1 leading-relaxed">{log.description}</div>
-                            )}
-                        </div>
-                    ))}
-                </div>
+            {/* Filter Aksi */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
+              <span className="text-neutral-500">Aksi:</span>
+              <select
+                value={selectedAction}
+                onChange={(e) => setSelectedAction(e.target.value)}
+                className="cursor-pointer bg-transparent font-semibold text-neutral-900 outline-none"
+              >
+                <option value="">Semua</option>
+                <option value="CREATE">CREATE</option>
+                <option value="UPDATE">UPDATE</option>
+                <option value="DELETE">DELETE</option>
+                <option value="RESTORE">RESTORE</option>
+              </select>
             </div>
+
+            {/* Filter Tanggal */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent font-semibold text-neutral-900 outline-none"
+              />
+              <span className="text-neutral-400">-</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent font-semibold text-neutral-900 outline-none"
+              />
+            </div>
+          </div>
         </div>
-    )
+
+        <div className="flex w-fit shrink-0 items-center gap-2 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-2 text-xs font-medium text-[#78350F] shadow-2xs">
+          Hanya baca — log tidak dapat diubah atau dihapus
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pt-2 pb-12 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between pt-2">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+              Audit log
+            </h1>
+            <p className="mt-0.5 text-xs text-neutral-400">
+              {logs.length} catatan ditampilkan dari database
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50"
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={onExport}
+              className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50"
+            >
+              Export log
+            </button>
+          </div>
+        </div>
+
+        {/* State Handler */}
+        {isLoading ? (
+          <div className="rounded-2xl border border-neutral-200 bg-white p-12 text-center text-xs text-neutral-500">
+            Memuat audit log dari database...
+          </div>
+        ) : isError ? (
+          <div className="rounded-2xl border border-rose-200 bg-white p-12 text-center text-xs text-rose-600">
+            Gagal mengambil audit log. Pastikan server backend berjalan.
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="rounded-2xl border border-neutral-200 bg-white p-12 text-center text-xs text-neutral-500">
+            Belum ada rekam jejak aktivitas pada filter ini.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {logs.map((log) => {
+              // Pemisah target entitas dan kode aset
+              const targetParts = log.target
+                ? log.target.split("·")
+                : ["assets", ""]
+              const entityName = targetParts[0]?.trim() || "assets"
+              const targetCode = targetParts[1]?.trim() || ""
+
+              return (
+                <div
+                  key={log.id}
+                  className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200/70 bg-white p-5 shadow-2xs md:flex-row"
+                >
+                  {/* KOLOM KIRI: User Info, Action Badge & Timestamp (Menumpuk Vertikal) */}
+                  <div className="w-full shrink-0 space-y-1.5 md:w-56">
+                    <span
+                      className={`inline-block rounded-md border px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${getBadgeStyle(
+                        log.type
+                      )}`}
+                    >
+                      {log.type}
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-neutral-900">
+                        {log.user.name}
+                      </h4>
+                      <p className="text-[11px] text-neutral-400">
+                        {log.user.role} · {log.user.ip}
+                      </p>
+                      <p className="mt-1 font-mono text-[11px] text-neutral-400">
+                        {log.timestamp}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* KOLOM KANAN: Target & Diff / Description */}
+                  <div className="flex-1 space-y-3">
+                    {/* Target Label (Di Atas Kanan Content) */}
+                    <div className="flex justify-start font-mono text-xs font-semibold text-neutral-700 md:justify-start">
+                      <span className="font-normal text-neutral-500">
+                        {entityName} ·{" "}
+                      </span>
+                      <span className="ml-1 text-[#3B82F6]">{targetCode}</span>
+                    </div>
+
+                    {/* Body Content: JSON Diff vs Text Description */}
+                    {log.oldValues || log.newValues ? (
+                      <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                        {/* OLD VALUES BOX (Merah Pastel) */}
+                        <div className="space-y-1 rounded-xl border border-neutral-200/80 bg-[#FAFAFA] p-3 font-mono text-[11px]">
+                          <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                            OLD_VALUES
+                          </div>
+                          <pre className="leading-relaxed whitespace-pre-wrap text-[#991B1B]">
+                            {log.oldValues
+                              ? JSON.stringify(log.oldValues, null, 2)
+                              : "(Kosong)"}
+                          </pre>
+                        </div>
+
+                        {/* NEW VALUES BOX (Hijau Pastel) */}
+                        <div className="space-y-1 rounded-xl border border-neutral-200/80 bg-[#FAFAFA] p-3 font-mono text-[11px]">
+                          <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                            NEW_VALUES
+                          </div>
+                          <pre className="leading-relaxed whitespace-pre-wrap text-[#065F46]">
+                            {log.newValues
+                              ? JSON.stringify(log.newValues, null, 2)
+                              : "(Kosong)"}
+                          </pre>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-3 text-xs leading-relaxed text-neutral-600">
+                        {log.description}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
