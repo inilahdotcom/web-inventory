@@ -765,7 +765,7 @@ function SplitAssetDialog({
           </button>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid items-start gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-xs font-semibold text-[#555a6a]">
             Jumlah yang dipecah
             <div className="flex h-11 items-center rounded-xl border border-[#d9dce4] bg-white px-3 focus-within:border-[#4262ff]">
