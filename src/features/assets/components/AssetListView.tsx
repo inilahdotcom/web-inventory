@@ -154,8 +154,8 @@ export function AssetListView() {
   const queryClient = useQueryClient()
 
   const searchParam = useSearch({ strict: false }) as {
-    focus?: string
     highlight?: string
+    latest?: string | number
     newCount?: string | number
   }
   const [highlightedCodes, setHighlightedCodes] = useState<string[]>([])
@@ -184,40 +184,46 @@ export function AssetListView() {
   }
 
   const initialSavedView = getInitialSavedView()
-  const focusedAssetCode = searchParam?.focus?.trim() ?? ""
+  const showLatestSplit = String(searchParam?.latest ?? "") === "1"
 
   const [query, setQuery] = useState(
-    focusedAssetCode || initialSavedView?.query || ""
+    showLatestSplit ? "" : initialSavedView?.query || ""
   )
   const [debouncedQuery, setDebouncedQuery] = useState(
-    focusedAssetCode || initialSavedView?.query || ""
+    showLatestSplit ? "" : initialSavedView?.query || ""
   )
   const [condition, setCondition] = useState<AssetCondition | "">(
-    initialSavedView?.condition ?? ""
+    showLatestSplit ? "" : initialSavedView?.condition || ""
   )
-  const [status, setStatus] = useState(initialSavedView?.status ?? "")
+  const [status, setStatus] = useState(
+    showLatestSplit ? "" : initialSavedView?.status || ""
+  )
   const [brandId, setBrandId] = useState<number | undefined>(
-    initialSavedView?.brandId
+    showLatestSplit ? undefined : initialSavedView?.brandId
   )
   const [categoryId, setCategoryId] = useState<number | undefined>(
-    initialSavedView?.categoryId
+    showLatestSplit ? undefined : initialSavedView?.categoryId
   )
   const [locationId, setLocationId] = useState<number | undefined>(
-    initialSavedView?.locationId
+    showLatestSplit ? undefined : initialSavedView?.locationId
   )
   const [purchaseDateFrom, setPurchaseDateFrom] = useState(
-    initialSavedView?.purchaseDateFrom ?? ""
+    showLatestSplit ? "" : initialSavedView?.purchaseDateFrom || ""
   )
   const [purchaseDateTo, setPurchaseDateTo] = useState(
-    initialSavedView?.purchaseDateTo ?? ""
+    showLatestSplit ? "" : initialSavedView?.purchaseDateTo || ""
   )
-  const [priceMin, setPriceMin] = useState(initialSavedView?.priceMin ?? "")
-  const [priceMax, setPriceMax] = useState(initialSavedView?.priceMax ?? "")
+  const [priceMin, setPriceMin] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMin || ""
+  )
+  const [priceMax, setPriceMax] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMax || ""
+  )
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(
-    initialSavedView?.quickFilter ?? ""
+    showLatestSplit ? "" : initialSavedView?.quickFilter || ""
   )
   const [sort, setSort] = useState<SortOption>(
-    initialSavedView?.sort ?? "code:asc"
+    showLatestSplit ? "code:desc" : initialSavedView?.sort || "code:asc"
   )
 
   const [pageSize, setPageSize] = useState<number>(getInitialPageSize)

@@ -366,8 +366,8 @@ export function AssetDetailView() {
       await navigate({
         to: "/asset",
         search: {
-          focus: result.created.asset_code,
           highlight: result.created.asset_code,
+          latest: 1,
           newCount: 1,
         },
       })
