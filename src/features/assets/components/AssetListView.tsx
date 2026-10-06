@@ -698,6 +698,18 @@ export function AssetListView() {
     toast.info("Tampilan tersimpan berhasil dihapus.")
   }
 
+  const openAssetDetail = (asset: Asset) => {
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
+  }
+
   const hasActiveFilters = Boolean(
     query ||
     condition ||
@@ -1173,6 +1185,7 @@ export function AssetListView() {
                   visibleAssets.length
                 )}
                 onToggle={() => toggleSelection(asset.code)}
+                onOpen={() => openAssetDetail(asset)}
               />
             ))}
           </div>
@@ -1200,6 +1213,7 @@ export function AssetListView() {
                     visibleAssets.length
                   )}
                   onToggle={() => toggleSelection(asset.code)}
+                  onOpen={() => openAssetDetail(asset)}
                 />
               ))}
             </section>
@@ -1242,6 +1256,7 @@ export function AssetListView() {
                   visibleAssets.length
                 )}
                 onToggle={() => toggleSelection(asset.code)}
+                onOpen={() => openAssetDetail(asset)}
               />
             ))}
           </div>
@@ -1330,12 +1345,14 @@ function AssetRow({
   isHighlighted = false,
   isNewImport = false,
   onToggle,
+  onOpen,
 }: {
   asset: Asset
   selected: boolean
   isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
 }) {
   // Cek apakah aset ini disorot karena "Perlu Tindakan"
   const isNeedsAttention =
@@ -1354,7 +1371,11 @@ function AssetRow({
       className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
-      <div className="flex min-w-0 items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
+      >
         <span className="truncate font-mono text-xs text-[#4262ff]">
           {asset.code}
         </span>
@@ -1374,15 +1395,19 @@ function AssetRow({
               Diperbarui
             </span>
           ))}
-      </div>
-      <span className="min-w-0">
+      </button>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="min-w-0 cursor-pointer text-left hover:underline"
+      >
         <span className="block truncate text-sm font-semibold">
           {asset.name}
         </span>
         <span className="block truncate text-xs text-[#8e91a0]">
           {asset.detail}
         </span>
-      </span>
+      </button>
       <span className="text-xs text-[#555a6a]">{asset.category}</span>
       <span
         className={`text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
@@ -1521,12 +1546,14 @@ function MobileAssetRow({
   isHighlighted = false,
   isNewImport = false,
   onToggle,
+  onOpen,
 }: {
   asset: Asset
   selected: boolean
   isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
 }) {
   const isNeedsAttention =
     isHighlighted && (asset.attention || asset.condition !== "Bagus")
@@ -1545,7 +1572,11 @@ function MobileAssetRow({
     >
       <div className="flex min-w-0 items-center gap-2">
         <CheckBox selected={selected} onClick={onToggle} />
-        <span className="min-w-0">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-w-0 cursor-pointer text-left"
+        >
           <span className="block truncate text-xs font-semibold">
             {asset.name}
           </span>
@@ -1570,7 +1601,7 @@ function MobileAssetRow({
                 </span>
               ))}
           </span>
-        </span>
+        </button>
       </div>
       <span className="min-w-0">
         <span
@@ -1598,12 +1629,14 @@ function AssetCard({
   isHighlighted = false,
   isNewImport = false,
   onToggle,
+  onOpen,
 }: {
   asset: Asset
   selected: boolean
   isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
 }) {
   const isNeedsAttention =
     isHighlighted && (asset.attention || asset.condition !== "Bagus")
@@ -1624,7 +1657,11 @@ function AssetCard({
         <CheckBox selected={selected} onClick={onToggle} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onOpen}
+              className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
+            >
               <span className="font-mono text-xs text-[#4262ff]">
                 {asset.code}
               </span>
@@ -1644,14 +1681,20 @@ function AssetCard({
                     Diperbarui
                   </span>
                 ))}
-            </div>
+            </button>
             <span
               className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
             >
               {asset.condition}
             </span>
           </div>
-          <h2 className="mt-2 truncate text-sm font-semibold">{asset.name}</h2>
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-2 block max-w-full cursor-pointer truncate text-left text-sm font-semibold hover:underline"
+          >
+            {asset.name}
+          </button>
           <p className="mt-0.5 text-xs text-[#8e91a0]">{asset.detail}</p>
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-xs text-[#6b6f7e]">
             <span>
