@@ -33,4 +33,22 @@ export const reportService = {
     )
     return response.data.data ?? []
   },
+  periodDates: async (
+    tab: ReportTab,
+    signal?: AbortSignal
+  ): Promise<string[]> => {
+    if (tab === "Mutasi aset") {
+      const response = await api.get<{
+        data: Array<{ movementDate: string }>
+      }>(reportUrl("/reports/movements"), { signal })
+      return (response.data.data ?? []).map((item) => item.movementDate)
+    }
+
+    const response = await api.get<{
+      data: Array<{ purchaseDate: string | null }>
+    }>(reportUrl("/reports/assets"), { signal })
+    return (response.data.data ?? []).flatMap((item) =>
+      item.purchaseDate ? [item.purchaseDate] : []
+    )
+  },
 }

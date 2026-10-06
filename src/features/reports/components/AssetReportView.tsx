@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { reportService } from "@/services/reportService"
@@ -20,17 +20,45 @@ const tabs: ReportTab[] = [
   "Per lokasi & pemegang",
   "Mutasi aset",
 ]
-const periods = ["Semua", "Agustus 2026", "Juli 2026"]
 const number = (value: number) => new Intl.NumberFormat("id-ID").format(value)
 
-function periodFilters(
-  period: string
-): Pick<ReportFilters, "dateFrom" | "dateTo"> {
-  if (period === "Agustus 2026")
-    return { dateFrom: "2026-08-01", dateTo: "2026-08-31" }
-  if (period === "Juli 2026")
-    return { dateFrom: "2026-07-01", dateTo: "2026-07-31" }
-  return {}
+type PeriodOption = {
+  value: string
+  label: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+const allPeriod: PeriodOption = { value: "all", label: "Semua" }
+const monthLabel = new Intl.DateTimeFormat("id-ID", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+})
+
+function createPeriodOptions(dates: string[]): PeriodOption[] {
+  const months = new Set(
+    dates.flatMap((date) => {
+      const match = /^(\d{4})-(\d{2})/.exec(date)
+      return match ? [`${match[1]}-${match[2]}`] : []
+    })
+  )
+
+  return [
+    allPeriod,
+    ...Array.from(months)
+      .sort((left, right) => right.localeCompare(left))
+      .map((value) => {
+        const [year, month] = value.split("-").map(Number)
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+        return {
+          value,
+          label: monthLabel.format(new Date(Date.UTC(year, month - 1, 1))),
+          dateFrom: `${value}-01`,
+          dateTo: `${value}-${String(lastDay).padStart(2, "0")}`,
+        }
+      }),
+  ]
 }
 
 function errorMessage(error: unknown): string {
@@ -48,7 +76,7 @@ function errorMessage(error: unknown): string {
 
 export function AssetReportView() {
   const [activeTab, setActiveTab] = useState<ReportTab>(tabs[0])
-  const [period, setPeriod] = useState("Semua")
+  const [period, setPeriod] = useState(allPeriod.value)
   const [location, setLocation] = useState("Semua")
   const [notice, setNotice] = useState("")
   const [exporting, setExporting] = useState(false)
@@ -56,9 +84,24 @@ export function AssetReportView() {
     queryKey: ["report-locations"],
     queryFn: reportService.locations,
   })
+  const periodsQuery = useQuery({
+    queryKey: ["report-periods", activeTab],
+    queryFn: ({ signal }) => reportService.periodDates(activeTab, signal),
+  })
+  const periods = useMemo(
+    () => createPeriodOptions(periodsQuery.data ?? []),
+    [periodsQuery.data]
+  )
+  const selectedPeriod =
+    periods.find((item) => item.value === period) ?? allPeriod
+
   const locations = locationsQuery.data ?? []
   const locationId = locations.find((item) => item.name === location)?.id
-  const filters: ReportFilters = { ...periodFilters(period), locationId }
+  const filters: ReportFilters = {
+    dateFrom: selectedPeriod.dateFrom,
+    dateTo: selectedPeriod.dateTo,
+    locationId,
+  }
   const reportQuery = useQuery({
     queryKey: [
       "report",
@@ -78,8 +121,8 @@ export function AssetReportView() {
     setNotice("")
     try {
       if (format === "excel")
-        await exportExcel(table, activeTab, period, location)
-      else await exportPdf(table, activeTab, period, location)
+        await exportExcel(table, activeTab, selectedPeriod.label, location)
+      else await exportPdf(table, activeTab, selectedPeriod.label, location)
     } catch (error) {
       setNotice(errorMessage(error))
     } finally {
@@ -95,7 +138,10 @@ export function AssetReportView() {
             <button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                if (tab !== activeTab) setPeriod(allPeriod.value)
+                setActiveTab(tab)
+              }}
               className={`h-8 rounded-full px-3.5 text-xs font-semibold transition ${activeTab === tab ? "bg-[#1c1c1e] text-white" : "border border-[#e0e2e8] bg-white text-[#555a6a]"}`}
             >
               {tab}
@@ -126,13 +172,13 @@ export function AssetReportView() {
               {table.title}
             </h1>
             <p className="mt-1 text-sm text-[#6b6f7e]">
-              Periode: {period === "Semua" ? "seluruh data" : period} · dihitung
-              ulang &lt; 10 detik (G-04)
+              Periode: {period === allPeriod.value ? "seluruh data" : selectedPeriod.label} ·
+              dihitung ulang &lt; 10 detik (G-04)
             </p>
           </div>
           <div className="flex flex-wrap gap-2 lg:ml-auto">
             <FilterSelect
-              value={period}
+              value={selectedPeriod.value}
               onChange={setPeriod}
               label="Periode"
               options={periods}
@@ -141,16 +187,24 @@ export function AssetReportView() {
               value={location}
               onChange={setLocation}
               label="Lokasi"
-              options={["Semua", ...locations.map((item) => item.name)]}
+              options={[
+                { value: "Semua", label: "Semua" },
+                ...locations.map((item) => ({
+                  value: item.name,
+                  label: item.name,
+                })),
+              ]}
             />
           </div>
         </section>
-        {(notice || reportQuery.isError || locationsQuery.isError) && (
+        {(notice || reportQuery.isError || locationsQuery.isError || periodsQuery.isError) && (
           <Notice onClose={() => setNotice("")}>
             {notice ||
               (reportQuery.isError
                 ? errorMessage(reportQuery.error)
-                : "Pilihan lokasi gagal dimuat dari server.")}
+                : locationsQuery.isError
+                  ? "Pilihan lokasi gagal dimuat dari server."
+                  : "Pilihan periode gagal dimuat dari server.")}
           </Notice>
         )}
         <section className="grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_21.25rem]">
@@ -471,7 +525,7 @@ function FilterSelect({
 }: {
   label: string
   value: string
-  options: string[]
+  options: Array<{ value: string; label: string }>
   onChange: (value: string) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -483,22 +537,22 @@ function FilterSelect({
         aria-expanded={open}
         className="flex h-9 items-center gap-1 rounded-full border border-[#c7cad5] bg-white px-3.5 text-xs font-semibold"
       >
-        {label}: {value}
+        {label}: {options.find((option) => option.value === value)?.label ?? value}
         <span aria-hidden="true">▾</span>
       </button>
       {open && (
         <div className="absolute top-10 right-0 z-20 min-w-full overflow-hidden rounded-xl border border-[#e0e2e8] bg-white p-1 shadow-lg">
           {options.map((option) => (
             <button
-              key={option}
+              key={option.value}
               type="button"
               onClick={() => {
-                onChange(option)
+                onChange(option.value)
                 setOpen(false)
               }}
-              className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option === value ? "bg-[#1c1c1e] text-white" : "hover:bg-[#f7f8fa]"}`}
+              className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option.value === value ? "bg-[#1c1c1e] text-white" : "hover:bg-[#f7f8fa]"}`}
             >
-              {option}
+              {option.label}
             </button>
           ))}
         </div>
