@@ -154,6 +154,7 @@ export function AssetListView() {
   const queryClient = useQueryClient()
 
   const searchParam = useSearch({ strict: false }) as {
+    focus?: string
     highlight?: string
     newCount?: string | number
   }
@@ -183,10 +184,13 @@ export function AssetListView() {
   }
 
   const initialSavedView = getInitialSavedView()
+  const focusedAssetCode = searchParam?.focus?.trim() ?? ""
 
-  const [query, setQuery] = useState(initialSavedView?.query ?? "")
+  const [query, setQuery] = useState(
+    focusedAssetCode || initialSavedView?.query || ""
+  )
   const [debouncedQuery, setDebouncedQuery] = useState(
-    initialSavedView?.query ?? ""
+    focusedAssetCode || initialSavedView?.query || ""
   )
   const [condition, setCondition] = useState<AssetCondition | "">(
     initialSavedView?.condition ?? ""

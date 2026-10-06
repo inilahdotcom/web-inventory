@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import { Route } from "@/routes/_app/asset/$id/"
 import {
   assetService,
@@ -115,6 +116,7 @@ function defaultSplitStatus(condition: string, currentStatus: string) {
 export function AssetDetailView() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
   const [detail, setDetail] = useState<AssetDetailAttr | null>(null)
   const [asset, setAsset] = useState<AssetDraft | null>(null)
@@ -359,11 +361,16 @@ export function AssetDetailView() {
     setSplitError("")
     try {
       const result = await assetService.splitAsset(detail.id, payload)
-      await refreshDetail()
+      await queryClient.invalidateQueries({ queryKey: ["assets"] })
       setSplitOpen(false)
-      setNotice(
-        `Record berhasil dipecah. Aset baru ${result.created.asset_code} dibuat sebanyak ${result.created.quantity} ${result.created.unit}.`
-      )
+      await navigate({
+        to: "/asset",
+        search: {
+          focus: result.created.asset_code,
+          highlight: result.created.asset_code,
+          newCount: 1,
+        },
+      })
     } catch (cause) {
       setSplitError(errorMessage(cause))
     } finally {
