@@ -1,21 +1,19 @@
 # ---- Base ----
-FROM oven/bun:1 AS base
+# Seluruh build memakai Node, bukan Bun: di agent Jenkins runtime Bun berputar
+# 100% CPU tanpa syscall (husky, vite build, lalu bun install sendiri macet).
+# Harus image glibc (bukan alpine) agar cocok dengan binding native di lockfile.
+FROM node:24-slim AS base
 WORKDIR /usr/src/app
 
-# ---- Install dependencies (di-cache selama package.json & bun.lock tidak berubah) ----
+# ---- Install dependencies (di-cache selama package.json & package-lock.json tidak berubah) ----
 FROM base AS install
-COPY package.json bun.lock ./
-# --ignore-scripts: lewati `prepare` (husky) - git hooks tidak berguna di image,
-# dan di agent Jenkins proses ini menggantung tanpa output
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile --ignore-scripts
+COPY package.json package-lock.json ./
+# --ignore-scripts: lewati `prepare` (husky) - git hooks tidak berguna di image
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
 
 # ---- Build ----
-# Build dijalankan dengan Node, bukan Bun: runtime JS Bun berputar 100% CPU
-# tanpa syscall di agent Jenkins (husky & vite build sama-sama macet).
-# Harus image glibc (bukan alpine) agar cocok dengan binding native hasil install.
-FROM node:24-slim AS build
-WORKDIR /usr/src/app
+FROM base AS build
 COPY --from=install /usr/src/app/node_modules node_modules
 COPY . .
 # .env ikut ke build; Vite menanamkan VITE_* ke bundle
