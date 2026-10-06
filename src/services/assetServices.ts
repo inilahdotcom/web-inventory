@@ -235,7 +235,7 @@ export const assetService = {
     payload: CreateAssetPayload
   ): Promise<AssetWriteResult> => {
     const response = await api.post("/assets/create", payload)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as AssetWriteResult
   },
 
   updateAsset: async (
@@ -243,17 +243,17 @@ export const assetService = {
     payload: UpdateAssetPayload
   ): Promise<AssetWriteResult> => {
     const response = await api.put(`/assets/update/${id}`, payload)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as AssetWriteResult
   },
 
   getAssetById: async (id: string): Promise<AssetAttr> => {
     const response = await api.get(`/assets/${id}`)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as AssetAttr
   },
 
   getAssetDetail: async (id: string): Promise<AssetDetailAttr> => {
     const response = await api.get(`/assets/${id}`)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as AssetDetailAttr
   },
 
   moveAsset: async (
@@ -261,7 +261,7 @@ export const assetService = {
     payload: MoveAssetPayload
   ): Promise<MoveAssetResponse> => {
     const response = await api.post(`/assets/${id}/movements`, payload)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as MoveAssetResponse
   },
 
   splitAsset: async (
@@ -283,8 +283,9 @@ export const assetService = {
         "Content-Type": "multipart/form-data",
       },
     })
-    const rawData = res.data?.data || res.data
-    const urls = rawData?.photo_urls || rawData
+    const rawData = (res.data?.data || res.data) as
+      { photo_urls?: string[] } | string[]
+    const urls = Array.isArray(rawData) ? rawData : rawData?.photo_urls
     return Array.isArray(urls) ? urls : []
   },
 
@@ -312,18 +313,45 @@ export const assetService = {
     })
   },
 
-  bulkDelete: async (payload: BulkDeletePayload): Promise<unknown> => {
+  bulkDelete: async (
+    payload: BulkDeletePayload
+  ): Promise<Record<string, unknown>> => {
     const response = await api.post("/assets/bulk-delete", payload)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as Record<string, unknown>
   },
 
-  getArchivedAssets: async (): Promise<unknown[]> => {
+  getArchivedAssets: async (): Promise<Record<string, unknown>[]> => {
     const response = await api.get("/assets/archive")
-    return response.data?.data || response.data || []
+    return (response.data?.data || response.data || []) as Record<
+      string,
+      unknown
+    >[]
   },
 
-  restoreAsset: async (id: string): Promise<unknown> => {
+  restoreAsset: async (id: string): Promise<Record<string, unknown>> => {
     const response = await api.patch(`/assets/restore/${id}`)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as Record<string, unknown>
+  },
+
+  exportExcel: async (
+    params: Omit<AssetListParams, "pageSize" | "cursor"> & { ids?: string[] }
+  ) => {
+    const response = await api.get("/assets/export/excel", {
+      params,
+      responseType: "blob",
+    })
+    return response
+  },
+
+  exportPdf: async (
+    params: Omit<AssetListParams, "pageSize" | "cursor"> & {
+      ids?: string[]
+    } = {}
+  ) => {
+    const response = await api.get("/assets/export/pdf", {
+      params,
+      responseType: "blob",
+    })
+    return response
   },
 }

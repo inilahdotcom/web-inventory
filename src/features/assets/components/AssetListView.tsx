@@ -1,9 +1,11 @@
-import { useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
+import { profileService } from "@/services/profileService"
 import { toast } from "sonner"
+import { downloadBlob } from "@/lib/DownloadBlob"
 import type {
   AssetCondition,
   AssetListItem,
@@ -58,6 +60,7 @@ type QuickFilter =
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
+// Style warna badge kondisi aset (Kondisi Rusak Berat TETAP MERAH)
 const conditionClass: Record<AssetCondition, string> = {
   Bagus: "bg-[#c3faf5] text-[#187574]",
   "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
@@ -123,25 +126,33 @@ function toAsset(item: AssetListItem): Asset {
     attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0
   )
   const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
-  const holderName = attr.holder || attr.holderName || attr.holder_name || ""
+  const holderName = String(
+    attr.holder || attr.holderName || attr.holder_name || ""
+  )
 
   return {
-    id: item.id || attr.id || "",
-    slug: attr.slug || attr.code || attr.assetCode || "",
-    code: attr.assetCode || attr.code || attr.asset_code || "—",
-    name: attr.name || attr.assetName || attr.asset_name || "Tanpa Nama",
+    id: String(item.id || attr.id || ""),
+    slug: String(attr.slug || attr.code || attr.assetCode || ""),
+    code: String(attr.assetCode || attr.code || attr.asset_code || "—"),
+    name: String(
+      attr.name || attr.assetName || attr.asset_name || "Tanpa Nama"
+    ),
     detail: holderName,
-    category: attr.categoryName || attr.category || attr.category_name || "—",
-    brand: attr.brandName || attr.brand || attr.brand_name || "—",
-    location: attr.locationName || attr.location || attr.location_name || "—",
-    quantity: attr.quantity ?? attr.qty ?? 1,
-    unit: attr.unit || "Unit",
-    condition: attr.condition || "Bagus",
-    status: attr.status || "Tersedia",
+    category: String(
+      attr.categoryName || attr.category || attr.category_name || "—"
+    ),
+    brand: String(attr.brandName || attr.brand || attr.brand_name || "—"),
+    location: String(
+      attr.locationName || attr.location || attr.location_name || "—"
+    ),
+    quantity: Number(attr.quantity ?? attr.qty ?? 1),
+    unit: String(attr.unit || "Unit"),
+    condition: (attr.condition as AssetCondition) || "Bagus",
+    status: String(attr.status || "Tersedia"),
     price:
       priceValue > 0 ? `Rp. ${formatNumber.format(priceValue)}` : undefined,
     priceValue,
-    attention: (attr.condition || "Bagus") !== "Bagus",
+    attention: ((attr.condition as AssetCondition) || "Bagus") !== "Bagus",
     hasPhoto,
   }
 }
@@ -153,11 +164,47 @@ export function AssetListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  // Profil user (query key sama dengan dashboard, jadi cache dipakai bersama)
+  const { data: profile } = useQuery({
+    queryKey: ["dashboard", "profile"],
+    queryFn: () => profileService.get(),
+  })
+
+  const displayName: string = profile?.attributes?.name || ""
+  const userInitials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+
+  // Popover dropdown profile
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Tutup dropdown saat klik di luar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   const searchParam = useSearch({ strict: false }) as {
+    search?: string
+    filter?: string
     highlight?: string
     latest?: string | number
     newCount?: string | number
   }
+
   const [highlightedCodes, setHighlightedCodes] = useState<string[]>([])
   const [highlightedCount, setHighlightedCount] = useState<number>(0)
 
@@ -240,6 +287,37 @@ export function AssetListView() {
   )
   const [selectedCodes, setSelectedCodes] = useState(() => new Set<string>())
   const [notice, setNotice] = useState("")
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const queryFromUrl = searchParam?.search || urlParams.get("search") || ""
+    const filterFromUrl = searchParam?.filter || urlParams.get("filter") || ""
+
+    if (queryFromUrl) {
+      queueMicrotask(() => {
+        setQuery(queryFromUrl)
+        setDebouncedQuery(queryFromUrl)
+      })
+    }
+
+    if (filterFromUrl === "missing_price") {
+      queueMicrotask(() => {
+        setQuickFilter("withoutPrice")
+      })
+    }
+  }, [searchParam?.search, searchParam?.filter])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = query.trim()
+      if (trimmed.length === 0 || trimmed.length >= 2) {
+        setDebouncedQuery(trimmed)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [query])
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -247,16 +325,14 @@ export function AssetListView() {
     resetPagination()
   }
 
-  // Sinkronisasi ukuran layar secara responsif
-  useState(() => {
+  useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)")
     const syncViewport = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mediaQuery.addEventListener("change", syncViewport)
     return () => mediaQuery.removeEventListener("change", syncViewport)
-  })
+  }, [])
 
-  // Sinkronisasi penanda / highlight baris baru dari URL
-  useState(() => {
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const rawHighlight = searchParam?.highlight || urlParams.get("highlight")
     const rawCount = searchParam?.newCount || urlParams.get("newCount")
@@ -266,24 +342,39 @@ export function AssetListView() {
         .split(",")
         .map((c) => c.trim().toLowerCase())
         .filter(Boolean)
-      setHighlightedCodes(codes)
+
+      queueMicrotask(() => {
+        setHighlightedCodes(codes)
+      })
     }
 
     if (rawCount) {
-      setHighlightedCount(Number(rawCount))
+      queueMicrotask(() => {
+        setHighlightedCount(Number(rawCount))
+      })
     }
 
     if (rawHighlight || rawCount) {
       const timer = setTimeout(() => {
         setHighlightedCodes([])
         setHighlightedCount(0)
+
+        navigate({
+          to: "/asset",
+          search: (prev: Record<string, unknown>) => {
+            const next = { ...prev }
+            delete next.highlight
+            delete next.newCount
+            return next
+          },
+          replace: true,
+        })
       }, 10000)
 
       return () => clearTimeout(timer)
     }
-  })
+  }, [searchParam?.highlight, searchParam?.newCount, navigate])
 
-  // Ambil Master Data Merek, Kategori, Lokasi menggunakan React Query
   const { data: brandData = [] } = useQuery({
     queryKey: ["masters", "brands"],
     queryFn: () => assetService.masters("brands"),
@@ -355,6 +446,10 @@ export function AssetListView() {
     ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi."
     : ""
 
+  const isHighlighted = (code: string) => {
+    return Boolean(code && highlightedCodes.includes(code.toLowerCase()))
+  }
+
   const isNewItem = (index: number, code: string, totalVisible: number) => {
     if (code && highlightedCodes.includes(code.toLowerCase())) return true
 
@@ -362,7 +457,6 @@ export function AssetListView() {
       const startIndex = Math.max(0, totalVisible - highlightedCount)
       return index >= startIndex
     }
-
     return false
   }
 
@@ -445,6 +539,76 @@ export function AssetListView() {
         : new Set(visibleAssets.map((asset) => asset.code))
     )
 
+  const buildExportParams = () => ({
+    sort,
+    search: debouncedQuery || undefined,
+    condition: condition || undefined,
+    status: status || undefined,
+    brandId,
+    categoryId,
+    locationId,
+    purchaseDateFrom: purchaseDateFrom || undefined,
+    purchaseDateTo: purchaseDateTo || undefined,
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
+    needsAttention: quickFilter === "needsAttention" || undefined,
+    withoutPrice: quickFilter === "withoutPrice" || undefined,
+    withoutPhoto: quickFilter === "withoutPhoto" || undefined,
+    duplicateCondition: quickFilter === "duplicateCondition" || undefined,
+  })
+
+  const runExport = async (name: string, extra: { ids?: string[] } = {}) => {
+    if (exporting) return
+    setExporting(true)
+    const toastId = toast.loading("Menyiapkan file Excel...")
+    try {
+      const response = await assetService.exportExcel({
+        ...buildExportParams(),
+        ...extra,
+      })
+      downloadBlob(
+        response,
+        `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`
+      )
+      toast.success("Export berhasil.", { id: toastId })
+    } catch {
+      toast.error("Gagal mengekspor data.", { id: toastId })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportAll = () => runExport("daftar-aset")
+
+  const handleExportSelected = () => {
+    const ids = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (ids.length === 0) {
+      toast.error("Tidak ada aset terpilih.")
+      return
+    }
+    runExport("aset-terpilih", { ids })
+  }
+
+  const bulkActions = [
+    {
+      label: "Ubah kondisi",
+      action: () =>
+        setNotice("Ubah kondisi siap diproses untuk aset terpilih."),
+    },
+    {
+      label: "Mutasi",
+      action: () => setNotice("Mutasi siap diproses untuk aset terpilih."),
+    },
+    {
+      label: exporting ? "Mengekspor..." : "Export terpilih",
+      action: handleExportSelected,
+    },
+  ]
+
   const handleBulkDelete = async () => {
     const idsToDelete = assets
       .filter((asset) => selectedCodes.has(asset.code))
@@ -502,6 +666,8 @@ export function AssetListView() {
     setSort("code:asc")
     setOpenFilter(null)
     resetPagination()
+
+    navigate({ to: "/asset" })
   }
 
   const handleSaveView = () => {
@@ -566,7 +732,19 @@ export function AssetListView() {
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-2.5 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-3.5 sm:pr-6 sm:pl-16 lg:pl-6">
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            navigate({
+              to: "/asset",
+              search: (prev: Record<string, unknown>) => ({
+                ...prev,
+                search: query.trim(),
+              }),
+            })
+          }}
+          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85"
+        >
           <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
           <input
             value={query}
@@ -578,14 +756,81 @@ export function AssetListView() {
           <span className="ml-auto hidden text-xs text-[#8e91a0] sm:block">
             {loading ? "Memuat..." : `${visibleAssets.length} hasil`}
           </span>
-        </label>
+        </form>
+
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
-            ?
-          </span>
-          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-xs font-semibold text-[#600000]">
-            RS
-          </span>
+          {/* Avatar Profile dengan Dropdown Menu (Detail Profile & Logout) */}
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              aria-label="Menu profil"
+              aria-expanded={isProfileOpen}
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600 transition select-none hover:ring-2 hover:ring-rose-300 focus:outline-none"
+            >
+              {userInitials || "DZ"}
+            </button>
+
+            {isProfileOpen && (
+              <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white py-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                <div className="border-b border-neutral-100 px-4 py-2">
+                  <p className="truncate text-xs font-semibold text-neutral-900">
+                    {displayName || "Dzaki Admin"}
+                  </p>
+                  <p className="text-[10px] text-neutral-500">
+                    Akun Terverifikasi
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                    navigate({ to: "/profile" })
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                >
+                  <svg
+                    className="h-4 w-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Detail Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                >
+                  <svg
+                    className="h-4 w-4 text-rose-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -606,7 +851,13 @@ export function AssetListView() {
               Kolom{" "}
               <span className="text-xs font-normal text-[#6b6f7e]">10/12</span>
             </Pill>
-            <Pill className="h-10 px-4 text-sm">Export Excel</Pill>
+            <Pill
+              className="h-10 px-4 text-sm"
+              onClick={handleExportAll}
+              disabled={exporting}
+            >
+              {exporting ? "Mengekspor..." : "Export Excel"}
+            </Pill>
             <button
               type="button"
               onClick={() => navigate({ to: "/asset/new" })}
@@ -807,18 +1058,19 @@ export function AssetListView() {
               </span>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
-              {["Ubah kondisi", "Mutasi", "Export terpilih"].map((label) => (
+              {bulkActions.map(({ label, action }) => (
                 <button
-                  onClick={() =>
-                    setNotice(`${label} siap diproses untuk aset terpilih.`)
-                  }
+                  type="button"
+                  onClick={action}
                   key={label}
-                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none"
+                  disabled={exporting}
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                 >
                   {label}
                 </button>
               ))}
               <button
+                type="button"
                 onClick={handleBulkDelete}
                 className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
               >
@@ -830,6 +1082,7 @@ export function AssetListView() {
 
         {notice && (
           <button
+            type="button"
             onClick={() => setNotice("")}
             className="cursor-pointer rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
           >
@@ -840,6 +1093,7 @@ export function AssetListView() {
         <div className="flex justify-start">
           <div className="inline-flex h-10 rounded-full border border-[#c7cad5] bg-white p-1">
             <button
+              type="button"
               onClick={() => setViewMode("table")}
               aria-label="Tampilan tabel"
               title="Tampilan tabel"
@@ -849,6 +1103,7 @@ export function AssetListView() {
               <Table2 size={16} strokeWidth={2} aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("card")}
               aria-label="Tampilan kartu"
               title="Tampilan kartu"
@@ -911,7 +1166,12 @@ export function AssetListView() {
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
-                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
+                isHighlighted={isHighlighted(asset.code)}
+                isNewImport={isNewItem(
+                  index,
+                  asset.code,
+                  visibleAssets.length
+                )}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -933,6 +1193,7 @@ export function AssetListView() {
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
+                  isHighlighted={isHighlighted(asset.code)}
                   isNewImport={isNewItem(
                     index,
                     asset.code,
@@ -974,7 +1235,12 @@ export function AssetListView() {
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
-                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
+                isHighlighted={isHighlighted(asset.code)}
+                isNewImport={isNewItem(
+                  index,
+                  asset.code,
+                  visibleAssets.length
+                )}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -1057,26 +1323,35 @@ function PageSizeMenu({
   )
 }
 
+// Komponen Baris Tabel Desktop (logika warna sorotan pintar)
 function AssetRow({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
 }) {
+  // Cek apakah aset ini disorot karena "Perlu Tindakan"
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const rowStyle = isNeedsAttention
+    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium" // MERAH untuk Perlu Tindakan
+    : isHighlighted || isNewImport
+      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium" // HIJAU untuk Edit / Import
+      : selected
+        ? "bg-[#f5f3ff]"
+        : "bg-white"
+
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${
-        isNewImport
-          ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
-          : selected
-            ? "bg-[#f5f3ff]"
-            : "bg-white"
-      }`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
       <div className="flex min-w-0 items-center gap-1.5">
@@ -1088,14 +1363,23 @@ function AssetRow({
             Baru
           </span>
         )}
+        {!isNewImport &&
+          isHighlighted &&
+          (isNeedsAttention ? (
+            <span className="shrink-0 rounded bg-rose-100 px-1 py-0.5 text-[9px] font-bold text-rose-800">
+              Perlu Tindakan
+            </span>
+          ) : (
+            <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800">
+              Diperbarui
+            </span>
+          ))}
       </div>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">
           {asset.name}
         </span>
-        <span
-          className={`block truncate text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
-        >
+        <span className="block truncate text-xs text-[#8e91a0]">
           {asset.detail}
         </span>
       </span>
@@ -1230,26 +1514,34 @@ function ActionMenu({ asset }: { asset: Asset }) {
   )
 }
 
+// Komponen Baris Tabel Mobile
 function MobileAssetRow({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const rowStyle = isNeedsAttention
+    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium"
+    : isHighlighted || isNewImport
+      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
+      : selected
+        ? "bg-[#f5f3ff]"
+        : "bg-white"
+
   return (
     <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 transition-colors duration-1000 last:border-b-0 ${
-        isNewImport
-          ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
-          : selected
-            ? "bg-[#f5f3ff]"
-            : "bg-white"
-      }`}
+      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
     >
       <div className="flex min-w-0 items-center gap-2">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -1266,6 +1558,17 @@ function MobileAssetRow({
                 Baru
               </span>
             )}
+            {!isNewImport &&
+              isHighlighted &&
+              (isNeedsAttention ? (
+                <span className="rounded bg-rose-100 px-1 text-[8px] font-bold text-rose-800">
+                  Perlu Tindakan
+                </span>
+              ) : (
+                <span className="rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800">
+                  Diperbarui
+                </span>
+              ))}
           </span>
         </span>
       </div>
@@ -1288,26 +1591,34 @@ function MobileAssetRow({
   )
 }
 
+// Komponen Kartu
 function AssetCard({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const cardStyle = isNeedsAttention
+    ? "border-rose-300 bg-rose-50/80 ring-1 ring-rose-300"
+    : isHighlighted || isNewImport
+      ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
+      : selected
+        ? "border-[#d8d2ff] bg-[#f5f3ff]"
+        : "border-[#eef0f3] bg-white"
+
   return (
     <article
-      className={`rounded-2xl border p-4 transition-colors duration-1000 ${
-        isNewImport
-          ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
-          : selected
-            ? "border-[#d8d2ff] bg-[#f5f3ff]"
-            : "border-[#eef0f3] bg-white"
-      }`}
+      className={`rounded-2xl border p-4 transition-colors duration-1000 ${cardStyle}`}
     >
       <div className="flex items-start gap-3">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -1322,6 +1633,17 @@ function AssetCard({
                   Baru
                 </span>
               )}
+              {!isNewImport &&
+                isHighlighted &&
+                (isNeedsAttention ? (
+                  <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-800">
+                    Perlu Tindakan
+                  </span>
+                ) : (
+                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                    Diperbarui
+                  </span>
+                ))}
             </div>
             <span
               className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
@@ -1330,11 +1652,7 @@ function AssetCard({
             </span>
           </div>
           <h2 className="mt-2 truncate text-sm font-semibold">{asset.name}</h2>
-          <p
-            className={`mt-0.5 text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
-          >
-            {asset.detail}
-          </p>
+          <p className="mt-0.5 text-xs text-[#8e91a0]">{asset.detail}</p>
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-xs text-[#6b6f7e]">
             <span>
               <b className="block text-[#1c1c1e]">Kategori</b>
@@ -1368,6 +1686,7 @@ function CheckBox({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
@@ -1379,18 +1698,22 @@ function CheckBox({
 function Pill({
   children,
   active = false,
+  disabled = false,
   className = "",
   onClick,
 }: {
   children: ReactNode
   active?: boolean
+  disabled?: boolean
   className?: string
   onClick?: () => void
 }) {
   return (
     <button
+      type="button"
+      disabled={disabled}
       onClick={onClick}
-      className={`flex h-8.5 cursor-pointer items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
+      className={`flex h-8.5 cursor-pointer items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
     >
       {children}
     </button>
