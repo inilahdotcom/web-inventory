@@ -1,9 +1,9 @@
-import { api } from '@/lib/axios'
+import { api } from "@/lib/axios"
 import type {
   AssetListItem,
   AssetMasterItem,
   AssetPagination,
-} from '@/types/asset'
+} from "@/types/asset"
 
 // ===== PHOTO & DETAIL INTERFACES =====
 export interface AssetPhoto {
@@ -133,7 +133,7 @@ export interface MoveAssetResponse {
 // ===== ASSET SERVICE =====
 export const assetService = {
   masters: async (type: string): Promise<AssetMasterItem[]> => {
-    const endpoint = type.endsWith('s') ? type : `${type}s`
+    const endpoint = type.endsWith("s") ? type : `${type}s`
     const response = await api.get(`/${endpoint}`)
     return response.data?.data || response.data || []
   },
@@ -142,7 +142,7 @@ export const assetService = {
     params: AssetListParams,
     signal?: AbortSignal
   ): Promise<AssetListResult> => {
-    const response = await api.get('/assets', {
+    const response = await api.get("/assets", {
       signal,
       params,
     })
@@ -151,53 +151,65 @@ export const assetService = {
       pagination: response.data?.meta?.pagination || {
         pageSize: params?.pageSize || 25,
         hasNextPage: false,
-        nextCursor: '',
+        nextCursor: "",
       },
     }
   },
 
-  createAsset: async (payload: CreateAssetPayload): Promise<any> => {
-    const response = await api.post('/assets/create', payload)
-    return response.data?.data || response.data
+  createAsset: async (
+    payload: CreateAssetPayload
+  ): Promise<Record<string, unknown>> => {
+    const response = await api.post("/assets/create", payload)
+    return (response.data?.data || response.data) as Record<string, unknown>
   },
 
-  updateAsset: async (id: string, payload: UpdateAssetPayload): Promise<any> => {
+  updateAsset: async (
+    id: string,
+    payload: UpdateAssetPayload
+  ): Promise<Record<string, unknown>> => {
     const response = await api.put(`/assets/update/${id}`, payload)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as Record<string, unknown>
   },
 
   getAssetById: async (id: string): Promise<AssetAttr> => {
     const response = await api.get(`/assets/${id}`)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as AssetAttr
   },
 
   getAssetDetail: async (id: string): Promise<AssetAttr> => {
     const response = await api.get(`/assets/${id}`)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as AssetAttr
   },
 
-  moveAsset: async (id: string, payload: MoveAssetPayload): Promise<MoveAssetResponse> => {
+  moveAsset: async (
+    id: string,
+    payload: MoveAssetPayload
+  ): Promise<MoveAssetResponse> => {
     const response = await api.post(`/assets/${id}/movements`, payload)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as MoveAssetResponse
   },
 
   uploadPhoto: async (files: File[]): Promise<string[]> => {
     const formData = new FormData()
     files.forEach((file) => {
-      formData.append('photo', file)
+      formData.append("photo", file)
     })
 
-    const res = await api.post('/assets/upload-photo', formData, {
+    const res = await api.post("/assets/upload-photo", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     })
-    const rawData = res.data?.data || res.data
-    const urls = rawData?.photo_urls || rawData
+    const rawData = (res.data?.data || res.data) as
+      { photo_urls?: string[] } | string[]
+    const urls = Array.isArray(rawData) ? rawData : rawData?.photo_urls
     return Array.isArray(urls) ? urls : []
   },
 
-  setPrimaryPhoto: async (assetId: string, photoId: number | string): Promise<void> => {
+  setPrimaryPhoto: async (
+    assetId: string,
+    photoId: number | string
+  ): Promise<void> => {
     await api.patch(`/assets/${assetId}/photos/${photoId}/primary`)
   },
 
@@ -209,24 +221,54 @@ export const assetService = {
     await api.delete(`/assets/delete/${id}`, { data: { reason } })
   },
 
-  permanentDeleteAsset: async (id: string, payload: PermanentDeletePayload): Promise<void> => {
+  permanentDeleteAsset: async (
+    id: string,
+    payload: PermanentDeletePayload
+  ): Promise<void> => {
     await api.delete(`/assets/permanent-delete/${id}`, {
       data: payload,
     })
   },
 
-  bulkDelete: async (payload: BulkDeletePayload): Promise<any> => {
-    const response = await api.post('/assets/bulk-delete', payload)
-    return response.data?.data || response.data
+  bulkDelete: async (
+    payload: BulkDeletePayload
+  ): Promise<Record<string, unknown>> => {
+    const response = await api.post("/assets/bulk-delete", payload)
+    return (response.data?.data || response.data) as Record<string, unknown>
   },
 
-  getArchivedAssets: async (): Promise<any[]> => {
-    const response = await api.get('/assets/archive')
-    return response.data?.data || response.data || []
+  getArchivedAssets: async (): Promise<Record<string, unknown>[]> => {
+    const response = await api.get("/assets/archive")
+    return (response.data?.data || response.data || []) as Record<
+      string,
+      unknown
+    >[]
   },
 
-  restoreAsset: async (id: string): Promise<any> => {
+  restoreAsset: async (id: string): Promise<Record<string, unknown>> => {
     const response = await api.patch(`/assets/restore/${id}`)
-    return response.data?.data || response.data
+    return (response.data?.data || response.data) as Record<string, unknown>
+  },
+
+  exportExcel: async (
+    params: Omit<AssetListParams, "pageSize" | "cursor"> & { ids?: string[] }
+  ) => {
+    const response = await api.get("/assets/export/excel", {
+      params,
+      responseType: "blob",
+    })
+    return response
+  },
+
+  exportPdf: async (
+    params: Omit<AssetListParams, "pageSize" | "cursor"> & {
+      ids?: string[]
+    } = {}
+  ) => {
+    const response = await api.get("/assets/export/pdf", {
+      params,
+      responseType: "blob",
+    })
+    return response
   },
 }
