@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
+import { profileService } from "@/services/profileService"
 import { toast } from "sonner"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import type { AxiosError } from "axios"
@@ -60,6 +61,7 @@ type QuickFilter =
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
+// Style warna badge kondisi aset (Kondisi Rusak Berat TETAP MERAH)
 const conditionClass: Record<AssetCondition, string> = {
   Bagus: "bg-[#c3faf5] text-[#187574]",
   "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
@@ -127,7 +129,39 @@ export function AssetListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // 1. Tangkap 'search' & 'filter' dari TanStack Router URL Params
+  // Profil user (query key sama dengan dashboard, jadi cache dipakai bersama)
+  const { data: profile } = useQuery({
+    queryKey: ["dashboard", "profile"],
+    queryFn: () => profileService.get(),
+  })
+
+  const displayName: string = profile?.attributes?.name || ""
+  const userInitials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+
+  // Popover dropdown profile
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Tutup dropdown saat klik di luar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   const searchParam = useSearch({ strict: false }) as {
     search?: string
     filter?: string
@@ -210,7 +244,6 @@ export function AssetListView() {
   const [notice, setNotice] = useState("")
   const [exporting, setExporting] = useState(false)
 
-  // 2. Sinkronisasi Query Param URL ke Input & Quick Filter
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const queryFromUrl = searchParam?.search || urlParams.get("search") || ""
@@ -230,7 +263,6 @@ export function AssetListView() {
     }
   }, [searchParam?.search, searchParam?.filter])
 
-  // 3. Debounce Effect Input Manual
   useEffect(() => {
     const timer = setTimeout(() => {
       const trimmed = query.trim()
@@ -248,7 +280,6 @@ export function AssetListView() {
     resetPagination()
   }
 
-  // Sinkronisasi ukuran layar secara responsif
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)")
     const syncViewport = (e: MediaQueryListEvent) => setIsMobile(e.matches)
@@ -256,7 +287,6 @@ export function AssetListView() {
     return () => mediaQuery.removeEventListener("change", syncViewport)
   }, [])
 
-  // Sinkronisasi penanda / highlight baris baru dari URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const rawHighlight = searchParam?.highlight || urlParams.get("highlight")
@@ -283,13 +313,23 @@ export function AssetListView() {
       const timer = setTimeout(() => {
         setHighlightedCodes([])
         setHighlightedCount(0)
+
+        navigate({
+          to: "/asset",
+          search: (prev: Record<string, unknown>) => {
+            const next = { ...prev }
+            delete next.highlight
+            delete next.newCount
+            return next
+          },
+          replace: true,
+        })
       }, 10000)
 
       return () => clearTimeout(timer)
     }
-  }, [searchParam?.highlight, searchParam?.newCount])
+  }, [searchParam?.highlight, searchParam?.newCount, navigate])
 
-  // Ambil Master Data Merek, Kategori, Lokasi
   const { data: brandData = [] } = useQuery({
     queryKey: ["masters", "brands"],
     queryFn: () => assetService.masters("brands"),
@@ -305,7 +345,6 @@ export function AssetListView() {
     queryFn: () => assetService.masters("locations"),
   })
 
-  // Ambil Data Utama Aset
   const {
     data: assetData,
     isLoading: loading,
@@ -361,14 +400,15 @@ export function AssetListView() {
     ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi."
     : ""
 
-  const isNewItem = (index: number, code: string, totalVisible: number) => {
-    if (code && highlightedCodes.includes(code.toLowerCase())) return true
+  const isHighlighted = (code: string) => {
+    return Boolean(code && highlightedCodes.includes(code.toLowerCase()))
+  }
 
-    if (highlightedCount > 0) {
+  const isNewItem = (index: number, totalVisible: number) => {
+    if (highlightedCount > 0 && searchParam?.newCount) {
       const startIndex = Math.max(0, totalVisible - highlightedCount)
       return index >= startIndex
     }
-
     return false
   }
 
@@ -451,7 +491,6 @@ export function AssetListView() {
         : new Set(visibleAssets.map((asset) => asset.code))
     )
 
-  // ===== EXPORT EXCEL =====
   const buildExportParams = () => ({
     sort,
     search: debouncedQuery || undefined,
@@ -581,7 +620,6 @@ export function AssetListView() {
     setOpenFilter(null)
     resetPagination()
 
-    // Bersihkan URL Search Params
     navigate({ to: "/asset" })
   }
 
@@ -674,9 +712,78 @@ export function AssetListView() {
         </form>
 
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-xs font-semibold text-[#600000]">
-            RS
-          </span>
+          {/* Avatar Profile dengan Dropdown Menu (Detail Profile & Logout) */}
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              aria-label="Menu profil"
+              aria-expanded={isProfileOpen}
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600 transition select-none hover:ring-2 hover:ring-rose-300 focus:outline-none"
+            >
+              {userInitials || "DZ"}
+            </button>
+
+            {isProfileOpen && (
+              <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white py-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                <div className="border-b border-neutral-100 px-4 py-2">
+                  <p className="truncate text-xs font-semibold text-neutral-900">
+                    {displayName || "Dzaki Admin"}
+                  </p>
+                  <p className="text-[10px] text-neutral-500">
+                    Akun Terverifikasi
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                    navigate({ to: "/profile" })
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                >
+                  <svg
+                    className="h-4 w-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Detail Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                >
+                  <svg
+                    className="h-4 w-4 text-rose-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -1012,7 +1119,8 @@ export function AssetListView() {
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
-                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
+                isHighlighted={isHighlighted(asset.code)}
+                isNewImport={isNewItem(index, visibleAssets.length)}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -1034,11 +1142,8 @@ export function AssetListView() {
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
-                  isNewImport={isNewItem(
-                    index,
-                    asset.code,
-                    visibleAssets.length
-                  )}
+                  isHighlighted={isHighlighted(asset.code)}
+                  isNewImport={isNewItem(index, visibleAssets.length)}
                   onToggle={() => toggleSelection(asset.code)}
                 />
               ))}
@@ -1075,7 +1180,8 @@ export function AssetListView() {
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
-                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
+                isHighlighted={isHighlighted(asset.code)}
+                isNewImport={isNewItem(index, visibleAssets.length)}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -1158,26 +1264,35 @@ function PageSizeMenu({
   )
 }
 
+// Komponen Baris Tabel Desktop (logika warna sorotan pintar)
 function AssetRow({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
 }) {
+  // Cek apakah aset ini disorot karena "Perlu Tindakan"
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const rowStyle = isNeedsAttention
+    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium" // MERAH untuk Perlu Tindakan
+    : isHighlighted || isNewImport
+      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium" // HIJAU untuk Edit / Import
+      : selected
+        ? "bg-[#f5f3ff]"
+        : "bg-white"
+
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${
-        isNewImport
-          ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
-          : selected
-            ? "bg-[#f5f3ff]"
-            : "bg-white"
-      }`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
       <div className="flex min-w-0 items-center gap-1.5">
@@ -1189,14 +1304,23 @@ function AssetRow({
             Baru
           </span>
         )}
+        {!isNewImport &&
+          isHighlighted &&
+          (isNeedsAttention ? (
+            <span className="shrink-0 rounded bg-rose-100 px-1 py-0.5 text-[9px] font-bold text-rose-800">
+              Perlu Tindakan
+            </span>
+          ) : (
+            <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800">
+              Diperbarui
+            </span>
+          ))}
       </div>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold">
           {asset.name}
         </span>
-        <span
-          className={`block truncate text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
-        >
+        <span className="block truncate text-xs text-[#8e91a0]">
           {asset.detail}
         </span>
       </span>
@@ -1331,26 +1455,34 @@ function ActionMenu({ asset }: { asset: Asset }) {
   )
 }
 
+// Komponen Baris Tabel Mobile
 function MobileAssetRow({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const rowStyle = isNeedsAttention
+    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium"
+    : isHighlighted || isNewImport
+      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
+      : selected
+        ? "bg-[#f5f3ff]"
+        : "bg-white"
+
   return (
     <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 transition-colors duration-1000 last:border-b-0 ${
-        isNewImport
-          ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
-          : selected
-            ? "bg-[#f5f3ff]"
-            : "bg-white"
-      }`}
+      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
     >
       <div className="flex min-w-0 items-center gap-2">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -1367,6 +1499,17 @@ function MobileAssetRow({
                 Baru
               </span>
             )}
+            {!isNewImport &&
+              isHighlighted &&
+              (isNeedsAttention ? (
+                <span className="rounded bg-rose-100 px-1 text-[8px] font-bold text-rose-800">
+                  Perlu Tindakan
+                </span>
+              ) : (
+                <span className="rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800">
+                  Diperbarui
+                </span>
+              ))}
           </span>
         </span>
       </div>
@@ -1389,26 +1532,34 @@ function MobileAssetRow({
   )
 }
 
+// Komponen Kartu
 function AssetCard({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const cardStyle = isNeedsAttention
+    ? "border-rose-300 bg-rose-50/80 ring-1 ring-rose-300"
+    : isHighlighted || isNewImport
+      ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
+      : selected
+        ? "border-[#d8d2ff] bg-[#f5f3ff]"
+        : "border-[#eef0f3] bg-white"
+
   return (
     <article
-      className={`rounded-2xl border p-4 transition-colors duration-1000 ${
-        isNewImport
-          ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
-          : selected
-            ? "border-[#d8d2ff] bg-[#f5f3ff]"
-            : "border-[#eef0f3] bg-white"
-      }`}
+      className={`rounded-2xl border p-4 transition-colors duration-1000 ${cardStyle}`}
     >
       <div className="flex items-start gap-3">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -1423,6 +1574,17 @@ function AssetCard({
                   Baru
                 </span>
               )}
+              {!isNewImport &&
+                isHighlighted &&
+                (isNeedsAttention ? (
+                  <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-800">
+                    Perlu Tindakan
+                  </span>
+                ) : (
+                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                    Diperbarui
+                  </span>
+                ))}
             </div>
             <span
               className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
@@ -1431,11 +1593,7 @@ function AssetCard({
             </span>
           </div>
           <h2 className="mt-2 truncate text-sm font-semibold">{asset.name}</h2>
-          <p
-            className={`mt-0.5 text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
-          >
-            {asset.detail}
-          </p>
+          <p className="mt-0.5 text-xs text-[#8e91a0]">{asset.detail}</p>
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-xs text-[#6b6f7e]">
             <span>
               <b className="block text-[#1c1c1e]">Kategori</b>

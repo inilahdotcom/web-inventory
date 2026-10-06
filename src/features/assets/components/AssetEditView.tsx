@@ -1,24 +1,35 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { Route } from '@/routes/_app/asset/$id/edit'
-import { InputField } from '@/components/ui/InputField'
-import { SelectedField } from '@/components/ui/SelectedField'
-import { assetService, type UpdateAssetPayload, type AssetAttr, type AssetPhoto } from '@/services/assetServices'
-import { masterDataService, type MasterDataItem } from '@/services/masterDataService'
+import React, { useState, useEffect } from "react"
+import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
+import type { AxiosError } from "axios"
+import { Route } from "@/routes/_app/asset/$id/edit"
+import { InputField } from "@/components/ui/InputField"
+import { SelectedField } from "@/components/ui/SelectedField"
+import {
+  assetService,
+  type UpdateAssetPayload,
+  type AssetAttr,
+  type AssetPhoto,
+} from "@/services/assetServices"
+import {
+  masterDataService,
+  type MasterDataItem,
+} from "@/services/masterDataService"
 import { toast } from "sonner"
 
 const MAX_PHOTOS = 5
 
+type ApiError = AxiosError<{ message?: string; error?: string }>
+
 const formatRupiahDisplay = (val: string | number): string => {
-  if (!val) return ''
-  const rawNumber = String(val).replace(/\D/g, '')
-  if (!rawNumber) return ''
-  return 'Rp ' + Number(rawNumber).toLocaleString('id-ID')
+  if (!val) return ""
+  const rawNumber = String(val).replace(/\D/g, "")
+  if (!rawNumber) return ""
+  return "Rp " + Number(rawNumber).toLocaleString("id-ID")
 }
 
 const parseRawNumber = (val: string): number => {
-  const rawNumber = val.replace(/\D/g, '')
+  const rawNumber = val.replace(/\D/g, "")
   return rawNumber ? Number(rawNumber) : 0
 }
 
@@ -44,25 +55,24 @@ export function AssetEditView() {
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   const [formData, setFormData] = useState({
-    kodeAset: '',
-    namaBarang: '',
-    categoryId: '',
-    locationId: '',
-    brandId: '',
-    kondisi: '',
-    status: '',
+    kodeAset: "",
+    namaBarang: "",
+    categoryId: "",
+    locationId: "",
+    brandId: "",
+    kondisi: "",
+    status: "",
     jumlah: 0,
-    hargaPerolehan: '0',
+    hargaPerolehan: "0",
   })
 
-  const [hargaDisplay, setHargaDisplay] = useState<string>('')
+  const [hargaDisplay, setHargaDisplay] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
-    setFetching(true)
 
     Promise.all([
       assetService.getAssetById(id),
@@ -80,37 +90,57 @@ export function AssetEditView() {
         const attrs = result.attributes
         setPhotos(attrs.photos ?? [])
 
-        const initialPrice = String(attrs.acquisitionPrice ?? '0')
+        const initialPrice = String(attrs.acquisitionPrice ?? "0")
 
-        const selectedCatId = attrs.categoryId && attrs.categoryId > 0 ? String(attrs.categoryId) : ''
-        const selectedLocId = attrs.locationId && attrs.locationId > 0 ? String(attrs.locationId) : ''
-        const selectedBrandId = attrs.brandId && attrs.brandId > 0 ? String(attrs.brandId) : ''
+        const selectedCatId =
+          attrs.categoryId && attrs.categoryId > 0
+            ? String(attrs.categoryId)
+            : ""
+        const selectedLocId =
+          attrs.locationId && attrs.locationId > 0
+            ? String(attrs.locationId)
+            : ""
+        const selectedBrandId =
+          attrs.brandId && attrs.brandId > 0 ? String(attrs.brandId) : ""
 
         setFormData({
-          kodeAset: attrs.code || '',
-          namaBarang: attrs.name || '',
+          kodeAset: attrs.code || "",
+          namaBarang: attrs.name || "",
           categoryId: selectedCatId,
           locationId: selectedLocId,
           brandId: selectedBrandId,
-          kondisi: attrs.condition || 'Bagus',
-          status: attrs.status || 'Tersedia',
+          kondisi: attrs.condition || "Bagus",
+          status: attrs.status || "Tersedia",
           jumlah: attrs.quantity || 1,
           hargaPerolehan: initialPrice,
         })
 
         setHargaDisplay(formatRupiahDisplay(initialPrice))
       })
-      .catch((err: any) => {
-        if (isMounted) setFetchError(err.response?.data?.message || err.response?.data?.error || 'Gagal memuat data aset')
+      .catch((error: unknown) => {
+        const err = error as ApiError
+        if (isMounted) {
+          setFetchError(
+            err.response?.data?.message ||
+              err.response?.data?.error ||
+              "Gagal memuat data aset"
+          )
+        }
       })
       .finally(() => {
         if (isMounted) setFetching(false)
       })
 
-    return () => { isMounted = false }
+    return () => {
+      isMounted = false
+    }
   }, [id])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -136,7 +166,7 @@ export function AssetEditView() {
       if (currentTotal >= MAX_PHOTOS) {
         toast.error(`Maksimal total foto adalah ${MAX_PHOTOS}!`)
         setPhotoError(`Maksimal total foto adalah ${MAX_PHOTOS}`)
-        e.target.value = ''
+        e.target.value = ""
         return
       }
 
@@ -144,12 +174,14 @@ export function AssetEditView() {
       const allowedFiles = chosenFiles.slice(0, availableSlots)
 
       if (chosenFiles.length > availableSlots) {
-        toast.warning(`Hanya ${availableSlots} foto yang ditambahkan karena melebihi batas ${MAX_PHOTOS} foto.`)
+        toast.warning(
+          `Hanya ${availableSlots} foto yang ditambahkan karena melebihi batas ${MAX_PHOTOS} foto.`
+        )
       }
 
       setNewFiles((prev) => [...prev, ...allowedFiles])
     }
-    e.target.value = ''
+    e.target.value = ""
   }
 
   const handleRemoveNewFile = (index: number) => {
@@ -172,7 +204,7 @@ export function AssetEditView() {
       }))
     )
 
-    toast.success('Foto utama diperbarui')
+    toast.success("Foto utama diperbarui")
     setPendingPrimaryId(null)
   }
 
@@ -198,7 +230,7 @@ export function AssetEditView() {
       return updated
     })
 
-    toast.success('Foto dihapus dari daftar')
+    toast.success("Foto dihapus dari daftar")
     setPendingDeleteId(null)
   }
 
@@ -207,7 +239,9 @@ export function AssetEditView() {
     if (!asset) return
 
     if (photos.length + newFiles.length > MAX_PHOTOS) {
-      toast.error(`Total foto tidak boleh lebih dari ${MAX_PHOTOS}! Hapus beberapa foto terlebih dahulu.`)
+      toast.error(
+        `Total foto tidak boleh lebih dari ${MAX_PHOTOS}! Hapus beberapa foto terlebih dahulu.`
+      )
       setPhotoError(`Total foto tidak boleh lebih dari ${MAX_PHOTOS}`)
       return
     }
@@ -231,9 +265,15 @@ export function AssetEditView() {
 
       const finalPhotoUrls = [...orderedExistingUrls, ...newlyUploadedUrls]
 
-      const categoryIdNum = formData.categoryId ? Number(formData.categoryId) : 1
-      const locationIdNum = formData.locationId ? Number(formData.locationId) : 1
-      const currentBrandIdNum = formData.brandId ? Number(formData.brandId) : null
+      const categoryIdNum = formData.categoryId
+        ? Number(formData.categoryId)
+        : 1
+      const locationIdNum = formData.locationId
+        ? Number(formData.locationId)
+        : 1
+      const currentBrandIdNum = formData.brandId
+        ? Number(formData.brandId)
+        : null
       const attrs = asset.attributes
 
       const payload: UpdateAssetPayload = {
@@ -246,7 +286,7 @@ export function AssetEditView() {
         status: formData.status,
         quantity: Number(formData.jumlah),
         purchase_price: Number(formData.hargaPerolehan),
-        unit: attrs.unit || 'unit',
+        unit: attrs.unit || "unit",
         purchase_date: attrs.acquisitionDate ?? undefined,
         holder_name: attrs.holder ?? undefined,
         notes: attrs.description ?? undefined,
@@ -254,49 +294,72 @@ export function AssetEditView() {
       }
 
       await assetService.updateAsset(id, payload)
-      
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
+
+      queryClient.invalidateQueries({ queryKey: ["assets"] })
 
       setNewFiles([])
-      toast.success('Perubahan berhasil disimpan!')
+      toast.success("Perubahan berhasil disimpan!")
 
-      // Navigasi kembali ke daftar aset dengan membawa parameter highlight
+      // Kirim kode aset spesifik yang baru di-edit agar sorotan tepat sasaran
       navigate({
-        to: '/asset',
+        to: "/asset",
         search: {
           highlight: formData.kodeAset,
         },
       })
-    } catch (err: any) {
-      console.error('Gagal update asset:', err)
-      setError(err.response?.data?.error || err.response?.data?.message || 'Gagal menyimpan perubahan')
+    } catch (error: unknown) {
+      console.error("Gagal update asset:", error)
+      const err = error as ApiError
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Gagal menyimpan perubahan"
+      )
     } finally {
       setLoading(false)
     }
   }
 
   if (fetching) {
-    return <div className="p-8 text-sm text-neutral-500">Memuat data aset...</div>
+    return (
+      <div className="p-8 text-sm text-neutral-500">Memuat data aset...</div>
+    )
   }
   if (fetchError || !asset) {
-    return <div className="p-8 text-sm text-red-600">{fetchError || 'Aset tidak ditemukan'}</div>
+    return (
+      <div className="p-8 text-sm text-red-600">
+        {fetchError || "Aset tidak ditemukan"}
+      </div>
+    )
   }
 
   const attrs = asset.attributes
 
   const getCategoryName = (catId?: number | string | null) => {
-    if (!catId) return '-'
-    return categories.find((c) => String(c.id) === String(catId))?.name || attrs.category || '-'
+    if (!catId) return "-"
+    return (
+      categories.find((c) => String(c.id) === String(catId))?.name ||
+      attrs.category ||
+      "-"
+    )
   }
 
   const getLocationName = (locId?: number | string | null) => {
-    if (!locId) return '-'
-    return locations.find((l) => String(l.id) === String(locId))?.name || attrs.location || '-'
+    if (!locId) return "-"
+    return (
+      locations.find((l) => String(l.id) === String(locId))?.name ||
+      attrs.location ||
+      "-"
+    )
   }
 
   const getBrandName = (brandId?: number | string | null) => {
-    if (!brandId) return '-'
-    return brands.find((b) => String(b.id) === String(brandId))?.name || attrs.brand || '-'
+    if (!brandId) return "-"
+    return (
+      brands.find((b) => String(b.id) === String(brandId))?.name ||
+      attrs.brand ||
+      "-"
+    )
   }
 
   const currentBrandIdNum = formData.brandId ? Number(formData.brandId) : null
@@ -307,25 +370,33 @@ export function AssetEditView() {
   const deleteTargetPhoto = photos.find((p) => p.id === pendingDeleteId)
 
   return (
-    <form onSubmit={handleSubmit} className="w-full min-h-svh flex flex-col justify-between text-[#1C1C1E]">
+    <form
+      onSubmit={handleSubmit}
+      className="flex min-h-svh w-full flex-col justify-between text-[#1C1C1E]"
+    >
       <div className="space-y-6 pb-28">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-xs text-neutral-500 pl-14 lg:pl-0">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 pl-14 text-xs text-neutral-500 lg:pl-0">
             <span>Daftar Aset</span>
             <span className="text-neutral-300">/</span>
             <span>{attrs.code}</span>
             <span className="text-neutral-300">/</span>
-            <span className="text-neutral-900 font-semibold">Ubah</span>
+            <span className="font-semibold text-neutral-900">Ubah</span>
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-800 text-xs font-bold shrink-0 select-none">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800 select-none">
             RS
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pt-2">
+        <div className="mx-auto max-w-7xl space-y-6 px-4 pt-2 sm:px-6 lg:px-8">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Ubah aset</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">Setiap perubahan dicatat di audit log beserta nilai lama dan baru (FR-UD3).</p>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+              Ubah aset
+            </h1>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Setiap perubahan dicatat di audit log beserta nilai lama dan baru
+              (FR-UD3).
+            </p>
           </div>
 
           {error && (
@@ -334,20 +405,22 @@ export function AssetEditView() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-neutral-700">Kode aset</label>
+                    <label className="text-xs font-medium text-neutral-700">
+                      Kode aset
+                    </label>
                     <div className="relative">
                       <input
                         type="text"
                         value={formData.kodeAset}
                         disabled
-                        className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-mono text-neutral-700 cursor-not-allowed"
+                        className="w-full cursor-not-allowed rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 font-mono text-xs text-neutral-700"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                      <span className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                         Read-only untuk Staff GA
                       </span>
                     </div>
@@ -362,15 +435,15 @@ export function AssetEditView() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <SelectedField
                     label="Kategori *"
                     name="categoryId"
                     value={formData.categoryId}
                     onChange={handleChange}
-                    className="text-[#1C1C1E] bg-white"
+                    className="bg-white text-[#1C1C1E]"
                     options={[
-                      { label: 'Lainnya', value: '' },
+                      { label: "Lainnya", value: "" },
                       ...categories.map((cat) => ({
                         label: cat.name,
                         value: String(cat.id),
@@ -383,9 +456,9 @@ export function AssetEditView() {
                     name="locationId"
                     value={formData.locationId}
                     onChange={handleChange}
-                    className="text-[#1C1C1E] bg-white"
+                    className="bg-white text-[#1C1C1E]"
                     options={[
-                      { label: 'Lainnya', value: '' },
+                      { label: "Lainnya", value: "" },
                       ...locations.map((loc) => ({
                         label: loc.name,
                         value: String(loc.id),
@@ -398,9 +471,9 @@ export function AssetEditView() {
                     name="brandId"
                     value={formData.brandId}
                     onChange={handleChange}
-                    className="text-[#1C1C1E] bg-white"
+                    className="bg-white text-[#1C1C1E]"
                     options={[
-                      { label: 'Lainnya', value: '' },
+                      { label: "Lainnya", value: "" },
                       ...brands.map((b) => ({
                         label: b.name,
                         value: String(b.id),
@@ -409,18 +482,18 @@ export function AssetEditView() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <SelectedField
                     label="Kondisi *"
                     name="kondisi"
                     value={formData.kondisi}
                     onChange={handleChange}
-                    className="text-[#1C1C1E] bg-white"
+                    className="bg-white text-[#1C1C1E]"
                     options={[
-                      { label: 'Bagus', value: 'Bagus' },
-                      { label: 'Rusak Ringan', value: 'Rusak Ringan' },
-                      { label: 'Rusak Berat', value: 'Rusak Berat' },
-                      { label: 'Hilang', value: 'Hilang' },
+                      { label: "Bagus", value: "Bagus" },
+                      { label: "Rusak Ringan", value: "Rusak Ringan" },
+                      { label: "Rusak Berat", value: "Rusak Berat" },
+                      { label: "Hilang", value: "Hilang" },
                     ]}
                   />
 
@@ -429,16 +502,16 @@ export function AssetEditView() {
                     name="status"
                     value={formData.status}
                     onChange={handleChange}
-                    className="text-[#1C1C1E] bg-white"
+                    className="bg-white text-[#1C1C1E]"
                     options={[
-                      { label: 'Tersedia', value: 'Tersedia' },
-                      { label: 'Digunakan', value: 'Digunakan' },
-                      { label: 'Diperbaiki', value: 'Diperbaiki' },
+                      { label: "Tersedia", value: "Tersedia" },
+                      { label: "Digunakan", value: "Digunakan" },
+                      { label: "Diperbaiki", value: "Diperbaiki" },
                     ]}
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <InputField
                     label="Jumlah *"
                     type="number"
@@ -455,14 +528,16 @@ export function AssetEditView() {
                     value={hargaDisplay}
                     onChange={handleHargaChange}
                     placeholder="Rp 0"
-                    className="text-[#1C1C1E] font-mono"
+                    className="font-mono text-[#1C1C1E]"
                   />
                 </div>
 
                 {/* KELOLA FOTO (FR-UD4) */}
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-neutral-900">Kelola foto (FR-UD4)</label>
+                    <label className="text-xs font-semibold text-neutral-900">
+                      Kelola foto (FR-UD4)
+                    </label>
                     <span className="text-[11px] font-medium text-neutral-500">
                       {totalPhotosCount}/{MAX_PHOTOS} foto
                     </span>
@@ -472,21 +547,25 @@ export function AssetEditView() {
                     <p className="text-xs text-red-600">{photoError}</p>
                   )}
 
-                  <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+                  <div className="no-scrollbar flex items-center gap-3 overflow-x-auto pb-2">
                     {photos.length === 0 && newFiles.length === 0 && (
-                      <p className="text-xs text-neutral-400 italic">Belum ada foto</p>
+                      <p className="text-xs text-neutral-400 italic">
+                        Belum ada foto
+                      </p>
                     )}
 
                     {photos.map((photo) => (
                       <div
                         key={photo.id}
-                        className={`relative h-20 w-24 rounded-xl border-2 overflow-hidden flex items-center justify-center shadow-2xs shrink-0 bg-neutral-100 ${
-                          photo.isPrimary ? 'border-amber-400' : 'border-neutral-200'
+                        className={`relative flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 bg-neutral-100 shadow-2xs ${
+                          photo.isPrimary
+                            ? "border-amber-400"
+                            : "border-neutral-200"
                         }`}
                       >
                         <img
                           src={photo.url}
-                          alt={photo.caption ?? 'Foto aset'}
+                          alt={photo.caption ?? "Foto aset"}
                           className="h-full w-full object-cover"
                         />
                         {photo.isPrimary && (
@@ -497,7 +576,7 @@ export function AssetEditView() {
                         <button
                           type="button"
                           onClick={() => handleOpenDeleteModal(photo.id)}
-                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-neutral-800/65 text-white flex items-center justify-center text-xs cursor-pointer hover:bg-neutral-900"
+                          className="absolute top-1 right-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-neutral-800/65 text-xs text-white hover:bg-neutral-900"
                         >
                           ×
                         </button>
@@ -505,7 +584,7 @@ export function AssetEditView() {
                           <button
                             type="button"
                             onClick={() => handleOpenPrimaryModal(photo.id)}
-                            className="absolute bottom-1 left-1 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold text-neutral-700 shadow-2xs hover:bg-white cursor-pointer"
+                            className="absolute bottom-1 left-1 cursor-pointer rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-semibold text-neutral-700 shadow-2xs hover:bg-white"
                           >
                             Jadikan utama
                           </button>
@@ -516,7 +595,7 @@ export function AssetEditView() {
                     {newFiles.map((file, idx) => (
                       <div
                         key={`new-${idx}`}
-                        className="relative h-20 w-24 rounded-xl border-2 border-dashed border-blue-400 overflow-hidden flex items-center justify-center shadow-2xs shrink-0 bg-neutral-50"
+                        className="relative flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-blue-400 bg-neutral-50 shadow-2xs"
                       >
                         <img
                           src={URL.createObjectURL(file)}
@@ -529,7 +608,7 @@ export function AssetEditView() {
                         <button
                           type="button"
                           onClick={() => handleRemoveNewFile(idx)}
-                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-neutral-800/65 text-white flex items-center justify-center text-xs cursor-pointer hover:bg-neutral-900"
+                          className="absolute top-1 right-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-neutral-800/65 text-xs text-white hover:bg-neutral-900"
                         >
                           ×
                         </button>
@@ -537,9 +616,13 @@ export function AssetEditView() {
                     ))}
 
                     {totalPhotosCount < MAX_PHOTOS && (
-                      <label className="h-20 w-24 rounded-xl border-2 border-dashed border-neutral-300 hover:border-neutral-400 bg-neutral-50 flex flex-col items-center justify-center gap-1 cursor-pointer shrink-0 transition-colors">
-                        <span className="text-lg text-neutral-500 font-bold">+</span>
-                        <span className="text-[10px] text-neutral-500 font-medium">Tambah Foto</span>
+                      <label className="flex h-20 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 transition-colors hover:border-neutral-400">
+                        <span className="text-lg font-bold text-neutral-500">
+                          +
+                        </span>
+                        <span className="text-[10px] font-medium text-neutral-500">
+                          Tambah Foto
+                        </span>
                         <input
                           type="file"
                           accept="image/*"
@@ -556,65 +639,108 @@ export function AssetEditView() {
 
             {/* RINGKASAN PERUBAHAN */}
             <div className="space-y-6">
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 shadow-2xs space-y-3">
-                <h3 className="text-xs font-bold text-neutral-900">Ringkasan perubahan</h3>
-                <div className="text-xs space-y-2 text-neutral-600">
+              <div className="space-y-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 shadow-2xs">
+                <h3 className="text-xs font-bold text-neutral-900">
+                  Ringkasan perubahan
+                </h3>
+                <div className="space-y-2 text-xs text-neutral-600">
                   {formData.namaBarang !== attrs.name && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Nama barang</span>
-                      <span className="text-neutral-500">{attrs.name} → {formData.namaBarang}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Nama barang
+                      </span>
+                      <span className="text-neutral-500">
+                        {attrs.name} → {formData.namaBarang}
+                      </span>
                     </div>
                   )}
 
                   {Number(formData.categoryId) !== attrs.categoryId && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Kategori</span>
-                      <span className="text-neutral-500">{getCategoryName(attrs.categoryId)} → {getCategoryName(formData.categoryId)}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Kategori
+                      </span>
+                      <span className="text-neutral-500">
+                        {getCategoryName(attrs.categoryId)} →{" "}
+                        {getCategoryName(formData.categoryId)}
+                      </span>
                     </div>
                   )}
 
                   {Number(formData.locationId) !== attrs.locationId && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Lokasi</span>
-                      <span className="text-neutral-500">{getLocationName(attrs.locationId)} → {getLocationName(formData.locationId)}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Lokasi
+                      </span>
+                      <span className="text-neutral-500">
+                        {getLocationName(attrs.locationId)} →{" "}
+                        {getLocationName(formData.locationId)}
+                      </span>
                     </div>
                   )}
 
                   {currentBrandIdNum !== originalBrandIdNum && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Merek</span>
-                      <span className="text-neutral-500">{getBrandName(attrs.brandId)} → {getBrandName(formData.brandId)}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Merek
+                      </span>
+                      <span className="text-neutral-500">
+                        {getBrandName(attrs.brandId)} →{" "}
+                        {getBrandName(formData.brandId)}
+                      </span>
                     </div>
                   )}
 
                   {formData.kondisi !== attrs.condition && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Kondisi</span>
-                      <span className="text-neutral-500">{attrs.condition} → {formData.kondisi}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Kondisi
+                      </span>
+                      <span className="text-neutral-500">
+                        {attrs.condition} → {formData.kondisi}
+                      </span>
                     </div>
                   )}
                   {formData.status !== attrs.status && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Status</span>
-                      <span className="text-neutral-500">{attrs.status} → {formData.status}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Status
+                      </span>
+                      <span className="text-neutral-500">
+                        {attrs.status} → {formData.status}
+                      </span>
                     </div>
                   )}
                   {Number(formData.jumlah) !== attrs.quantity && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Jumlah</span>
-                      <span className="text-neutral-500">{attrs.quantity} → {formData.jumlah}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Jumlah
+                      </span>
+                      <span className="text-neutral-500">
+                        {attrs.quantity} → {formData.jumlah}
+                      </span>
                     </div>
                   )}
-                  {Number(formData.hargaPerolehan) !== (attrs.acquisitionPrice ?? 0) && (
+                  {Number(formData.hargaPerolehan) !==
+                    (attrs.acquisitionPrice ?? 0) && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Harga perolehan</span>
-                      <span className="text-neutral-500">{formatRupiahDisplay(attrs.acquisitionPrice ?? 0)} → {hargaDisplay || 'Rp 0'}</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Harga perolehan
+                      </span>
+                      <span className="text-neutral-500">
+                        {formatRupiahDisplay(attrs.acquisitionPrice ?? 0)} →{" "}
+                        {hargaDisplay || "Rp 0"}
+                      </span>
                     </div>
                   )}
                   {newFiles.length > 0 && (
                     <div>
-                      <span className="font-semibold text-neutral-700 block">Foto Baru</span>
-                      <span className="text-neutral-500">{newFiles.length} foto siap diunggah</span>
+                      <span className="block font-semibold text-neutral-700">
+                        Foto Baru
+                      </span>
+                      <span className="text-neutral-500">
+                        {newFiles.length} foto siap diunggah
+                      </span>
                     </div>
                   )}
                 </div>
@@ -624,43 +750,50 @@ export function AssetEditView() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-neutral-200/80 bg-white/90 backdrop-blur-md px-6 lg:px-8 py-4 shadow-md">
+      <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-neutral-200/80 bg-white/90 px-6 py-4 shadow-md backdrop-blur-md lg:px-8">
         <span className="text-xs text-neutral-400">
-          {loading ? 'Menyimpan...' : 'Perubahan belum tersimpan'}
+          {loading ? "Menyimpan..." : "Perubahan belum tersimpan"}
         </span>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={handleCancel}
             disabled={loading}
-            className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 cursor-pointer disabled:opacity-50"
+            className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
           >
             Batal
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white hover:bg-neutral-800 shadow-2xs cursor-pointer disabled:opacity-50"
+            className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-neutral-800 disabled:opacity-50"
           >
-            {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+            {loading ? "Menyimpan..." : "Simpan Perubahan"}
           </button>
         </div>
       </div>
 
       {/* MODAL KONFIRMASI UBAH FOTO UTAMA */}
       {pendingPrimaryId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4 border border-neutral-100">
+        <div className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/40 p-4 backdrop-blur-xs duration-150 fade-in">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-100 bg-white p-6 shadow-xl">
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-neutral-900">Ubah Foto Utama?</h3>
+              <h3 className="text-base font-bold text-neutral-900">
+                Ubah Foto Utama?
+              </h3>
               <p className="text-xs text-neutral-500">
-                Foto ini akan dijadikan sebagai sampul/foto utama aset di seluruh halaman.
+                Foto ini akan dijadikan sebagai sampul/foto utama aset di
+                seluruh halaman.
               </p>
             </div>
 
             {primaryTargetPhoto && (
-              <div className="relative h-36 w-full rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 flex items-center justify-center">
-                <img src={primaryTargetPhoto.url} alt="Foto Pratinjau Utama" className="h-full w-full object-cover" />
+              <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                <img
+                  src={primaryTargetPhoto.url}
+                  alt="Foto Pratinjau Utama"
+                  className="h-full w-full object-cover"
+                />
               </div>
             )}
 
@@ -668,14 +801,14 @@ export function AssetEditView() {
               <button
                 type="button"
                 onClick={() => setPendingPrimaryId(null)}
-                className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleConfirmSetPrimary}
-                className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white hover:bg-neutral-800 cursor-pointer shadow-2xs"
+                className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-neutral-800"
               >
                 Simpan
               </button>
@@ -686,18 +819,25 @@ export function AssetEditView() {
 
       {/* MODAL KONFIRMASI HAPUS FOTO */}
       {pendingDeleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4 border border-neutral-100">
+        <div className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/40 p-4 backdrop-blur-xs duration-150 fade-in">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-100 bg-white p-6 shadow-xl">
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-red-600">Hapus Foto Aset?</h3>
+              <h3 className="text-base font-bold text-red-600">
+                Hapus Foto Aset?
+              </h3>
               <p className="text-xs text-neutral-500">
-                Foto ini akan dihapus dari daftar foto aset. Tindakan ini tidak dapat dibatalkan.
+                Foto ini akan dihapus dari daftar foto aset. Tindakan ini tidak
+                dapat dibatalkan.
               </p>
             </div>
 
             {deleteTargetPhoto && (
-              <div className="relative h-36 w-full rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 flex items-center justify-center">
-                <img src={deleteTargetPhoto.url} alt="Foto yang Akan Dihapus" className="h-full w-full object-cover" />
+              <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                <img
+                  src={deleteTargetPhoto.url}
+                  alt="Foto yang Akan Dihapus"
+                  className="h-full w-full object-cover"
+                />
               </div>
             )}
 
@@ -705,14 +845,14 @@ export function AssetEditView() {
               <button
                 type="button"
                 onClick={() => setPendingDeleteId(null)}
-                className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+                className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeletePhoto}
-                className="rounded-xl bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700 cursor-pointer shadow-2xs"
+                className="cursor-pointer rounded-xl bg-red-600 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-red-700"
               >
                 Hapus
               </button>
