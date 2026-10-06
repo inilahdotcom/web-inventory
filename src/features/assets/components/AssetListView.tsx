@@ -77,7 +77,13 @@ const conditionOptions: AssetCondition[] = [
   "Rusak Berat",
   "Hilang",
 ]
-const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
+const statusOptions = [
+  "Digunakan",
+  "Tersedia",
+  "Diperbaiki",
+  "Dihapuskan",
+  "Tidak Tersedia",
+]
 
 type AssetListApiAttributes = Partial<AssetListItem["attributes"]> & {
   id?: string

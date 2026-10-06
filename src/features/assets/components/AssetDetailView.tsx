@@ -43,6 +43,7 @@ const fields: Array<{ key: keyof AssetDraft; label: string; mono?: boolean }> =
 
 const conditionOptions = ["Bagus", "Rusak Ringan", "Rusak Berat", "Hilang"]
 const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
+const splitStatusOptions = [...statusOptions, "Tidak Tersedia"]
 
 type SplitAssetDraft = {
   quantity: string
@@ -105,7 +106,7 @@ function defaultSplitStatus(condition: string, currentStatus: string) {
   if (condition === "Rusak Ringan" || condition === "Rusak Berat") {
     return "Diperbaiki"
   }
-  if (condition === "Hilang") return "Tersedia"
+  if (condition === "Hilang") return "Tidak Tersedia"
   return currentStatus === "Diperbaiki" || currentStatus === "Dihapuskan"
     ? "Tersedia"
     : currentStatus
@@ -718,11 +719,15 @@ function SplitAssetDialog({
   const availableConditions = conditionOptions.filter(
     (condition) => condition !== currentCondition
   )
-  const availableStatuses = statusOptions.filter(
-    (status) =>
-      status !== "Dihapuskan" &&
-      (draft.condition === "Bagus" || status !== "Digunakan")
-  )
+  const availableStatuses =
+    draft.condition === "Hilang"
+      ? ["Tidak Tersedia"]
+      : splitStatusOptions.filter(
+          (status) =>
+            status !== "Dihapuskan" &&
+            status !== "Tidak Tersedia" &&
+            (draft.condition === "Bagus" || status !== "Digunakan")
+        )
 
   return (
     <div
@@ -801,7 +806,7 @@ function SplitAssetDialog({
             Status record baru
             <select
               value={draft.status}
-              disabled={busy}
+              disabled={busy || draft.condition === "Hilang"}
               onChange={(event) => onChange({ status: event.target.value })}
               className="h-11 rounded-xl border border-[#d9dce4] bg-white px-3 text-sm outline-none focus:border-[#4262ff] disabled:opacity-60"
             >
@@ -811,6 +816,11 @@ function SplitAssetDialog({
                 </option>
               ))}
             </select>
+            {draft.condition === "Hilang" && (
+              <span className="font-normal text-[#8e91a0]">
+                Aset hilang otomatis berstatus Tidak Tersedia.
+              </span>
+            )}
           </label>
 
           <label className="grid gap-1.5 text-xs font-semibold text-[#555a6a] sm:col-span-2">
