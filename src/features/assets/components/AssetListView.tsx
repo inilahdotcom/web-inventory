@@ -30,7 +30,8 @@ type SavedView = {
 }
 
 const formatNumber = new Intl.NumberFormat("id-ID")
-const rupiahInput = (value: string) => (value ? `Rp. ${formatNumber.format(Number(value))}` : "")
+const rupiahInput = (value: string) =>
+  value ? `Rp. ${formatNumber.format(Number(value))}` : ""
 const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
@@ -53,11 +54,7 @@ type Asset = {
 }
 
 type QuickFilter =
-  | ""
-  | "needsAttention"
-  | "withoutPrice"
-  | "withoutPhoto"
-  | "duplicateCondition"
+  "" | "needsAttention" | "withoutPrice" | "withoutPhoto" | "duplicateCondition"
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
@@ -82,10 +79,43 @@ const conditionOptions: AssetCondition[] = [
 ]
 const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
 
-function toAsset(item: AssetListItem): Asset {
-  const attr = (item.attributes || item) as any
+type AssetListApiAttributes = Partial<AssetListItem["attributes"]> & {
+  id?: string
+  assetCode?: string
+  asset_code?: string
+  assetName?: string
+  asset_name?: string
+  categoryName?: string
+  category_name?: string
+  brandName?: string
+  brand_name?: string
+  locationName?: string
+  location_name?: string
+  holderName?: string
+  holder_name?: string
+  purchasePrice?: number
+  price?: number
+  qty?: number
+}
 
-  const priceValue = Number(attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0)
+function apiErrorMessage(error: unknown) {
+  const value = error as {
+    message?: string
+    response?: { data?: { message?: string; error?: string } }
+  }
+  return (
+    value.response?.data?.message ||
+    value.response?.data?.error ||
+    value.message
+  )
+}
+
+function toAsset(item: AssetListItem): Asset {
+  const attr = (item.attributes || item) as AssetListApiAttributes
+
+  const priceValue = Number(
+    attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0
+  )
   const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
   const holderName = attr.holder || attr.holderName || attr.holder_name || ""
 
@@ -103,9 +133,7 @@ function toAsset(item: AssetListItem): Asset {
     condition: attr.condition || "Bagus",
     status: attr.status || "Tersedia",
     price:
-      priceValue > 0
-        ? `Rp. ${formatNumber.format(priceValue)}`
-        : undefined,
+      priceValue > 0 ? `Rp. ${formatNumber.format(priceValue)}` : undefined,
     priceValue,
     attention: (attr.condition || "Bagus") !== "Bagus",
     hasPhoto,
@@ -119,7 +147,10 @@ export function AssetListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const searchParam = useSearch({ strict: false }) as { highlight?: string; newCount?: string | number }
+  const searchParam = useSearch({ strict: false }) as {
+    highlight?: string
+    newCount?: string | number
+  }
   const [highlightedCodes, setHighlightedCodes] = useState<string[]>([])
   const [highlightedCount, setHighlightedCount] = useState<number>(0)
 
@@ -148,21 +179,41 @@ export function AssetListView() {
   const initialSavedView = getInitialSavedView()
 
   const [query, setQuery] = useState(initialSavedView?.query ?? "")
-  const [debouncedQuery, setDebouncedQuery] = useState(initialSavedView?.query ?? "")
-  const [condition, setCondition] = useState<AssetCondition | "">(initialSavedView?.condition ?? "")
+  const [debouncedQuery, setDebouncedQuery] = useState(
+    initialSavedView?.query ?? ""
+  )
+  const [condition, setCondition] = useState<AssetCondition | "">(
+    initialSavedView?.condition ?? ""
+  )
   const [status, setStatus] = useState(initialSavedView?.status ?? "")
-  const [brandId, setBrandId] = useState<number | undefined>(initialSavedView?.brandId)
-  const [categoryId, setCategoryId] = useState<number | undefined>(initialSavedView?.categoryId)
-  const [locationId, setLocationId] = useState<number | undefined>(initialSavedView?.locationId)
-  const [purchaseDateFrom, setPurchaseDateFrom] = useState(initialSavedView?.purchaseDateFrom ?? "")
-  const [purchaseDateTo, setPurchaseDateTo] = useState(initialSavedView?.purchaseDateTo ?? "")
+  const [brandId, setBrandId] = useState<number | undefined>(
+    initialSavedView?.brandId
+  )
+  const [categoryId, setCategoryId] = useState<number | undefined>(
+    initialSavedView?.categoryId
+  )
+  const [locationId, setLocationId] = useState<number | undefined>(
+    initialSavedView?.locationId
+  )
+  const [purchaseDateFrom, setPurchaseDateFrom] = useState(
+    initialSavedView?.purchaseDateFrom ?? ""
+  )
+  const [purchaseDateTo, setPurchaseDateTo] = useState(
+    initialSavedView?.purchaseDateTo ?? ""
+  )
   const [priceMin, setPriceMin] = useState(initialSavedView?.priceMin ?? "")
   const [priceMax, setPriceMax] = useState(initialSavedView?.priceMax ?? "")
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialSavedView?.quickFilter ?? "")
-  const [sort, setSort] = useState<SortOption>(initialSavedView?.sort ?? "code:asc")
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(
+    initialSavedView?.quickFilter ?? ""
+  )
+  const [sort, setSort] = useState<SortOption>(
+    initialSavedView?.sort ?? "code:asc"
+  )
 
   const [pageSize, setPageSize] = useState<number>(getInitialPageSize)
-  const [hasSavedPreset, setHasSavedPreset] = useState<boolean>(Boolean(initialSavedView))
+  const [hasSavedPreset, setHasSavedPreset] = useState<boolean>(
+    Boolean(initialSavedView)
+  )
 
   const [openFilter, setOpenFilter] = useState<string | null>(null)
   const [cursor, setCursor] = useState("")
@@ -218,24 +269,28 @@ export function AssetListView() {
 
   // Ambil Master Data Merek, Kategori, Lokasi menggunakan React Query
   const { data: brandData = [] } = useQuery({
-    queryKey: ['masters', 'brands'],
+    queryKey: ["masters", "brands"],
     queryFn: () => assetService.masters("brands"),
   })
 
   const { data: categoryData = [] } = useQuery({
-    queryKey: ['masters', 'categories'],
+    queryKey: ["masters", "categories"],
     queryFn: () => assetService.masters("categories"),
   })
 
   const { data: locationData = [] } = useQuery({
-    queryKey: ['masters', 'locations'],
+    queryKey: ["masters", "locations"],
     queryFn: () => assetService.masters("locations"),
   })
 
   // Ambil Data Utama Aset menggunakan React Query
-  const { data: assetData, isLoading: loading, error } = useQuery({
+  const {
+    data: assetData,
+    isLoading: loading,
+    error,
+  } = useQuery({
     queryKey: [
-      'assets',
+      "assets",
       {
         pageSize,
         sort,
@@ -275,9 +330,14 @@ export function AssetListView() {
     },
   })
 
-  const assets = useMemo(() => (assetData?.assets ? assetData.assets.map(toAsset) : []), [assetData])
+  const assets = useMemo(
+    () => (assetData?.assets ? assetData.assets.map(toAsset) : []),
+    [assetData]
+  )
   const pagination = assetData?.pagination || emptyPagination
-  const errorMessage = error ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi." : ""
+  const errorMessage = error
+    ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi."
+    : ""
 
   const isNewItem = (index: number, code: string, totalVisible: number) => {
     if (code && highlightedCodes.includes(code.toLowerCase())) return true
@@ -394,10 +454,10 @@ export function AssetListView() {
       toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
 
       setSelectedCodes(new Set())
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ["assets"] })
+    } catch (error: unknown) {
       toast.error(
-        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
       )
     }
   }
@@ -520,8 +580,8 @@ export function AssetListView() {
               Daftar Aset
             </h1>
             <span className="text-sm text-[#6b6f7e]">
-              {visibleAssets.length} aset ditampilkan &middot; {pageSummary.units}{" "}
-              unit &middot; nilai tercatat Rp{" "}
+              {visibleAssets.length} aset ditampilkan &middot;{" "}
+              {pageSummary.units} unit &middot; nilai tercatat Rp{" "}
               {formatNumber.format(pageSummary.value)}
             </span>
           </div>
@@ -534,7 +594,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={() => navigate({ to: "/asset/new" })}
-              className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto cursor-pointer"
+              className="col-span-2 flex h-10 cursor-pointer items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
             >
               + Tambah Aset
             </button>
@@ -600,7 +660,7 @@ export function AssetListView() {
               <button
                 type="button"
                 onClick={handleSaveView}
-                className="h-8.5 rounded-full px-3 text-xs font-semibold text-[#4262ff] hover:bg-[#f0efff] transition cursor-pointer"
+                className="h-8.5 cursor-pointer rounded-full px-3 text-xs font-semibold text-[#4262ff] transition hover:bg-[#f0efff]"
               >
                 + Simpan tampilan ini
               </button>
@@ -613,7 +673,7 @@ export function AssetListView() {
                   type="button"
                   onClick={handleClearSavedView}
                   title="Hapus tampilan tersimpan default"
-                  className="ml-1 text-[11px] text-[#6b6f7e] hover:text-[#600000] cursor-pointer"
+                  className="ml-1 cursor-pointer text-[11px] text-[#6b6f7e] hover:text-[#600000]"
                 >
                   &times;
                 </button>
@@ -711,7 +771,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={resetFilters}
-              className="ml-1 h-8.5 px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5] cursor-pointer"
+              className="ml-1 h-8.5 cursor-pointer px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5]"
               disabled={!hasActiveFilters}
             >
               Reset Filter
@@ -737,14 +797,14 @@ export function AssetListView() {
                     setNotice(`${label} siap diproses untuk aset terpilih.`)
                   }
                   key={label}
-                  className="flex h-8 flex-1 items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none cursor-pointer"
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none"
                 >
                   {label}
                 </button>
               ))}
               <button
                 onClick={handleBulkDelete}
-                className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none cursor-pointer"
+                className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
               >
                 Hapus
               </button>
@@ -755,7 +815,7 @@ export function AssetListView() {
         {notice && (
           <button
             onClick={() => setNotice("")}
-            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574] cursor-pointer"
+            className="cursor-pointer rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
           >
             {notice} &times;
           </button>
@@ -768,7 +828,7 @@ export function AssetListView() {
               aria-label="Tampilan tabel"
               title="Tampilan tabel"
               aria-pressed={tableIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <Table2 size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -777,7 +837,7 @@ export function AssetListView() {
               aria-label="Tampilan kartu"
               title="Tampilan kartu"
               aria-pressed={cardIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -800,8 +860,10 @@ export function AssetListView() {
             <p className="text-sm text-[#600000]">{errorMessage}</p>
             <button
               type="button"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['assets'] })}
-              className="h-9 rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white cursor-pointer"
+              onClick={() =>
+                queryClient.invalidateQueries({ queryKey: ["assets"] })
+              }
+              className="h-9 cursor-pointer rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white"
             >
               Coba lagi
             </button>
@@ -855,7 +917,11 @@ export function AssetListView() {
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
-                  isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
+                  isNewImport={isNewItem(
+                    index,
+                    asset.code,
+                    visibleAssets.length
+                  )}
                   onToggle={() => toggleSelection(asset.code)}
                 />
               ))}
@@ -863,12 +929,13 @@ export function AssetListView() {
           )}
 
         <section
-          className={`${loading || errorMessage || visibleAssets.length === 0
-            ? "hidden"
-            : viewMode === "card"
+          className={`${
+            loading || errorMessage || visibleAssets.length === 0
               ? "hidden"
-              : "hidden md:block"
-            } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
+              : viewMode === "card"
+                ? "hidden"
+                : "hidden md:block"
+          } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
         >
           <div className="min-w-250">
             <div
@@ -943,14 +1010,14 @@ function PageSizeMenu({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-8 items-center gap-1.5 rounded-full border border-[#e0e2e8] bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5] cursor-pointer"
+        className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#e0e2e8] bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5]"
       >
         <span>{pageSize} / halaman</span>
         <ChevronDown size={13} strokeWidth={2.5} />
       </button>
 
       {open && (
-        <div className="absolute bottom-10 right-0 z-20 w-32 rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+        <div className="absolute right-0 bottom-10 z-20 w-32 rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
           {[10, 25, 100].map((size) => (
             <button
               key={size}
@@ -959,8 +1026,10 @@ function PageSizeMenu({
                 onChange(size)
                 setOpen(false)
               }}
-              className={`flex w-full rounded-lg px-3 py-1.5 text-left text-xs font-medium hover:bg-[#f5f6f8] cursor-pointer ${
-                pageSize === size ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"
+              className={`flex w-full cursor-pointer rounded-lg px-3 py-1.5 text-left text-xs font-medium hover:bg-[#f5f6f8] ${
+                pageSize === size
+                  ? "bg-[#f0efff] text-[#4262ff]"
+                  : "text-[#555a6a]"
               }`}
             >
               {size} / halaman
@@ -985,19 +1054,21 @@ function AssetRow({
 }) {
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 last:border-b-0 transition-colors duration-1000 ${
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${
         isNewImport
-          ? "bg-emerald-50/80 border-l-4 border-l-emerald-500 font-medium"
+          ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
           : selected
             ? "bg-[#f5f3ff]"
             : "bg-white"
       }`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className="font-mono text-xs text-[#4262ff] truncate">{asset.code}</span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate font-mono text-xs text-[#4262ff]">
+          {asset.code}
+        </span>
         {isNewImport && (
-          <span className="rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800 shrink-0 animate-pulse">
+          <span className="shrink-0 animate-pulse rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800">
             Baru
           </span>
         )}
@@ -1060,6 +1131,20 @@ function ActionMenu({ asset }: { asset: Asset }) {
     })
   }
 
+  const goToDetail = () => {
+    setOpen(false)
+
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
+  }
+
   const handleSoftDelete = async () => {
     setOpen(false)
 
@@ -1073,11 +1158,11 @@ function ActionMenu({ asset }: { asset: Asset }) {
     try {
       await assetService.delete(asset.id, reason)
       toast.success("Aset berhasil diarsipkan.")
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-    } catch (error: any) {
-      console.error("Detail Error Delete:", error?.response || error)
+      queryClient.invalidateQueries({ queryKey: ["assets"] })
+    } catch (error: unknown) {
+      console.error("Detail Error Delete:", error)
       toast.error(
-        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
       )
     }
   }
@@ -1089,7 +1174,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Menu aksi"
         aria-expanded={open}
-        className="grid size-7 place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3] cursor-pointer"
+        className="grid size-7 cursor-pointer place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3]"
       >
         <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
       </button>
@@ -1097,13 +1182,13 @@ function ActionMenu({ asset }: { asset: Asset }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-8 z-30 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
+          className="absolute top-8 right-0 z-30 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
         >
           <button
             type="button"
             role="menuitem"
-            onClick={goToEdit}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
+            onClick={goToDetail}
+            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
           >
             Detail
           </button>
@@ -1111,7 +1196,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
             type="button"
             role="menuitem"
             onClick={goToEdit}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
+            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
           >
             Edit
           </button>
@@ -1119,7 +1204,7 @@ function ActionMenu({ asset }: { asset: Asset }) {
             type="button"
             role="menuitem"
             onClick={handleSoftDelete}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2] cursor-pointer"
+            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
           >
             Hapus (Arsipkan)
           </button>
@@ -1142,9 +1227,9 @@ function MobileAssetRow({
 }) {
   return (
     <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 transition-colors duration-1000 ${
+      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 transition-colors duration-1000 last:border-b-0 ${
         isNewImport
-          ? "bg-emerald-50/80 border-l-4 border-l-emerald-500 font-medium"
+          ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
           : selected
             ? "bg-[#f5f3ff]"
             : "bg-white"
@@ -1161,7 +1246,7 @@ function MobileAssetRow({
               {asset.code}
             </span>
             {isNewImport && (
-              <span className="rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800 animate-pulse">
+              <span className="animate-pulse rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800">
                 Baru
               </span>
             )}
@@ -1217,7 +1302,7 @@ function AssetCard({
                 {asset.code}
               </span>
               {isNewImport && (
-                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 animate-pulse">
+                <span className="animate-pulse rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
                   Baru
                 </span>
               )}
@@ -1268,7 +1353,7 @@ function CheckBox({
   return (
     <button
       onClick={onClick}
-      className={`grid size-4 place-items-center rounded border text-[10px] cursor-pointer ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
+      className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
     </button>
@@ -1289,7 +1374,7 @@ function Pill({
   return (
     <button
       onClick={onClick}
-      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold cursor-pointer ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
+      className={`flex h-8.5 cursor-pointer items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
     >
       {children}
     </button>
@@ -1310,7 +1395,7 @@ function ReferenceChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex h-8.5 items-center rounded-full border px-3.75 text-xs font-semibold transition cursor-pointer ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
+      className={`flex h-8.5 cursor-pointer items-center rounded-full border px-3.75 text-xs font-semibold transition ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
     >
       {children}
     </button>
@@ -1353,7 +1438,7 @@ function FilterMenu<T extends string | number>({
           onClick={() => onOpenChange(isOpen ? null : id)}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
-          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{isActive ? `${label}: ${selected.name}` : label}</span>
           {!isActive && (
@@ -1368,7 +1453,7 @@ function FilterMenu<T extends string | number>({
               onOpenChange(null)
             }}
             aria-label={`Hapus filter ${label}`}
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} aria-hidden="true" />
           </button>
@@ -1388,7 +1473,7 @@ function FilterMenu<T extends string | number>({
               onChange(undefined)
               onOpenChange(null)
             }}
-            className="flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
+            className="flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
           >
             Semua
           </button>
@@ -1402,7 +1487,7 @@ function FilterMenu<T extends string | number>({
                 onChange(option.id)
                 onOpenChange(null)
               }}
-              className={`flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] cursor-pointer ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
+              className={`flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
             >
               {option.name}
             </button>
@@ -1440,7 +1525,7 @@ function DateRangeFilter({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1453,7 +1538,7 @@ function DateRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter tanggal perolehan"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -1514,7 +1599,7 @@ function PriceRangeFilter({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1527,7 +1612,7 @@ function PriceRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter rentang harga"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -1585,7 +1670,7 @@ function Page({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`grid size-8 place-items-center rounded-full text-xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
+      className={`grid size-8 cursor-pointer place-items-center rounded-full text-xs disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
     >
       {children}
     </button>
