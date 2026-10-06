@@ -42,6 +42,42 @@ export interface AssetAttr {
   attributes: AssetData
 }
 
+export interface AssetMutation {
+  id: number
+  fromLocation: string
+  toLocation: string
+  fromHolder: string | null
+  toHolder: string | null
+  mutationDate: string
+  reason: string
+  actorName: string
+  createdAt: string | null
+}
+
+export interface AssetAuditLog {
+  id: number
+  actorName: string
+  action: string
+  fieldName: string | null
+  oldValue: string | null
+  newValue: string | null
+  createdAt: string | null
+}
+
+export interface AssetDetailAttr {
+  id: string
+  attributes: AssetData & {
+    mutationHistory: AssetMutation[]
+    auditLogs: AssetAuditLog[]
+    completeness: {
+      filled: number
+      total: number
+      percentage: number
+      missingFields: string[]
+    }
+  }
+}
+
 // ===== PAYLOAD INTERFACES =====
 export interface CreateAssetPayload {
   asset_code?: string
@@ -112,6 +148,13 @@ export interface AssetListResult {
   pagination: AssetPagination
 }
 
+export interface AssetWriteResult extends Record<string, unknown> {
+  id?: string
+  code?: string
+  asset_code?: string
+  warning?: string
+}
+
 export interface MoveAssetPayload {
   to_location_id: number
   to_holder?: string
@@ -128,6 +171,38 @@ export interface MoveAssetResponse {
   toHolder: string | null
   movementDate: string
   reason: string
+}
+
+export interface SplitAssetPayload {
+  split_quantity: number
+  condition: string
+  status?: string
+  notes?: string
+}
+
+export interface SplitAssetRecord {
+  id: string
+  asset_code: string
+  name: string
+  category_id: number
+  brand_id: number | null
+  quantity: number
+  unit: string
+  condition: string
+  status: string
+  purchase_price: number | null
+  purchase_date: string | null
+  location_id: number
+  holder_name: string | null
+  notes: string | null
+  photos?: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface SplitAssetResponse {
+  original: SplitAssetRecord
+  created: SplitAssetRecord
 }
 
 // ===== ASSET SERVICE =====
@@ -158,17 +233,17 @@ export const assetService = {
 
   createAsset: async (
     payload: CreateAssetPayload
-  ): Promise<Record<string, unknown>> => {
+  ): Promise<AssetWriteResult> => {
     const response = await api.post("/assets/create", payload)
-    return (response.data?.data || response.data) as Record<string, unknown>
+    return (response.data?.data || response.data) as AssetWriteResult
   },
 
   updateAsset: async (
     id: string,
     payload: UpdateAssetPayload
-  ): Promise<Record<string, unknown>> => {
+  ): Promise<AssetWriteResult> => {
     const response = await api.put(`/assets/update/${id}`, payload)
-    return (response.data?.data || response.data) as Record<string, unknown>
+    return (response.data?.data || response.data) as AssetWriteResult
   },
 
   getAssetById: async (id: string): Promise<AssetAttr> => {
@@ -176,9 +251,9 @@ export const assetService = {
     return (response.data?.data || response.data) as AssetAttr
   },
 
-  getAssetDetail: async (id: string): Promise<AssetAttr> => {
+  getAssetDetail: async (id: string): Promise<AssetDetailAttr> => {
     const response = await api.get(`/assets/${id}`)
-    return (response.data?.data || response.data) as AssetAttr
+    return (response.data?.data || response.data) as AssetDetailAttr
   },
 
   moveAsset: async (
@@ -187,6 +262,14 @@ export const assetService = {
   ): Promise<MoveAssetResponse> => {
     const response = await api.post(`/assets/${id}/movements`, payload)
     return (response.data?.data || response.data) as MoveAssetResponse
+  },
+
+  splitAsset: async (
+    id: string,
+    payload: SplitAssetPayload
+  ): Promise<SplitAssetResponse> => {
+    const response = await api.post(`/assets/${id}/split`, payload)
+    return response.data?.data || response.data
   },
 
   uploadPhoto: async (files: File[]): Promise<string[]> => {

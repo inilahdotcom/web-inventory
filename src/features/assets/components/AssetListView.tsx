@@ -6,7 +6,6 @@ import { assetService } from "@/services/assetServices"
 import { profileService } from "@/services/profileService"
 import { toast } from "sonner"
 import { downloadBlob } from "@/lib/DownloadBlob"
-import type { AxiosError } from "axios"
 import type {
   AssetCondition,
   AssetListItem,
@@ -81,16 +80,52 @@ const conditionOptions: AssetCondition[] = [
   "Rusak Berat",
   "Hilang",
 ]
-const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
+const statusOptions = [
+  "Digunakan",
+  "Tersedia",
+  "Diperbaiki",
+  "Dihapuskan",
+  "Tidak Tersedia",
+]
+
+type AssetListApiAttributes = Partial<AssetListItem["attributes"]> & {
+  id?: string
+  assetCode?: string
+  asset_code?: string
+  assetName?: string
+  asset_name?: string
+  categoryName?: string
+  category_name?: string
+  brandName?: string
+  brand_name?: string
+  locationName?: string
+  location_name?: string
+  holderName?: string
+  holder_name?: string
+  purchasePrice?: number
+  price?: number
+  qty?: number
+}
+
+function apiErrorMessage(error: unknown) {
+  const value = error as {
+    message?: string
+    response?: { data?: { message?: string; error?: string } }
+  }
+  return (
+    value.response?.data?.message ||
+    value.response?.data?.error ||
+    value.message
+  )
+}
 
 function toAsset(item: AssetListItem): Asset {
-  const attr = (item.attributes || item) as Record<string, unknown>
+  const attr = (item.attributes || item) as AssetListApiAttributes
 
-  const rawPrice =
+  const priceValue = Number(
     attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0
-  const priceValue = Number(rawPrice)
-  const photos = attr.photos
-  const hasPhoto = Array.isArray(photos) && photos.length > 0
+  )
+  const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
   const holderName = String(
     attr.holder || attr.holderName || attr.holder_name || ""
   )
@@ -166,6 +201,7 @@ export function AssetListView() {
     search?: string
     filter?: string
     highlight?: string
+    latest?: string | number
     newCount?: string | number
   }
 
@@ -195,37 +231,46 @@ export function AssetListView() {
   }
 
   const initialSavedView = getInitialSavedView()
+  const showLatestSplit = String(searchParam?.latest ?? "") === "1"
 
-  const [query, setQuery] = useState(initialSavedView?.query ?? "")
+  const [query, setQuery] = useState(
+    showLatestSplit ? "" : initialSavedView?.query || ""
+  )
   const [debouncedQuery, setDebouncedQuery] = useState(
-    initialSavedView?.query ?? ""
+    showLatestSplit ? "" : initialSavedView?.query || ""
   )
   const [condition, setCondition] = useState<AssetCondition | "">(
-    initialSavedView?.condition ?? ""
+    showLatestSplit ? "" : initialSavedView?.condition || ""
   )
-  const [status, setStatus] = useState(initialSavedView?.status ?? "")
+  const [status, setStatus] = useState(
+    showLatestSplit ? "" : initialSavedView?.status || ""
+  )
   const [brandId, setBrandId] = useState<number | undefined>(
-    initialSavedView?.brandId
+    showLatestSplit ? undefined : initialSavedView?.brandId
   )
   const [categoryId, setCategoryId] = useState<number | undefined>(
-    initialSavedView?.categoryId
+    showLatestSplit ? undefined : initialSavedView?.categoryId
   )
   const [locationId, setLocationId] = useState<number | undefined>(
-    initialSavedView?.locationId
+    showLatestSplit ? undefined : initialSavedView?.locationId
   )
   const [purchaseDateFrom, setPurchaseDateFrom] = useState(
-    initialSavedView?.purchaseDateFrom ?? ""
+    showLatestSplit ? "" : initialSavedView?.purchaseDateFrom || ""
   )
   const [purchaseDateTo, setPurchaseDateTo] = useState(
-    initialSavedView?.purchaseDateTo ?? ""
+    showLatestSplit ? "" : initialSavedView?.purchaseDateTo || ""
   )
-  const [priceMin, setPriceMin] = useState(initialSavedView?.priceMin ?? "")
-  const [priceMax, setPriceMax] = useState(initialSavedView?.priceMax ?? "")
+  const [priceMin, setPriceMin] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMin || ""
+  )
+  const [priceMax, setPriceMax] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMax || ""
+  )
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(
-    initialSavedView?.quickFilter ?? ""
+    showLatestSplit ? "" : initialSavedView?.quickFilter || ""
   )
   const [sort, setSort] = useState<SortOption>(
-    initialSavedView?.sort ?? "code:asc"
+    showLatestSplit ? "code:desc" : initialSavedView?.sort || "code:asc"
   )
 
   const [pageSize, setPageSize] = useState<number>(getInitialPageSize)
@@ -345,6 +390,7 @@ export function AssetListView() {
     queryFn: () => assetService.masters("locations"),
   })
 
+  // Ambil Data Utama Aset menggunakan React Query
   const {
     data: assetData,
     isLoading: loading,
@@ -404,8 +450,10 @@ export function AssetListView() {
     return Boolean(code && highlightedCodes.includes(code.toLowerCase()))
   }
 
-  const isNewItem = (index: number, totalVisible: number) => {
-    if (highlightedCount > 0 && searchParam?.newCount) {
+  const isNewItem = (index: number, code: string, totalVisible: number) => {
+    if (code && highlightedCodes.includes(code.toLowerCase())) return true
+
+    if (highlightedCount > 0) {
       const startIndex = Math.max(0, totalVisible - highlightedCount)
       return index >= startIndex
     }
@@ -588,9 +636,8 @@ export function AssetListView() {
       setSelectedCodes(new Set())
       queryClient.invalidateQueries({ queryKey: ["assets"] })
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
       toast.error(
-        `Gagal mengarsipkan aset: ${err.response?.data?.message || err.message}`
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
       )
     }
   }
@@ -1120,7 +1167,11 @@ export function AssetListView() {
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
                 isHighlighted={isHighlighted(asset.code)}
-                isNewImport={isNewItem(index, visibleAssets.length)}
+                isNewImport={isNewItem(
+                  index,
+                  asset.code,
+                  visibleAssets.length
+                )}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -1143,7 +1194,11 @@ export function AssetListView() {
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
                   isHighlighted={isHighlighted(asset.code)}
-                  isNewImport={isNewItem(index, visibleAssets.length)}
+                  isNewImport={isNewItem(
+                    index,
+                    asset.code,
+                    visibleAssets.length
+                  )}
                   onToggle={() => toggleSelection(asset.code)}
                 />
               ))}
@@ -1181,7 +1236,11 @@ export function AssetListView() {
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
                 isHighlighted={isHighlighted(asset.code)}
-                isNewImport={isNewItem(index, visibleAssets.length)}
+                isNewImport={isNewItem(
+                  index,
+                  asset.code,
+                  visibleAssets.length
+                )}
                 onToggle={() => toggleSelection(asset.code)}
               />
             ))}
@@ -1376,9 +1435,10 @@ function ActionMenu({ asset }: { asset: Asset }) {
     setOpen(false)
 
     if (!asset.id) {
-      toast.error("ID Aset tidak valid atau tidak ditemukan")
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
       return
     }
+
     navigate({
       to: "/asset/$id",
       params: { id: String(asset.id) },
@@ -1400,10 +1460,9 @@ function ActionMenu({ asset }: { asset: Asset }) {
       toast.success("Aset berhasil diarsipkan.")
       queryClient.invalidateQueries({ queryKey: ["assets"] })
     } catch (error: unknown) {
-      const err = error as AxiosError<{ message?: string }>
-      console.error("Detail Error Delete:", err.response || err)
+      console.error("Detail Error Delete:", error)
       toast.error(
-        `Gagal mengarsipkan aset: ${err.response?.data?.message || err.message}`
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
       )
     }
   }
