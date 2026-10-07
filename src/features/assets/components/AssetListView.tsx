@@ -656,60 +656,43 @@ export function AssetListView() {
           </div>
         </section>
 
-        {!loading &&
-          !errorMessage &&
-          visibleAssets.length > 0 &&
-          viewMode === "table" && (
-            <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white md:hidden">
-              <div className="grid h-10 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#e0e2e8] bg-[#f7f8fa] px-3 text-[10px] font-semibold tracking-wide text-[#6b6f7e] uppercase">
-                <span className="pl-6">Nama barang</span>
-                <span>Kondisi</span>
-                <span className="text-right">Harga</span>
-              </div>
-              {visibleAssets.map((asset) => (
-                <MobileAssetRow
-                  key={asset.code}
-                  asset={asset}
-                  selected={selectedCodes.has(asset.code)}
-                  onToggle={() => toggleSelection(asset.code)}
-                />
-              ))}
-            </section>
-          )}
-
         <section
           className={`${
             loading || errorMessage || visibleAssets.length === 0
               ? "hidden"
               : viewMode === "card"
                 ? "hidden"
-                : "hidden md:block"
-          } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
+                : viewMode === "table"
+                  ? "block"
+                  : "hidden md:block"
+          } overflow-hidden rounded-2xl border border-[#eef0f3] bg-white`}
         >
-          <div className="min-w-240">
-            <div
-              className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
-            >
-              <CheckBox selected={allSelected} onClick={selectAll} />
-              <span className="text-[#1c1c1e]">Kode &uarr;</span>
-              <span>Nama barang</span>
-              <span>Kategori</span>
-              <span>Merek</span>
-              <span className="text-right">Qty</span>
-              <span>Sat.</span>
-              <span>Kondisi</span>
-              <span>Lokasi</span>
-              <span className="text-right">Harga</span>
-              <span />
+          <div className="overflow-x-auto">
+            <div className="min-w-240">
+              <div
+                className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
+              >
+                <CheckBox selected={allSelected} onClick={selectAll} />
+                <span className="text-[#1c1c1e]">Kode &uarr;</span>
+                <span>Nama barang</span>
+                <span>Kategori</span>
+                <span>Merek</span>
+                <span className="text-right">Qty</span>
+                <span>Sat.</span>
+                <span>Kondisi</span>
+                <span>Lokasi</span>
+                <span className="text-right">Harga</span>
+                <span />
+              </div>
+              {visibleAssets.map((asset) => (
+                <AssetRow
+                  key={asset.code}
+                  asset={asset}
+                  selected={selectedCodes.has(asset.code)}
+                  onToggle={() => toggleSelection(asset.code)}
+                />
+              ))}
             </div>
-            {visibleAssets.map((asset) => (
-              <AssetRow
-                key={asset.code}
-                asset={asset}
-                selected={selectedCodes.has(asset.code)}
-                onToggle={() => toggleSelection(asset.code)}
-              />
-            ))}
           </div>
           <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3">
             <span className="text-xs text-[#6b6f7e]">
@@ -796,49 +779,6 @@ function AssetRow({
         {asset.price ?? "Belum diisi"}
       </span>
       <span className="text-center text-sm text-[#8e91a0]">&#8943;</span>
-    </div>
-  )
-}
-
-function MobileAssetRow({
-  asset,
-  selected,
-  onToggle,
-}: {
-  asset: Asset
-  selected: boolean
-  onToggle: () => void
-}) {
-  return (
-    <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <CheckBox selected={selected} onClick={onToggle} />
-        <span className="min-w-0">
-          <span className="block truncate text-xs font-semibold">
-            {asset.name}
-          </span>
-          <span className="block truncate font-mono text-[10px] text-[#4262ff]">
-            {asset.code}
-          </span>
-        </span>
-      </div>
-      <span className="min-w-0">
-        <span
-          className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${conditionClass[asset.condition]}`}
-        >
-          {asset.condition}
-        </span>
-        <span className="mt-1 block truncate text-[11px] text-[#6b6f7e]">
-          {asset.location}
-        </span>
-      </span>
-      <span
-        className={`truncate text-right font-mono text-[11px] ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
-      >
-        {asset.price ?? "Belum diisi"}
-      </span>
     </div>
   )
 }
