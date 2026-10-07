@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { profileService } from "@/services/profileService"
+import { useAutoLogout } from "@/hooks/useAutoLogout" // 1. Import hook
+import { SessionExpiredModal } from "@/components/ui/SessionExpiredModa" // 2. Import modal
 
 interface SidebarMenuItem {
   to: string
@@ -17,6 +19,9 @@ export function Sidebar({
 }) {
   const [open, setOpen] = useState(false)
   const [showDesktopContent, setShowDesktopContent] = useState(!collapsed)
+
+  // 3. Panggil hook auto-logout di sini
+  const { isExpired, confirmLogout } = useAutoLogout()
 
   useEffect(() => {
     if (collapsed) return
@@ -83,6 +88,9 @@ export function Sidebar({
           </aside>
         </div>
       )}
+
+      {/* 4. Pasang Modal Sesi Berakhir di sini */}
+      <SessionExpiredModal isOpen={isExpired} onConfirm={confirmLogout} />
     </>
   )
 }
@@ -130,7 +138,6 @@ function SidebarContent({
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex h-16 items-center px-5.5">
-        {/* Logo & Judul diklik mengarah ke halaman / */}
         <Link
           to="/"
           onClick={onNavigate}
@@ -187,7 +194,6 @@ function SidebarContent({
         </div>
       </nav>
 
-      {/* Profil User Box diklik mengarah ke /profile */}
       <div className="p-3.5">
         <Link
           to="/profile"
