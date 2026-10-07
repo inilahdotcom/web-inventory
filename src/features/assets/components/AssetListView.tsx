@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
 import { profileService } from "@/services/profileService"
+import { usePermission } from "@/hooks/usePermission"
 import { toast } from "sonner"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import type {
@@ -60,7 +61,6 @@ type QuickFilter =
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
-// Style warna badge kondisi aset (Kondisi Rusak Berat TETAP MERAH)
 const conditionClass: Record<AssetCondition, string> = {
   Bagus: "bg-[#c3faf5] text-[#187574]",
   "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
@@ -164,7 +164,10 @@ export function AssetListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Profil user (query key sama dengan dashboard, jadi cache dipakai bersama)
+  // Ambil data permission untuk kontrol hak akses UI
+  const { canCreateEditAsset, canDeleteRestoreAsset, canExportLaporan } =
+    usePermission()
+
   const { data: profile } = useQuery({
     queryKey: ["dashboard", "profile"],
     queryFn: () => profileService.get(),
@@ -179,11 +182,9 @@ export function AssetListView() {
     .join("")
     .toUpperCase()
 
-  // Popover dropdown profile
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  // Tutup dropdown saat klik di luar
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -390,7 +391,6 @@ export function AssetListView() {
     queryFn: () => assetService.masters("locations"),
   })
 
-  // Ambil Data Utama Aset menggunakan React Query
   const {
     data: assetData,
     isLoading: loading,
@@ -594,19 +594,28 @@ export function AssetListView() {
   }
 
   const bulkActions = [
-    {
-      label: "Ubah kondisi",
-      action: () =>
-        setNotice("Ubah kondisi siap diproses untuk aset terpilih."),
-    },
-    {
-      label: "Mutasi",
-      action: () => setNotice("Mutasi siap diproses untuk aset terpilih."),
-    },
-    {
-      label: exporting ? "Mengekspor..." : "Export terpilih",
-      action: handleExportSelected,
-    },
+    ...(canCreateEditAsset
+      ? [
+          {
+            label: "Ubah kondisi",
+            action: () =>
+              setNotice("Ubah kondisi siap diproses untuk aset terpilih."),
+          },
+          {
+            label: "Mutasi",
+            action: () =>
+              setNotice("Mutasi siap diproses untuk aset terpilih."),
+          },
+        ]
+      : []),
+    ...(canExportLaporan
+      ? [
+          {
+            label: exporting ? "Mengekspor..." : "Export terpilih",
+            action: handleExportSelected,
+          },
+        ]
+      : []),
   ]
 
   const handleBulkDelete = async () => {
@@ -771,7 +780,6 @@ export function AssetListView() {
         </form>
 
         <div className="ml-auto flex items-center gap-2.5">
-          {/* Avatar Profile dengan Dropdown Menu (Detail Profile & Logout) */}
           <div className="relative" ref={profileRef}>
             <button
               type="button"
@@ -863,20 +871,28 @@ export function AssetListView() {
               Kolom{" "}
               <span className="text-xs font-normal text-[#6b6f7e]">10/12</span>
             </Pill>
-            <Pill
-              className="h-10 px-4 text-sm"
-              onClick={handleExportAll}
-              disabled={exporting}
-            >
-              {exporting ? "Mengekspor..." : "Export Excel"}
-            </Pill>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/asset/new" })}
-              className="col-span-2 flex h-10 cursor-pointer items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
-            >
-              + Tambah Aset
-            </button>
+
+            {/* Sembunyikan Tombol Export jika tidak boleh export */}
+            {canExportLaporan && (
+              <Pill
+                className="h-10 px-4 text-sm"
+                onClick={handleExportAll}
+                disabled={exporting}
+              >
+                {exporting ? "Mengekspor..." : "Export Excel"}
+              </Pill>
+            )}
+
+            {/* Sembunyikan Tombol + Tambah Aset untuk Viewer */}
+            {canCreateEditAsset && (
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/asset/new" })}
+                className="col-span-2 flex h-10 cursor-pointer items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
+              >
+                + Tambah Aset
+              </button>
+            )}
           </div>
         </section>
 
@@ -1081,13 +1097,17 @@ export function AssetListView() {
                   {label}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={handleBulkDelete}
-                className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
-              >
-                Hapus
-              </button>
+
+              {/* Sembunyikan Tombol Hapus Massal jika bukan ADMIN */}
+              {canDeleteRestoreAsset && (
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
+                >
+                  Hapus
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -1310,7 +1330,6 @@ function PageSizeMenu({
   )
 }
 
-// Komponen Baris Tabel Desktop (logika warna sorotan pintar)
 function AssetRow({
   asset,
   selected,
@@ -1326,14 +1345,13 @@ function AssetRow({
   onToggle: () => void
   onOpen: () => void
 }) {
-  // Cek apakah aset ini disorot karena "Perlu Tindakan"
   const isNeedsAttention =
     isHighlighted && (asset.attention || asset.condition !== "Bagus")
 
   const rowStyle = isNeedsAttention
-    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium" // MERAH untuk Perlu Tindakan
+    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium"
     : isHighlighted || isNewImport
-      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium" // HIJAU untuk Edit / Import
+      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
       : selected
         ? "bg-[#f5f3ff]"
         : "bg-white"
@@ -1418,6 +1436,9 @@ function ActionMenu({ asset }: { asset: Asset }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // Ambil permission untuk menyembunyikan aksi di dropdown
+  const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
+
   const goToEdit = () => {
     setOpen(false)
 
@@ -1493,29 +1514,36 @@ function ActionMenu({ asset }: { asset: Asset }) {
           >
             Detail
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={goToEdit}
-            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleSoftDelete}
-            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
-          >
-            Hapus (Arsipkan)
-          </button>
+
+          {/* Sembunyikan Opsi Edit jika Viewer */}
+          {canCreateEditAsset && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={goToEdit}
+              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            >
+              Edit
+            </button>
+          )}
+
+          {/* Sembunyikan Opsi Hapus (Arsipkan) jika bukan Admin */}
+          {canDeleteRestoreAsset && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSoftDelete}
+              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
+            >
+              Hapus (Arsipkan)
+            </button>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-// Komponen Kartu
 function AssetCard({
   asset,
   selected,

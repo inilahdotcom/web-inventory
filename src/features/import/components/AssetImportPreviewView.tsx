@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { usePermission } from "@/hooks/usePermission"
 
 export interface ImportItem {
   id: string | number
@@ -47,6 +48,9 @@ export function AssetImportPreviewView({
   onSimpanValid,
   onUnduhTemplate,
 }: AssetImportPreviewViewProps) {
+  // Panggil permission hook untuk membatasi aksi manipulasi data import
+  const { canCreateEditAsset } = usePermission()
+
   const [filterTab, setFilterTab] = useState<"gagal" | "semua">("gagal")
 
   const filteredData =
@@ -111,29 +115,40 @@ export function AssetImportPreviewView({
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={onUnduhTemplate}
-          className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-2xs transition-all hover:border-neutral-400 hover:bg-neutral-50"
-        >
-          <svg
-            className="h-4 w-4 text-neutral-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Sembunyikan Tombol Unduh Template Excel jika hanya Viewer */}
+        {canCreateEditAsset && (
+          <button
+            type="button"
+            onClick={onUnduhTemplate}
+            className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-2xs transition-all hover:border-neutral-400 hover:bg-neutral-50"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          Unduh Template Excel
-        </button>
+            <svg
+              className="h-4 w-4 text-neutral-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Unduh Template Excel
+          </button>
+        )}
       </div>
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
+        {/* Banner Peringatan jika bukan Admin/Staff GA */}
+        {!canCreateEditAsset && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800">
+            <strong>Mode Pratinjau (Read-Only):</strong> Akun Anda tidak
+            memiliki izin untuk menyimpan atau mengunggah data aset baru.
+          </div>
+        )}
+
         <div className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs md:flex-row md:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
@@ -143,28 +158,33 @@ export function AssetImportPreviewView({
               {fileName} · {fileInfo}
             </p>
           </div>
-          <div className="flex items-center gap-3 self-end md:self-auto">
-            <button
-              type="button"
-              onClick={onGantiFile}
-              className="cursor-pointer rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50"
-            >
-              Ganti file
-            </button>
-            <button
-              type="button"
-              onClick={onSimpanValid}
-              disabled={stats.siapSimpan === 0}
-              className={`rounded-xl px-5 py-2.5 text-xs font-medium shadow-2xs transition-all ${
-                stats.siapSimpan > 0
-                  ? "cursor-pointer bg-neutral-900 text-white hover:bg-neutral-800"
-                  : "cursor-not-allowed bg-neutral-200 text-neutral-400"
-              }`}
-            >
-              Simpan {stats.siapSimpan} baris valid
-            </button>
-          </div>
+
+          {/* Sembunyikan Aksi Ganti File & Simpan jika Viewer */}
+          {canCreateEditAsset && (
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <button
+                type="button"
+                onClick={onGantiFile}
+                className="cursor-pointer rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50"
+              >
+                Ganti file
+              </button>
+              <button
+                type="button"
+                onClick={onSimpanValid}
+                disabled={stats.siapSimpan === 0}
+                className={`rounded-xl px-5 py-2.5 text-xs font-medium shadow-2xs transition-all ${
+                  stats.siapSimpan > 0
+                    ? "cursor-pointer bg-neutral-900 text-white hover:bg-neutral-800"
+                    : "cursor-not-allowed bg-neutral-200 text-neutral-400"
+                }`}
+              >
+                Simpan {stats.siapSimpan} baris valid
+              </button>
+            </div>
+          )}
         </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] p-5 shadow-2xs">
             <span className="text-xs font-medium text-[#065F46]">

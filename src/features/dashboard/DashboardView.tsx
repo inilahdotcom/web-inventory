@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { api } from "../../lib/axios"
 import { profileService } from "@/services/profileService"
 import { assetService } from "@/services/assetServices"
+import { usePermission } from "@/hooks/usePermission"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import { DashboardStats } from "./components/DashboardStats"
 import { RecentActivityTable } from "./components/RecentActivityTable"
@@ -46,6 +47,11 @@ type ExportType = "excel" | "pdf"
 
 export function DashboardView() {
   const navigate = useNavigate()
+
+  // Ambil permission untuk menyembunyikan tombol UI bagi Viewer
+  const { canCreateEditAsset, canImportExcel, canExportLaporan } =
+    usePermission()
+
   // Data dashboard (React Query: tanpa setState di dalam useEffect)
   const {
     data,
@@ -62,7 +68,7 @@ export function DashboardView() {
     },
   })
 
-  // Profil user (turunan dari query, bukan state)
+  // Profil user
   const { data: profile } = useQuery({
     queryKey: ["dashboard", "profile"],
     queryFn: () => profileService.get(),
@@ -106,7 +112,7 @@ export function DashboardView() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Handler Export (Excel & PDF lewat blob, token ikut terkirim)
+  // Handler Export
   const runExport = async (type: ExportType) => {
     setIsExportOpen(false)
     if (exporting) return
@@ -194,46 +200,48 @@ export function DashboardView() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-            {/* Dropdown Menu Export Header */}
-            <div className="relative hidden sm:inline-block" ref={exportRef}>
-              <button
-                type="button"
-                onClick={() => setIsExportOpen((prev) => !prev)}
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-900 shadow-2xs transition hover:bg-neutral-50"
-              >
-                <span>{exporting ? "Mengekspor..." : "Export"}</span>
-                <ChevronDown size={13} strokeWidth={2.5} />
-              </button>
+            {/* Dropdown Menu Export Header (Hanya jika diizinkan export) */}
+            {canExportLaporan && (
+              <div className="relative hidden sm:inline-block" ref={exportRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsExportOpen((prev) => !prev)}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-900 shadow-2xs transition hover:bg-neutral-50"
+                >
+                  <span>{exporting ? "Mengekspor..." : "Export"}</span>
+                  <ChevronDown size={13} strokeWidth={2.5} />
+                </button>
 
-              {isExportOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
-                  <button
-                    type="button"
-                    onClick={handleExportExcel}
-                    disabled={exporting !== null}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="grid size-5 place-items-center rounded bg-emerald-100 text-[10px] font-bold text-emerald-700">
-                      XLS
-                    </span>
-                    {exporting === "excel" ? "Mengekspor..." : "Export Excel"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportPdf}
-                    disabled={exporting !== null}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="grid size-5 place-items-center rounded bg-rose-100 text-[10px] font-bold text-rose-700">
-                      PDF
-                    </span>
-                    {exporting === "pdf" ? "Mengekspor..." : "Export PDF"}
-                  </button>
-                </div>
-              )}
-            </div>
+                {isExportOpen && (
+                  <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                    <button
+                      type="button"
+                      onClick={handleExportExcel}
+                      disabled={exporting !== null}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="grid size-5 place-items-center rounded bg-emerald-100 text-[10px] font-bold text-emerald-700">
+                        XLS
+                      </span>
+                      {exporting === "excel" ? "Mengekspor..." : "Export Excel"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportPdf}
+                      disabled={exporting !== null}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="grid size-5 place-items-center rounded bg-rose-100 text-[10px] font-bold text-rose-700">
+                        PDF
+                      </span>
+                      {exporting === "pdf" ? "Mengekspor..." : "Export PDF"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* Avatar Profile dengan Dropdown Menu (Detail Profile & Logout) */}
+            {/* Avatar Profile */}
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
@@ -255,7 +263,6 @@ export function DashboardView() {
                     </p>
                   </div>
 
-                  {/* Pilihan 1: Detail Profile */}
                   <button
                     type="button"
                     onClick={() => {
@@ -280,7 +287,6 @@ export function DashboardView() {
                     Detail Profile
                   </button>
 
-                  {/* Pilihan 2: Logout */}
                   <button
                     type="button"
                     onClick={() => {
@@ -322,29 +328,35 @@ export function DashboardView() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() =>
-                navigate({
-                  to: "/import/preview",
-                  search: { action: "preview" },
-                })
-              }
-              className="cursor-pointer rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-900 shadow-2xs transition hover:bg-neutral-50"
-            >
-              Import Excel
-            </button>
+            {/* Sembunyikan Tombol Import Excel jika Viewer */}
+            {canImportExcel && (
+              <button
+                onClick={() =>
+                  navigate({
+                    to: "/import/preview",
+                    search: { action: "preview" },
+                  })
+                }
+                className="cursor-pointer rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-900 shadow-2xs transition hover:bg-neutral-50"
+              >
+                Import Excel
+              </button>
+            )}
 
-            <button
-              onClick={() =>
-                navigate({
-                  to: "/asset/new",
-                  search: { action: "new" },
-                })
-              }
-              className="cursor-pointer rounded-2xl bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-neutral-800"
-            >
-              + Tambah Aset
-            </button>
+            {/* Sembunyikan Tombol + Tambah Aset jika Viewer */}
+            {canCreateEditAsset && (
+              <button
+                onClick={() =>
+                  navigate({
+                    to: "/asset/new",
+                    search: { action: "new" },
+                  })
+                }
+                className="cursor-pointer rounded-2xl bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-neutral-800"
+              >
+                + Tambah Aset
+              </button>
+            )}
           </div>
         </div>
 
