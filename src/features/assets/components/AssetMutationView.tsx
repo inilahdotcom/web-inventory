@@ -50,13 +50,9 @@ export function AssetMutationView() {
 
         setAssets(assetResult.assets)
         setLocations(locationResult)
-        const firstAsset = assetResult.assets[0]
-        const firstDestination = locationResult.find(
-          (location) => location.id !== firstAsset?.attributes.locationId
-        ) ?? locationResult[0]
-        setAssetId(firstAsset?.id ?? "")
-        setToLocationId(firstDestination?.id ?? 0)
-        setHolder(firstAsset?.attributes.holder ?? "")
+        setAssetId("")
+        setToLocationId(0)
+        setHolder("")
       } catch {
         if (isMounted) {
           setError("Data aset atau lokasi gagal dimuat. Silakan muat ulang halaman.")
@@ -75,14 +71,23 @@ export function AssetMutationView() {
 
   const handleAssetChange = (nextAssetId: string) => {
     const nextAsset = assets.find((asset) => asset.id === nextAssetId)
+    if (!nextAsset) {
+      setAssetId("")
+      setToLocationId(0)
+      setHolder("")
+      setReason("")
+      setError("")
+      return
+    }
+
     const nextLocation =
       locations.find(
-        (location) => location.id !== nextAsset?.attributes.locationId
+        (location) => location.id !== nextAsset.attributes.locationId
       ) ?? locations[0]
 
     setAssetId(nextAssetId)
     setToLocationId(nextLocation?.id ?? 0)
-    setHolder(nextAsset?.attributes.holder ?? "")
+    setHolder(nextAsset.attributes.holder ?? "")
     setReason("")
     setError("")
   }
