@@ -2,8 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { authService } from "@/services/authServices"
 import { authStorage } from "@/lib/auth-storage"
 
-// Durasi timeout (10 detik untuk testing, ganti ke 60 * 60 * 1000 untuk 60 menit)
-const TIMEOUT_DURATION = 10 * 1000
+const TIMEOUT_DURATION = 60 * 60 * 1000
 
 export function useAutoLogout() {
   const [isExpired, setIsExpired] = useState(false)

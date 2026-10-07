@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { ShieldAlert } from "lucide-react"
+import { usePermission } from "@/hooks/usePermission"
 import { auditLogService } from "@/services/auditLogServices"
 
 export interface AuditLogItem {
@@ -22,6 +24,9 @@ interface AuditLogViewProps {
 }
 
 export function AuditLogView({ onExport }: AuditLogViewProps) {
+  // Panggil permission hook untuk membatasi akses halaman Audit Log (Khusus Admin)
+  const { canViewAuditLog } = usePermission()
+
   // State Filter Interaktif
   const [selectedEntity, setSelectedEntity] = useState<string>("assets")
   const [selectedAction, setSelectedAction] = useState<string>("")
@@ -50,6 +55,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
         endDate: endDate || undefined,
         pageSize: 50,
       }),
+    enabled: canViewAuditLog, // Mencegah request dikirim jika pengguna bukan Admin
   })
 
   // Style badge warna sesuai Figma
@@ -68,6 +74,24 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
       default:
         return "bg-neutral-100 text-neutral-800 border-neutral-200"
     }
+  }
+
+  // Tampilan jika pengguna BUKAN Admin (Staff GA / Viewer)
+  if (!canViewAuditLog) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50/50 p-4 text-[#1C1C1E]">
+        <div className="flex max-w-md flex-col items-center rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-2xs">
+          <div className="grid size-12 place-items-center rounded-full bg-rose-100 text-rose-600">
+            <ShieldAlert size={24} />
+          </div>
+          <h1 className="mt-4 text-lg font-semibold">Akses Terbatas</h1>
+          <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+            Halaman Audit Log hanya dapat diakses oleh Admin sistem. Anda tidak
+            memiliki izin yang cukup untuk melihat catatan aktivitas ini.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -145,7 +169,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => refetch()}
+              onClick={() => void refetch()}
               className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50"
             >
               Refresh
@@ -188,7 +212,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                   key={log.id}
                   className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200/70 bg-white p-5 shadow-2xs md:flex-row"
                 >
-                  {/* KOLOM KIRI: User Info, Action Badge & Timestamp (Menumpuk Vertikal) */}
+                  {/* KOLOM KIRI: User Info, Action Badge & Timestamp */}
                   <div className="w-full shrink-0 space-y-1.5 md:w-56">
                     <span
                       className={`inline-block rounded-md border px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${getBadgeStyle(
@@ -212,7 +236,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
 
                   {/* KOLOM KANAN: Target & Diff / Description */}
                   <div className="flex-1 space-y-3">
-                    {/* Target Label (Di Atas Kanan Content) */}
+                    {/* Target Label */}
                     <div className="flex justify-start font-mono text-xs font-semibold text-neutral-700 md:justify-start">
                       <span className="font-normal text-neutral-500">
                         {entityName} ·{" "}
@@ -223,7 +247,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                     {/* Body Content: JSON Diff vs Text Description */}
                     {log.oldValues || log.newValues ? (
                       <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
-                        {/* OLD VALUES BOX (Merah Pastel) */}
+                        {/* OLD VALUES BOX */}
                         <div className="space-y-1 rounded-xl border border-neutral-200/80 bg-[#FAFAFA] p-3 font-mono text-[11px]">
                           <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
                             OLD_VALUES
@@ -235,7 +259,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                           </pre>
                         </div>
 
-                        {/* NEW VALUES BOX (Hijau Pastel) */}
+                        {/* NEW VALUES BOX */}
                         <div className="space-y-1 rounded-xl border border-neutral-200/80 bg-[#FAFAFA] p-3 font-mono text-[11px]">
                           <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
                             NEW_VALUES

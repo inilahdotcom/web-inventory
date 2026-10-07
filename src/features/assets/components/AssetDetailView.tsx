@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { Route } from "@/routes/_app/asset/$id/"
+import { usePermission } from "@/hooks/usePermission"
 import {
   assetService,
   type AssetAuditLog,
@@ -118,6 +119,10 @@ export function AssetDetailView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Memanggil permission hook untuk mengontrol hak akses UI
+  const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
+
   const [detail, setDetail] = useState<AssetDetailAttr | null>(null)
   const [asset, setAsset] = useState<AssetDraft | null>(null)
   const [editing, setEditing] = useState(false)
@@ -450,20 +455,32 @@ export function AssetDetailView() {
             >
               Mutasi
             </ActionButton>
-            <ActionButton
-              variant="outline"
-              disabled={busy}
-              onClick={() => void deleteAsset()}
-            >
-              Hapus
-            </ActionButton>
-            <ActionButton
-              variant="dark"
-              disabled={busy}
-              onClick={() => void toggleEditing()}
-            >
-              {busy ? "Memproses…" : editing ? "Simpan perubahan" : "Ubah Aset"}
-            </ActionButton>
+
+            {/* Sembunyikan Tombol Hapus jika bukan Admin */}
+            {canDeleteRestoreAsset && (
+              <ActionButton
+                variant="outline"
+                disabled={busy}
+                onClick={() => void deleteAsset()}
+              >
+                Hapus
+              </ActionButton>
+            )}
+
+            {/* Sembunyikan Tombol Ubah Aset jika Viewer */}
+            {canCreateEditAsset && (
+              <ActionButton
+                variant="dark"
+                disabled={busy}
+                onClick={() => void toggleEditing()}
+              >
+                {busy
+                  ? "Memproses…"
+                  : editing
+                    ? "Simpan perubahan"
+                    : "Ubah Aset"}
+              </ActionButton>
+            )}
           </div>
         </section>
 
@@ -477,13 +494,17 @@ export function AssetDetailView() {
                 <span className="text-[11.5px] text-[#8e91a0]">
                   {photos.length} dari 5 terunggah
                 </span>
-                <button
-                  type="button"
-                  onClick={() => !busy && inputRef.current?.click()}
-                  className="ml-auto text-[13px] font-semibold text-[#4262ff]"
-                >
-                  Unggah foto
-                </button>
+
+                {/* Sembunyikan Tombol Unggah Foto jika Viewer */}
+                {canCreateEditAsset && (
+                  <button
+                    type="button"
+                    onClick={() => !busy && inputRef.current?.click()}
+                    className="ml-auto text-[13px] font-semibold text-[#4262ff]"
+                  >
+                    Unggah foto
+                  </button>
+                )}
                 <input
                   ref={inputRef}
                   type="file"
@@ -497,30 +518,40 @@ export function AssetDetailView() {
                 <PhotoSlot
                   image={photos[0]}
                   main
-                  onClick={() => !busy && inputRef.current?.click()}
+                  onClick={() =>
+                    canCreateEditAsset && !busy && inputRef.current?.click()
+                  }
                   label="foto utama · 4:3"
                 />
                 <div className="flex flex-col gap-3">
                   <PhotoSlot
                     image={photos[1]}
-                    onClick={() => !busy && inputRef.current?.click()}
+                    onClick={() =>
+                      canCreateEditAsset && !busy && inputRef.current?.click()
+                    }
                     label="foto 2"
                   />
                   <PhotoSlot
                     image={photos[2]}
-                    onClick={() => !busy && inputRef.current?.click()}
+                    onClick={() =>
+                      canCreateEditAsset && !busy && inputRef.current?.click()
+                    }
                     label="foto 3"
                   />
                 </div>
                 <div className="flex flex-col gap-3">
                   <PhotoSlot
                     image={photos[3]}
-                    onClick={() => !busy && inputRef.current?.click()}
+                    onClick={() =>
+                      canCreateEditAsset && !busy && inputRef.current?.click()
+                    }
                     label="foto 4"
                   />
                   <PhotoSlot
                     image={photos[4]}
-                    onClick={() => !busy && inputRef.current?.click()}
+                    onClick={() =>
+                      canCreateEditAsset && !busy && inputRef.current?.click()
+                    }
                     label="foto 5"
                   />
                 </div>
@@ -591,7 +622,9 @@ export function AssetDetailView() {
                   onChange={(value) => updateAsset("description", value)}
                 />
               </div>
-              {detail.attributes.quantity > 1 && (
+
+              {/* Sembunyikan Opsi Pecah Record jika Viewer */}
+              {detail.attributes.quantity > 1 && canCreateEditAsset && (
                 <div className="flex flex-col gap-3 rounded-xl bg-[#fff8e0] px-3.5 py-3 sm:flex-row sm:items-center">
                   <span className="text-[12.5px] leading-[1.45] text-[#746019]">
                     Record ini berisi {detail.attributes.quantity}{" "}

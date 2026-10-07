@@ -2,8 +2,9 @@ import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { profileService } from "@/services/profileService"
-import { useAutoLogout } from "@/hooks/useAutoLogout" // 1. Import hook
-import { SessionExpiredModal } from "@/components/ui/SessionExpiredModa" // 2. Import modal
+import { usePermission } from "@/hooks/usePermission"
+import { useAutoLogout } from "@/hooks/useAutoLogout"
+import { SessionExpiredModal } from "@/components/ui/SessionExpiredModa"
 
 interface SidebarMenuItem {
   to: string
@@ -20,7 +21,6 @@ export function Sidebar({
   const [open, setOpen] = useState(false)
   const [showDesktopContent, setShowDesktopContent] = useState(!collapsed)
 
-  // 3. Panggil hook auto-logout di sini
   const { isExpired, confirmLogout } = useAutoLogout()
 
   useEffect(() => {
@@ -89,7 +89,6 @@ export function Sidebar({
         </div>
       )}
 
-      {/* 4. Pasang Modal Sesi Berakhir di sini */}
       <SessionExpiredModal isOpen={isExpired} onConfirm={confirmLogout} />
     </>
   )
@@ -102,7 +101,13 @@ function SidebarContent({
   onNavigate?: () => void
   onCollapse?: () => void
 }) {
-  // Fetch Profile User secara dinamis
+  const {
+    canCreateEditAsset,
+    canImportExcel,
+    canManageAdminData,
+    canDeleteRestoreAsset,
+  } = usePermission()
+
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: () => profileService.get(),
@@ -119,20 +124,30 @@ function SidebarContent({
     .join("")
     .toUpperCase()
 
+  // Menu utama dasar yang terbuka untuk semua role (Profil disertakan di sini)
   const primaryItems: SidebarMenuItem[] = [
     { to: "/", label: "Dashboard" },
     { to: "/asset", label: "Daftar Aset" },
-    { to: "/mutasi", label: "Mutasi Aset" },
-    { to: "/import/preview", label: "Import Data" },
+    // Mutasi Aset hanya untuk Admin & Staff GA
+    ...(canCreateEditAsset ? [{ to: "/mutasi", label: "Mutasi Aset" }] : []),
+    // Import Data hanya untuk Admin & Staff GA
+    ...(canImportExcel
+      ? [{ to: "/import/preview", label: "Import Data" }]
+      : []),
     { to: "/laporan", label: "Laporan" },
-    { to: "/arsip", label: "Arsip Aset" },
+    // Arsip Aset hanya untuk Admin
+    ...(canDeleteRestoreAsset || canManageAdminData
+      ? [{ to: "/arsip", label: "Arsip Aset" }]
+      : []),
+    // Menu Profil sekarang tampil di SEMUA role
+    { to: "/profile", label: "Profil" },
   ]
 
+  // Menu khusus Admin saja
   const adminItems: SidebarMenuItem[] = [
     { to: "/master-data", label: "Master Data" },
     { to: "/user-management", label: "Pengguna" },
     { to: "/audit-log", label: "Audit Log" },
-    { to: "/profile", label: "Profil" },
   ]
 
   return (
@@ -179,19 +194,25 @@ function SidebarContent({
             />
           ))}
         </div>
-        <p className="mt-6.25 mb-2.25 px-2.25 text-[10px] font-bold text-[#777780]">
-          ADMIN
-        </p>
-        <div className="space-y-0.75">
-          {adminItems.map((item) => (
-            <NavItem
-              key={item.to}
-              to={item.to}
-              label={item.label}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
+
+        {/* Section ADMIN hanya ditampilkan jika role adalah Admin */}
+        {canManageAdminData && (
+          <>
+            <p className="mt-6.25 mb-2.25 px-2.25 text-[10px] font-bold text-[#777780]">
+              ADMIN
+            </p>
+            <div className="space-y-0.75">
+              {adminItems.map((item) => (
+                <NavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </nav>
 
       <div className="p-3.5">
