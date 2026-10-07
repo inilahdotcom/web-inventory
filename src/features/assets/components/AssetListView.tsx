@@ -1013,7 +1013,7 @@ function DateRangeFilter({
     from && to ? `${from} – ${to}` : from || to || "Tanggal perolehan"
 
   return (
-    <div className={open ? "relative w-full sm:w-auto" : "relative"}>
+    <div className={open ? "relative w-full lg:w-auto" : "relative"}>
       <div
         className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
@@ -1041,7 +1041,7 @@ function DateRangeFilter({
         )}
       </div>
       {open && (
-        <div className="mt-2 grid w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] sm:absolute sm:top-10 sm:left-0 sm:z-20 sm:mt-0 sm:w-64">
+        <div className="mt-2 grid w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0 lg:w-64">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
             Dari tanggal
             <input
@@ -1087,7 +1087,7 @@ function PriceRangeFilter({
     : "Rentang harga"
 
   return (
-    <div className={open ? "relative w-full sm:w-auto" : "relative"}>
+    <div className={open ? "relative w-full lg:w-auto" : "relative"}>
       <div
         className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
@@ -1115,7 +1115,7 @@ function PriceRangeFilter({
         )}
       </div>
       {open && (
-        <div className="mt-2 grid w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] sm:absolute sm:top-10 sm:right-0 sm:z-20 sm:mt-0 sm:w-60">
+        <div className="mt-2 grid w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:right-0 lg:z-20 lg:mt-0 lg:w-60">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
             Harga minimum
             <input
