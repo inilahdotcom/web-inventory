@@ -2,6 +2,15 @@ import { api } from "@/lib/axios"
 import { authStorage } from "@/lib/auth-storage"
 import type { ApiResponse, LoginRequest, LoginResponse } from "@/types/auth"
 
+export interface PublicDashboardStats {
+  summary: {
+    total_asset_types: number
+    total_quantity: number
+    total_asset_value: number
+    total_damaged: number
+  }
+}
+
 export const authService = {
   login: async (
     payload: LoginRequest,
@@ -25,6 +34,18 @@ export const authService = {
     return data
   },
 
+  // Fungsi untuk mengambil data statistik publik di halaman login
+  getPublicStats: async (): Promise<PublicDashboardStats | null> => {
+    try {
+      const response = await api.get<{ data: PublicDashboardStats }>(
+        "/public/stats"
+      )
+      return response.data?.data || response.data
+    } catch {
+      return null
+    }
+  },
+
   // 1. Fungsi Permintaan Lupa Password (Kirim Link/Token ke Email)
   forgotPassword: async (email: string) => {
     const response = await api.post(
@@ -45,7 +66,7 @@ export const authService = {
       "/users/reset-password",
       {
         token: payload.token,
-        password: payload.new_password,     // Dikirim jika DTO Go memakai struct tag `json:"password"`
+        password: payload.new_password, // Dikirim jika DTO Go memakai struct tag `json:"password"`
         new_password: payload.new_password, // Dikirim jika DTO Go memakai struct tag `json:"new_password"`
       },
       {
