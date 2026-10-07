@@ -21,6 +21,7 @@ export function Sidebar({
   const [open, setOpen] = useState(false)
   const [showDesktopContent, setShowDesktopContent] = useState(!collapsed)
 
+  // Hook auto-logout dari branch develop
   const { isExpired, confirmLogout } = useAutoLogout()
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export function Sidebar({
         </div>
       )}
 
+      {/* Modal Sesi Berakhir dari develop */}
       <SessionExpiredModal isOpen={isExpired} onConfirm={confirmLogout} />
     </>
   )
@@ -124,26 +126,22 @@ function SidebarContent({
     .join("")
     .toUpperCase()
 
-  // Menu utama dasar yang terbuka untuk semua role (Profil disertakan di sini)
+  // Menu utama dasar (Profil disertakan di sini agar tampil di semua role)
   const primaryItems: SidebarMenuItem[] = [
     { to: "/", label: "Dashboard" },
     { to: "/asset", label: "Daftar Aset" },
-    // Mutasi Aset hanya untuk Admin & Staff GA
     ...(canCreateEditAsset ? [{ to: "/mutasi", label: "Mutasi Aset" }] : []),
-    // Import Data hanya untuk Admin & Staff GA
     ...(canImportExcel
       ? [{ to: "/import/preview", label: "Import Data" }]
       : []),
     { to: "/laporan", label: "Laporan" },
-    // Arsip Aset hanya untuk Admin
     ...(canDeleteRestoreAsset || canManageAdminData
       ? [{ to: "/arsip", label: "Arsip Aset" }]
       : []),
-    // Menu Profil sekarang tampil di SEMUA role
     { to: "/profile", label: "Profil" },
   ]
 
-  // Menu khusus Admin saja
+  // Menu khusus Admin
   const adminItems: SidebarMenuItem[] = [
     { to: "/master-data", label: "Master Data" },
     { to: "/user-management", label: "Pengguna" },
