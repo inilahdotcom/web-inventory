@@ -1,21 +1,12 @@
 import { Link } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { profileService } from "@/services/profileService"
 
-const primaryItems = [
-  ["/", "Dashboard"],
-  ["/asset", "Daftar Aset", "95"],
-  ["/mutasi", "Mutasi Aset"],
-  ["/import/preview", "Import Data"],
-  ["/laporan", "Laporan"],
-  ["/arsip", "Arsip Aset", "3"],
-] as const
-
-const adminItems = [
-  ["/master-data", "Master Data"],
-  ["/user-management", "Pengguna", "7"],
-  ["/audit-log", "Audit Log"],
-  ["/profile", "Profil"],
-] as const
+interface SidebarMenuItem {
+  to: string
+  label: string
+}
 
 export function Sidebar({
   collapsed,
@@ -85,7 +76,10 @@ export function Sidebar({
             className="absolute inset-0 bg-black/45"
           />
           <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
-            <SidebarContent onNavigate={() => setOpen(false)} onCollapse={() => setOpen(false)} />
+            <SidebarContent
+              onNavigate={() => setOpen(false)}
+              onCollapse={() => setOpen(false)}
+            />
           </aside>
         </div>
       )}
@@ -100,20 +94,62 @@ function SidebarContent({
   onNavigate?: () => void
   onCollapse?: () => void
 }) {
+  // Fetch Profile User secara dinamis
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileService.get(),
+  })
+
+  const displayName = profile?.attributes?.name || "..."
+  const roleName = profile?.attributes?.role || "..."
+
+  const userInitials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part: string) => part[0])
+    .join("")
+    .toUpperCase()
+
+  const primaryItems: SidebarMenuItem[] = [
+    { to: "/", label: "Dashboard" },
+    { to: "/asset", label: "Daftar Aset" },
+    { to: "/mutasi", label: "Mutasi Aset" },
+    { to: "/import/preview", label: "Import Data" },
+    { to: "/laporan", label: "Laporan" },
+    { to: "/arsip", label: "Arsip Aset" },
+  ]
+
+  const adminItems: SidebarMenuItem[] = [
+    { to: "/master-data", label: "Master Data" },
+    { to: "/user-management", label: "Pengguna" },
+    { to: "/audit-log", label: "Audit Log" },
+    { to: "/profile", label: "Profil" },
+  ]
+
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex h-16 items-center px-5.5">
-        <span className="grid size-6.75 place-items-center rounded-lg bg-[#ffd02f] text-[11px] font-bold text-[#1c1c1e]">
-          GA
-        </span>
-        <span className="ml-2.25">
-          <span className="block text-xs leading-3.5 font-bold">
-            INC Inventaris
+        {/* Logo & Judul diklik mengarah ke halaman / */}
+        <Link
+          to="/"
+          onClick={onNavigate}
+          className="flex items-center transition-opacity hover:opacity-85"
+        >
+          <img
+            src="/image/Logo.png"
+            alt="Logo INC"
+            className="size-10.5 rounded-xl border border-[#343438] bg-[#2a2a2e] object-contain p-1.5 shadow-sm"
+          />
+          <span className="ml-2.5">
+            <span className="block text-xs leading-3.5 font-bold">
+              INC Inventaris
+            </span>
+            <span className="block text-[10px] leading-3.25 text-[#777780]">
+              General Affairs
+            </span>
           </span>
-          <span className="block text-[10px] leading-3.25 text-[#777780]">
-            General Affairs
-          </span>
-        </span>
+        </Link>
         <button
           type="button"
           onClick={onCollapse}
@@ -123,16 +159,16 @@ function SidebarContent({
           «
         </button>
       </div>
+
       <nav className="flex-1 px-3.5 pt-2.75">
         <div className="space-y-0.75">
-          {primaryItems.map(([to, label, count]) => (
+          {primaryItems.map((item) => (
             <NavItem
-              key={to}
-              to={to}
-              label={label}
-              count={count}
+              key={item.to}
+              to={item.to}
+              label={item.label}
               onNavigate={onNavigate}
-              exact={to === "/"}
+              exact={item.to === "/"}
             />
           ))}
         </div>
@@ -140,31 +176,36 @@ function SidebarContent({
           ADMIN
         </p>
         <div className="space-y-0.75">
-          {adminItems.map(([to, label, count]) => (
+          {adminItems.map((item) => (
             <NavItem
-              key={to}
-              to={to}
-              label={label}
-              count={count}
+              key={item.to}
+              to={item.to}
+              label={item.label}
               onNavigate={onNavigate}
             />
           ))}
         </div>
       </nav>
+
+      {/* Profil User Box diklik mengarah ke /profile */}
       <div className="p-3.5">
-        <span className="flex h-11.75 items-center gap-2.5 rounded-[11px] bg-[#343438] px-2.5">
+        <Link
+          to="/profile"
+          onClick={onNavigate}
+          className="flex h-11.75 items-center gap-2.5 rounded-[11px] bg-[#343438] px-2.5 transition-colors hover:bg-[#3a3a3e]"
+        >
           <span className="grid size-6.75 place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">
-            RS
+            {userInitials || "..."}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[11px] leading-3.25 font-bold">
-              Rizky Saputra
+              {displayName}
             </span>
             <span className="block truncate pt-px text-[10px] leading-3 text-[#858896]">
-              Admin GA
+              {roleName}
             </span>
           </span>
-        </span>
+        </Link>
       </div>
     </div>
   )
@@ -173,13 +214,11 @@ function SidebarContent({
 function NavItem({
   to,
   label,
-  count,
   onNavigate,
   exact = false,
 }: {
   to: string
   label: string
-  count?: string
   onNavigate?: () => void
   exact?: boolean
 }) {
@@ -200,11 +239,6 @@ function NavItem({
             className={`mr-2.75 size-3.5 rounded border ${isActive ? "border-[#ffd02f] bg-[#ffd02f]" : "border-[#858896]"}`}
           />
           <span>{label}</span>
-          {count && (
-            <span className="ml-auto text-[10px] font-medium text-[#858896]">
-              {count}
-            </span>
-          )}
         </>
       )}
     </Link>

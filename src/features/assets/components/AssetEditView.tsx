@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { Route } from "@/routes/_app/asset/$id/edit"
 import { InputField } from "@/components/ui/InputField"
@@ -15,6 +15,7 @@ import {
   masterDataService,
   type MasterDataItem,
 } from "@/services/masterDataService"
+import { profileService } from "@/services/profileService"
 import { toast } from "sonner"
 
 const MAX_PHOTOS = 5
@@ -37,6 +38,38 @@ export function AssetEditView() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  // Profil user (queryKey disamakan dengan AssetListView, AssetCreateView, & Sidebar)
+  const { data: profile } = useQuery({
+    queryKey: ["dashboard", "profile"],
+    queryFn: () => profileService.get(),
+  })
+
+  const displayName: string = profile?.attributes?.name || ""
+  const userInitials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+
+  // Popover dropdown profile
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const [asset, setAsset] = useState<AssetAttr | null>(null)
   const [photos, setPhotos] = useState<AssetPhoto[]>([])
@@ -383,8 +416,78 @@ export function AssetEditView() {
             <span className="text-neutral-300">/</span>
             <span className="font-semibold text-neutral-900">Ubah</span>
           </div>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800 select-none">
-            RS
+
+          {/* Avatar Profile dengan Popover Dropdown (Disamakan persis dengan AssetListView & AssetCreateView) */}
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              aria-label="Menu profil"
+              aria-expanded={isProfileOpen}
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600 transition select-none hover:ring-2 hover:ring-rose-300 focus:outline-none"
+            >
+              {userInitials || "DZ"}
+            </button>
+
+            {isProfileOpen && (
+              <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white py-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                <div className="border-b border-neutral-100 px-4 py-2">
+                  <p className="truncate text-xs font-semibold text-neutral-900">
+                    {displayName || "Dzaki Admin"}
+                  </p>
+                  <p className="text-[10px] text-neutral-500">
+                    Akun Terverifikasi
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                    navigate({ to: "/profile" })
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                >
+                  <svg
+                    className="h-4 w-4 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Detail Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                >
+                  <svg
+                    className="h-4 w-4 text-rose-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
