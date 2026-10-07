@@ -158,7 +158,7 @@ function toAsset(item: AssetListItem): Asset {
 }
 
 const tableColumns =
-  "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
+  "grid-cols-[30px_112px_minmax(150px,1.4fr)_minmax(84px,0.8fr)_minmax(64px,0.65fr)_38px_44px_92px_minmax(76px,0.75fr)_112px_32px]"
 
 export function AssetListView() {
   const navigate = useNavigate()
@@ -1207,18 +1207,36 @@ export function AssetListView() {
           </div>
         </section>
 
-        {!loading &&
-          !errorMessage &&
-          visibleAssets.length > 0 &&
-          viewMode === "table" && (
-            <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white md:hidden">
-              <div className="grid h-10 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#e0e2e8] bg-[#f7f8fa] px-3 text-[10px] font-semibold tracking-wide text-[#6b6f7e] uppercase">
-                <span className="pl-6">Nama barang</span>
+        <section
+          className={`${
+            loading || errorMessage || visibleAssets.length === 0
+              ? "hidden"
+              : viewMode === "card"
+                ? "hidden"
+                : viewMode === "table"
+                  ? "block"
+                  : "hidden md:block"
+          } overflow-hidden rounded-2xl border border-[#eef0f3] bg-white`}
+        >
+          <div className="overflow-x-auto">
+            <div className="min-w-240">
+              <div
+                className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
+              >
+                <CheckBox selected={allSelected} onClick={selectAll} />
+                <span className="text-[#1c1c1e]">Kode &uarr;</span>
+                <span>Nama barang</span>
+                <span>Kategori</span>
+                <span>Merek</span>
+                <span className="text-right">Qty</span>
+                <span>Sat.</span>
                 <span>Kondisi</span>
+                <span>Lokasi</span>
                 <span className="text-right">Harga</span>
+                <span />
               </div>
               {visibleAssets.map((asset, index) => (
-                <MobileAssetRow
+                <AssetRow
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
@@ -1232,45 +1250,7 @@ export function AssetListView() {
                   onOpen={() => openAssetDetail(asset)}
                 />
               ))}
-            </section>
-          )}
-
-        <section
-          className={`${
-            loading || errorMessage || visibleAssets.length === 0
-              ? "hidden"
-              : viewMode === "card"
-                ? "hidden"
-                : "hidden md:block"
-          } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
-        >
-          <div className="min-w-250">
-            <div
-              className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
-            >
-              <CheckBox selected={allSelected} onClick={selectAll} />
-              <span className="text-[#1c1c1e]">Kode &uarr;</span>
-              <span>Nama barang</span>
-              <span>Kategori</span>
-              <span>Merek</span>
-              <span className="text-right">Qty</span>
-              <span>Sat.</span>
-              <span>Kondisi</span>
-              <span>Lokasi</span>
-              <span className="text-right">Harga</span>
-              <span />
             </div>
-            {visibleAssets.map((asset, index) => (
-              <AssetRow
-                key={asset.code}
-                asset={asset}
-                selected={selectedCodes.has(asset.code)}
-                isHighlighted={isHighlighted(asset.code)}
-                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
-                onToggle={() => toggleSelection(asset.code)}
-                onOpen={() => openAssetDetail(asset)}
-              />
-            ))}
           </div>
           <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3">
             <span className="text-xs text-[#6b6f7e]">
@@ -1418,9 +1398,11 @@ function AssetRow({
           {asset.detail}
         </span>
       </button>
-      <span className="text-xs text-[#555a6a]">{asset.category}</span>
+      <span className="min-w-0 truncate text-xs text-[#555a6a]">
+        {asset.category}
+      </span>
       <span
-        className={`text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
+        className={`min-w-0 truncate text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
       >
         {asset.brand}
       </span>
@@ -1435,9 +1417,11 @@ function AssetRow({
           {asset.condition}
         </span>
       </span>
-      <span className="text-xs text-[#555a6a]">{asset.location}</span>
+      <span className="min-w-0 truncate text-xs text-[#555a6a]">
+        {asset.location}
+      </span>
       <span
-        className={`text-right font-mono text-xs ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
+        className={`text-right font-mono text-xs whitespace-nowrap ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
       >
         {asset.price ?? "Belum diisi"}
       </span>
@@ -1556,88 +1540,6 @@ function ActionMenu({ asset }: { asset: Asset }) {
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-function MobileAssetRow({
-  asset,
-  selected,
-  isHighlighted = false,
-  isNewImport = false,
-  onToggle,
-  onOpen,
-}: {
-  asset: Asset
-  selected: boolean
-  isHighlighted?: boolean
-  isNewImport?: boolean
-  onToggle: () => void
-  onOpen: () => void
-}) {
-  const isNeedsAttention =
-    isHighlighted && (asset.attention || asset.condition !== "Bagus")
-
-  const rowStyle = isNeedsAttention
-    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium"
-    : isHighlighted || isNewImport
-      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
-      : selected
-        ? "bg-[#f5f3ff]"
-        : "bg-white"
-
-  return (
-    <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <CheckBox selected={selected} onClick={onToggle} />
-        <button
-          type="button"
-          onClick={onOpen}
-          className="min-w-0 cursor-pointer text-left"
-        >
-          <span className="block truncate text-xs font-semibold">
-            {asset.name}
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="block truncate font-mono text-[10px] text-[#4262ff]">
-              {asset.code}
-            </span>
-            {isNewImport && (
-              <span className="animate-pulse rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800">
-                Baru
-              </span>
-            )}
-            {!isNewImport &&
-              isHighlighted &&
-              (isNeedsAttention ? (
-                <span className="rounded bg-rose-100 px-1 text-[8px] font-bold text-rose-800">
-                  Perlu Tindakan
-                </span>
-              ) : (
-                <span className="rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800">
-                  Diperbarui
-                </span>
-              ))}
-          </span>
-        </button>
-      </div>
-      <span className="min-w-0">
-        <span
-          className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${conditionClass[asset.condition]}`}
-        >
-          {asset.condition}
-        </span>
-        <span className="mt-1 block truncate text-[11px] text-[#6b6f7e]">
-          {asset.location}
-        </span>
-      </span>
-      <span
-        className={`truncate text-right font-mono text-[11px] ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
-      >
-        {asset.price ?? "Belum diisi"}
-      </span>
     </div>
   )
 }
@@ -1918,7 +1820,7 @@ function DateRangeFilter({
     from && to ? `${from} – ${to}` : from || to || "Tanggal perolehan"
 
   return (
-    <div className="relative">
+    <div className={open ? "relative w-full sm:w-auto" : "relative"}>
       <div
         className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
@@ -1946,7 +1848,7 @@ function DateRangeFilter({
         )}
       </div>
       {open && (
-        <div className="absolute top-10 left-0 z-20 grid w-64 gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+        <div className="mt-2 grid w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] sm:absolute sm:top-10 sm:left-0 sm:z-20 sm:mt-0 sm:w-64">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
             Dari tanggal
             <input
@@ -1992,7 +1894,7 @@ function PriceRangeFilter({
     : "Rentang harga"
 
   return (
-    <div className="relative">
+    <div className={open ? "relative w-full sm:w-auto" : "relative"}>
       <div
         className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
@@ -2020,7 +1922,7 @@ function PriceRangeFilter({
         )}
       </div>
       {open && (
-        <div className="absolute top-10 right-0 z-20 grid w-60 gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+        <div className="mt-2 grid w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] sm:absolute sm:top-10 sm:right-0 sm:z-20 sm:mt-0 sm:w-60">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
             Harga minimum
             <input
