@@ -1792,7 +1792,7 @@ function DateRangeFilter({
     from && to ? `${from} – ${to}` : from || to || "Tanggal perolehan"
 
   return (
-    <div className={open ? "relative w-full lg:w-auto" : "relative"}>
+    <div className="relative w-full lg:w-auto">
       <div
         className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
