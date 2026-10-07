@@ -1199,7 +1199,7 @@ function AuditItem({
   return (
     <div className="flex flex-col gap-0.75 border-b border-[#eef0f3] pb-2.75 last:border-0 last:pb-0">
       <span className="text-[12.5px] font-semibold">{title}</span>
-      <span className="line-clamp-2 text-[12px] break-words text-[#6b6f7e]">
+      <span className="wrap-break-words line-clamp-2 text-[12px] text-[#6b6f7e]">
         {detail}
       </span>
       <span className="text-[11px] text-[#8e91a0]">{meta}</span>
