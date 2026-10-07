@@ -27,11 +27,7 @@ type Asset = {
 }
 
 type QuickFilter =
-  | ""
-  | "needsAttention"
-  | "withoutPrice"
-  | "withoutPhoto"
-  | "duplicateCondition"
+  "" | "needsAttention" | "withoutPrice" | "withoutPhoto" | "duplicateCondition"
 
 const conditionClass: Record<AssetCondition, string> = {
   Bagus: "bg-[#c3faf5] text-[#187574]",
@@ -85,7 +81,7 @@ function toAsset(item: AssetListItem): Asset {
 }
 
 const tableColumns =
-  "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
+  "grid-cols-[30px_112px_minmax(150px,1.4fr)_minmax(84px,0.8fr)_minmax(64px,0.65fr)_38px_44px_92px_minmax(76px,0.75fr)_112px_32px]"
 
 export function AssetListView() {
   const [query, setQuery] = useState("")
@@ -290,7 +286,8 @@ export function AssetListView() {
             needsAttention: quickFilter === "needsAttention" || undefined,
             withoutPrice: quickFilter === "withoutPrice" || undefined,
             withoutPhoto: quickFilter === "withoutPhoto" || undefined,
-            duplicateCondition: quickFilter === "duplicateCondition" || undefined,
+            duplicateCondition:
+              quickFilter === "duplicateCondition" || undefined,
             cursor: cursor || undefined,
           },
           controller.signal
@@ -689,7 +686,7 @@ export function AssetListView() {
                 : "hidden md:block"
           } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
         >
-          <div className="min-w-250">
+          <div className="min-w-240">
             <div
               className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
             >
@@ -771,9 +768,11 @@ function AssetRow({
           {asset.detail}
         </span>
       </span>
-      <span className="text-xs text-[#555a6a]">{asset.category}</span>
+      <span className="min-w-0 truncate text-xs text-[#555a6a]">
+        {asset.category}
+      </span>
       <span
-        className={`text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
+        className={`min-w-0 truncate text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
       >
         {asset.brand}
       </span>
@@ -788,9 +787,11 @@ function AssetRow({
           {asset.condition}
         </span>
       </span>
-      <span className="text-xs text-[#555a6a]">{asset.location}</span>
+      <span className="min-w-0 truncate text-xs text-[#555a6a]">
+        {asset.location}
+      </span>
       <span
-        className={`text-right font-mono text-xs ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
+        className={`text-right font-mono text-xs whitespace-nowrap ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
       >
         {asset.price ?? "Belum diisi"}
       </span>
