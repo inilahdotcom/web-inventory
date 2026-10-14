@@ -1,7 +1,6 @@
-import { api } from "@/lib/axios" // Sesuaikan path import axios instance kamu
+import { api } from "@/lib/axios"
 import type { ApiResponse } from "@/types/auth"
 
-// Define interface response jika menggunakan TypeScript
 export interface DashboardStats {
   summary: {
     total_asset_types: number

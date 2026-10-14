@@ -10,10 +10,7 @@ export function useAutoLogout() {
   const lastResetRef = useRef<number>(0)
 
   const resetTimer = useCallback(() => {
-    // Hapus timer lama
     if (timerRef.current) clearTimeout(timerRef.current)
-
-    // Jalankan timer baru jika user sudah login dan modal belum aktif
     const token = authStorage.getAccessToken()
     if (token && !isExpired) {
       timerRef.current = setTimeout(() => {
@@ -28,7 +25,6 @@ export function useAutoLogout() {
   }
 
   useEffect(() => {
-    // Inisialisasi lastResetRef di dalam useEffect agar tidak memicu error impure function
     lastResetRef.current = Date.now()
 
     const events = ["mousemove", "keydown", "click", "scroll", "touchstart"]

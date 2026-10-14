@@ -10,6 +10,7 @@ import {
   type MasterDataItem,
 } from "@/services/masterDataService"
 import { profileService } from "@/services/profileService"
+import { authService } from "@/services/authServices" // Import authService jika ada, atau hapus token langsung
 import { toast } from "sonner"
 
 const MAP_SATUAN: Record<string, string> = {
@@ -35,7 +36,7 @@ export function AssetCreateView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Profil user (queryKey disamakan dengan AssetListView & Sidebar)
+  // Profil user
   const { data: profile } = useQuery({
     queryKey: ["dashboard", "profile"],
     queryFn: () => profileService.get(),
@@ -53,6 +54,29 @@ export function AssetCreateView() {
   // Popover dropdown profile
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+
+  // Handler Logout Aktif
+  const handleLogout = async () => {
+    setIsProfileOpen(false)
+    try {
+      // Jika ada API logout dari authService, panggil di sini
+      if (authService?.logout) {
+        await authService.logout()
+      }
+    } catch (err) {
+      console.error("Gagal request logout:", err)
+    } finally {
+      // Clear storage
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+
+      // Reset React Query cache & redirect ke Login
+      queryClient.clear()
+      toast.success("Berhasil keluar dari akun")
+      navigate({ to: "/auth/login" })
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -352,7 +376,7 @@ export function AssetCreateView() {
             <span className="font-semibold text-neutral-900">Tambah aset</span>
           </div>
 
-          {/* Avatar Profile dengan Popover Dropdown (Disamakan persis dengan AssetListView) */}
+          {/* Avatar Profile */}
           <div className="relative" ref={profileRef}>
             <button
               type="button"
@@ -399,11 +423,10 @@ export function AssetCreateView() {
                   Detail Profile
                 </button>
 
+                {/* Tombol Logout Aktif */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsProfileOpen(false)
-                  }}
+                  onClick={handleLogout}
                   className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                 >
                   <svg

@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import { profileService } from "@/services/profileService"
+import { authService } from "@/services/authServices"
+import { toast } from "sonner"
 import type { Profile } from "@/types/profile"
 
 type PasswordValues = {
@@ -9,6 +13,9 @@ type PasswordValues = {
 }
 
 export function ProfileView() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
   const [profile, setProfile] = useState<Profile | null>(null)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -22,6 +29,7 @@ export function ProfileView() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const initials = useMemo(
     () =>
@@ -116,9 +124,30 @@ export function ProfileView() {
       setPasswords({ current: "", next: "", confirmation: "" })
       setNotice("Password berhasil diperbarui.")
     } catch {
-      setError("Password gagal diperbarui. Periksa password lama lalu coba lagi.")
+      setError(
+        "Password gagal diperbarui. Periksa password lama lalu coba lagi."
+      )
     } finally {
       setIsSavingPassword(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      if (authService?.logout) {
+        await authService.logout()
+      }
+    } catch (err) {
+      console.error("Gagal request logout:", err)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+
+      queryClient.clear()
+      toast.success("Berhasil keluar dari akun")
+      navigate({ to: "/auth/login" })
     }
   }
 
@@ -135,7 +164,9 @@ export function ProfileView() {
             </span>
             <span className="flex flex-col gap-1">
               <span className="text-2xl font-semibold tracking-tight">
-                {isLoading ? "Memuat profil..." : profile?.attributes.name || "-"}
+                {isLoading
+                  ? "Memuat profil..."
+                  : profile?.attributes.name || "-"}
               </span>
               <span className="text-xs text-[#6b6f7e]">
                 {profile
@@ -239,11 +270,33 @@ export function ProfileView() {
               </ActionButton>
             </div>
           </section>
+
+          {/* Card Sesi Aktif & Logout */}
+          <section className="flex flex-col gap-3 rounded-2xl border border-[#fce8b3] bg-[#fff8e1] p-5.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-bold text-[#5c3c00]">
+                Sesi aktif
+              </span>
+              <span className="text-xs text-[#7c5e10]">
+                Chrome - Windows 11 · 127.0.0.1 — sesi ini berakhir otomatis
+                setelah 60 menit tidak aktif (FR-A01)
+              </span>
+            </div>
+            <ActionButton
+              variant="dark"
+              className="h-10 px-5 text-xs font-bold"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? "Keluar..." : "Keluar"}
+            </ActionButton>
+          </section>
         </div>
       </div>
     </div>
   )
 }
+
 function ProfileField({
   label,
   value,
