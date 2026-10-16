@@ -5,6 +5,16 @@ import type { AxiosError } from "axios"
 import { Route } from "@/routes/_app/asset/$id/edit"
 import { InputField } from "@/components/ui/InputField"
 import { SelectedField } from "@/components/ui/SelectedField"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import {
   assetService,
   type UpdateAssetPayload,
@@ -519,14 +529,14 @@ export function AssetEditView() {
           </div>
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+              <Card className="space-y-4 p-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-neutral-700">
@@ -752,11 +762,11 @@ export function AssetEditView() {
                     )}
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
 
             <div className="space-y-6">
-              <div className="space-y-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 shadow-2xs">
+              <Card className="space-y-3 bg-muted/30 p-5">
                 <h3 className="text-xs font-bold text-neutral-900">
                   Ringkasan perubahan
                 </h3>
@@ -861,122 +871,120 @@ export function AssetEditView() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-neutral-200/80 bg-white/90 px-6 py-4 shadow-md backdrop-blur-md lg:px-8">
-        <span className="text-xs text-neutral-400">
+      <div className="sticky bottom-0 z-20 flex items-center justify-between border-t border-hairline bg-card/90 px-6 py-4 shadow-md backdrop-blur-md lg:px-8">
+        <span className="text-xs text-muted-foreground">
           {loading ? "Menyimpan..." : "Perubahan belum tersimpan"}
         </span>
         <div className="flex gap-3">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleCancel}
             disabled={loading}
-            className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
           >
             Batal
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-neutral-800 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" variant="primary" disabled={loading}>
             {loading ? "Menyimpan..." : "Simpan Perubahan"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* MODAL KONFIRMASI UBAH FOTO UTAMA */}
-      {pendingPrimaryId !== null && (
-        <div className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/40 p-4 backdrop-blur-xs duration-150 fade-in">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-100 bg-white p-6 shadow-xl">
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-neutral-900">
-                Ubah Foto Utama?
-              </h3>
-              <p className="text-xs text-neutral-500">
-                Foto ini akan dijadikan sebagai sampul/foto utama aset di
-                seluruh halaman.
-              </p>
-            </div>
+      <Dialog
+        open={pendingPrimaryId !== null}
+        onOpenChange={(open) => !open && setPendingPrimaryId(null)}
+      >
+        <DialogContent className="max-w-sm rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">
+              Ubah Foto Utama?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Foto ini akan dijadikan sebagai sampul/foto utama aset di seluruh
+              halaman.
+            </DialogDescription>
+          </DialogHeader>
 
-            {primaryTargetPhoto && (
-              <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
-                <img
-                  src={primaryTargetPhoto.url}
-                  alt="Foto Pratinjau Utama"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setPendingPrimaryId(null)}
-                className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSetPrimary}
-                className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-neutral-800"
-              >
-                Simpan
-              </button>
+          {primaryTargetPhoto && (
+            <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-hairline bg-muted/40">
+              <img
+                src={primaryTargetPhoto.url}
+                alt="Foto Pratinjau Utama"
+                className="h-full w-full object-cover"
+              />
             </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPendingPrimaryId(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleConfirmSetPrimary}
+            >
+              Simpan
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL KONFIRMASI HAPUS FOTO */}
-      {pendingDeleteId !== null && (
-        <div className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/40 p-4 backdrop-blur-xs duration-150 fade-in">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-100 bg-white p-6 shadow-xl">
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-red-600">
-                Hapus Foto Aset?
-              </h3>
-              <p className="text-xs text-neutral-500">
-                Foto ini akan dihapus dari daftar foto aset. Tindakan ini tidak
-                dapat dibatalkan.
-              </p>
-            </div>
+      <Dialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+      >
+        <DialogContent className="max-w-sm rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-destructive">
+              Hapus Foto Aset?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Foto ini akan dihapus dari daftar foto aset. Tindakan ini tidak
+              dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
 
-            {deleteTargetPhoto && (
-              <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
-                <img
-                  src={deleteTargetPhoto.url}
-                  alt="Foto yang Akan Dihapus"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setPendingDeleteId(null)}
-                className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeletePhoto}
-                className="cursor-pointer rounded-xl bg-red-600 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-red-700"
-              >
-                Hapus
-              </button>
+          {deleteTargetPhoto && (
+            <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-xl border border-hairline bg-muted/40">
+              <img
+                src={deleteTargetPhoto.url}
+                alt="Foto yang Akan Dihapus"
+                className="h-full w-full object-cover"
+              />
             </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPendingDeleteId(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDeletePhoto}
+            >
+              Hapus
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

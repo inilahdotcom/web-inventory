@@ -1,5 +1,17 @@
 import { useState } from "react"
 import { usePermission } from "@/hooks/usePermission"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
+import { Download } from "lucide-react"
 
 export interface ImportItem {
   id: string | number
@@ -117,44 +129,36 @@ export function AssetImportPreviewView({
 
         {/* Sembunyikan Tombol Unduh Template Excel jika hanya Viewer */}
         {canCreateEditAsset && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={onUnduhTemplate}
-            className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 shadow-2xs transition-all hover:border-neutral-400 hover:bg-neutral-50"
+            className="gap-2"
           >
-            <svg
-              className="h-4 w-4 text-neutral-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+            <Download className="h-4 w-4 text-muted-foreground" />
             Unduh Template Excel
-          </button>
+          </Button>
         )}
       </div>
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
         {/* Banner Peringatan jika bukan Admin/Staff GA */}
         {!canCreateEditAsset && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-medium text-amber-800">
-            <strong>Mode Pratinjau (Read-Only):</strong> Akun Anda tidak
-            memiliki izin untuk menyimpan atau mengunggah data aset baru.
-          </div>
+          <Alert variant="warning">
+            <AlertDescription>
+              <strong>Mode Pratinjau (Read-Only):</strong> Akun Anda tidak
+              memiliki izin untuk menyimpan atau mengunggah data aset baru.
+            </AlertDescription>
+          </Alert>
         )}
 
-        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs md:flex-row md:items-center">
+        <Card className="flex flex-col justify-between gap-4 p-6 md:flex-row md:items-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Pratinjau import
             </h1>
-            <p className="mt-1 text-xs break-all text-neutral-500">
+            <p className="mt-1 text-xs break-all text-muted-foreground">
               {fileName} · {fileInfo}
             </p>
           </div>
@@ -162,31 +166,29 @@ export function AssetImportPreviewView({
           {/* Sembunyikan Aksi Ganti File & Simpan jika Viewer */}
           {canCreateEditAsset && (
             <div className="flex items-center gap-3 self-end md:self-auto">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="md"
                 onClick={onGantiFile}
-                className="cursor-pointer rounded-xl border border-neutral-300 px-5 py-2.5 text-xs font-medium text-neutral-700 shadow-2xs transition-colors hover:bg-neutral-50"
               >
                 Ganti file
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
+                size="md"
                 onClick={onSimpanValid}
                 disabled={stats.siapSimpan === 0}
-                className={`rounded-xl px-5 py-2.5 text-xs font-medium shadow-2xs transition-all ${
-                  stats.siapSimpan > 0
-                    ? "cursor-pointer bg-neutral-900 text-white hover:bg-neutral-800"
-                    : "cursor-not-allowed bg-neutral-200 text-neutral-400"
-                }`}
               >
                 Simpan {stats.siapSimpan} baris valid
-              </button>
+              </Button>
             </div>
           )}
-        </div>
+        </Card>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] p-5 shadow-2xs">
+          <Card className="space-y-1 border-[#A7F3D0] bg-[#ECFDF5] p-5">
             <span className="text-xs font-medium text-[#065F46]">
               Siap disimpan
             </span>
@@ -198,9 +200,9 @@ export function AssetImportPreviewView({
                 baris valid
               </span>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-1 rounded-2xl border border-[#FECDD3] bg-[#FFF1F2] p-5 shadow-2xs">
+          <Card className="space-y-1 border-[#FECDD3] bg-[#FFF1F2] p-5">
             <span className="text-xs font-medium text-[#9F1239]">Gagal</span>
             <div className="flex items-baseline gap-2 pt-1">
               <span className="text-3xl font-bold text-[#881337]">
@@ -210,9 +212,9 @@ export function AssetImportPreviewView({
                 butuh koreksi
               </span>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-1 rounded-2xl border border-[#FDE68A] bg-[#FEF3C7] p-5 shadow-2xs">
+          <Card className="space-y-1 border-[#FDE68A] bg-[#FEF3C7] p-5">
             <span className="text-xs font-medium text-[#92400E]">
               Dinormalkan
             </span>
@@ -224,107 +226,121 @@ export function AssetImportPreviewView({
                 harga teks → angka
               </span>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-1 rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xs">
-            <span className="text-xs font-medium text-neutral-600">
+          <Card className="space-y-1 p-5">
+            <span className="text-xs font-medium text-muted-foreground">
               Diabaikan
             </span>
             <div className="flex items-baseline gap-2 pt-1">
-              <span className="text-3xl font-bold text-neutral-900">
+              <span className="text-3xl font-bold text-foreground">
                 {stats.diabaikan}
               </span>
-              <span className="text-xs font-medium text-neutral-500">
+              <span className="text-xs font-medium text-muted-foreground">
                 baris header ulang
               </span>
             </div>
-          </div>
+          </Card>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xs">
-          <div className="flex flex-col justify-between gap-3 border-b border-neutral-200 p-5 sm:flex-row sm:items-center">
-            <p className="text-xs font-medium text-neutral-700">
-              <span className="font-bold text-[#1C1C1E]">
-                {stats.gagal} baris gagal
-              </span>{" "}
-              — Koreksi langsung di tabel ini, atau lanjutkan tanpa baris
+        <Card className="overflow-hidden">
+          <div className="flex flex-col justify-between gap-3 border-b border-hairline p-5 sm:flex-row sm:items-center">
+            <p className="text-xs font-medium text-foreground">
+              <span className="font-bold">{stats.gagal} baris gagal</span> —
+              Koreksi langsung di tabel ini, atau lanjutkan tanpa baris
               tersebut.
             </p>
-            <div className="flex items-center self-start rounded-xl bg-neutral-100 p-1 text-xs shadow-inner sm:self-auto">
-              <button
+            <div className="flex items-center gap-1 self-start rounded-xl bg-muted p-1 text-xs sm:self-auto">
+              <Button
                 type="button"
+                variant={filterTab === "gagal" ? "secondary" : "ghost"}
+                size="sm"
                 onClick={() => setFilterTab("gagal")}
-                className={`cursor-pointer rounded-lg px-4 py-1.5 font-medium transition-all ${filterTab === "gagal" ? "bg-white text-neutral-900 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+                className="h-8 text-xs"
               >
                 Hanya yang gagal ({stats.gagal})
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={filterTab === "semua" ? "secondary" : "ghost"}
+                size="sm"
                 onClick={() => setFilterTab("semua")}
-                className={`cursor-pointer rounded-lg px-4 py-1.5 font-medium transition-all ${filterTab === "semua" ? "bg-white text-neutral-900 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+                className="h-8 text-xs"
               >
                 Semua baris ({data.length})
-              </button>
+              </Button>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-175 border-collapse text-left text-xs">
-              <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50/70 text-[10px] font-semibold tracking-wider text-neutral-400 uppercase">
-                  <th className="px-6 py-3.5">Baris</th>
-                  <th className="px-6 py-3.5">Kode</th>
-                  <th className="px-6 py-3.5">Item</th>
-                  <th className="px-6 py-3.5">Harga di File</th>
-                  <th className="px-6 py-3.5">Dibaca Jadi</th>
-                  <th className="px-6 py-3.5">Alasan Gagal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200 text-neutral-800">
+            <Table className="w-full min-w-175">
+              <TableHeader>
+                <TableRow className="border-b border-hairline bg-muted/50">
+                  <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                    Baris
+                  </TableHead>
+                  <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                    Kode
+                  </TableHead>
+                  <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                    Item
+                  </TableHead>
+                  <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                    Harga di File
+                  </TableHead>
+                  <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                    Dibaca Jadi
+                  </TableHead>
+                  <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                    Alasan Gagal
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredData.length > 0 ? (
                   filteredData.map((row) => (
-                    <tr
+                    <TableRow
                       key={row.id}
-                      className="transition-colors hover:bg-neutral-50/50"
+                      className="transition-colors hover:bg-muted/50"
                     >
-                      <td className="px-6 py-4 font-mono text-neutral-400">
+                      <TableCell className="px-6 py-4 font-mono text-muted-foreground">
                         {row.baris}
-                      </td>
-                      <td
-                        className={`px-6 py-4 font-mono ${row.kode === "kosong" ? "text-neutral-400 italic" : "text-neutral-700"}`}
+                      </TableCell>
+                      <TableCell
+                        className={`px-6 py-4 font-mono ${row.kode === "kosong" ? "text-muted-foreground italic" : "text-foreground"}`}
                       >
                         {row.kode}
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-neutral-900">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 font-semibold text-foreground">
                         {row.item}
-                      </td>
-                      <td className="px-6 py-4 text-neutral-500">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-muted-foreground">
                         {row.hargaFile}
-                      </td>
-                      <td
-                        className={`px-6 py-4 font-mono ${row.dibacaJadi.includes("-") ? "font-bold text-rose-700" : "text-neutral-700"}`}
+                      </TableCell>
+                      <TableCell
+                        className={`px-6 py-4 font-mono ${row.dibacaJadi.includes("-") ? "font-bold text-destructive" : "text-foreground"}`}
                       >
                         {row.dibacaJadi}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-rose-700">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 font-medium text-destructive">
                         {row.alasanGagal}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (
-                  <tr>
-                    <td
+                  <TableRow>
+                    <TableCell
                       colSpan={6}
-                      className="py-12 text-center text-neutral-400"
+                      className="py-12 text-center text-muted-foreground"
                     >
                       Tidak ada data yang perlu ditampilkan untuk filter ini.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   )

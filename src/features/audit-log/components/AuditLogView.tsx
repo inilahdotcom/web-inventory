@@ -3,6 +3,11 @@ import { useQuery } from "@tanstack/react-query"
 import { ShieldAlert } from "lucide-react"
 import { usePermission } from "@/hooks/usePermission"
 import { auditLogService } from "@/services/auditLogServices"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export interface AuditLogItem {
   id: string | number
@@ -58,38 +63,38 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     enabled: canViewAuditLog, // Mencegah request dikirim jika pengguna bukan Admin
   })
 
-  // Style badge warna sesuai Figma
-  const getBadgeStyle = (type: string) => {
+  // Style badge variant
+  const getBadgeVariant = (type: string) => {
     switch (type.toUpperCase()) {
       case "UPDATE":
-        return "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]"
+        return "rusak-ringan" as const
       case "DELETE":
       case "PERMANENT_DELETE":
-        return "bg-[#FEE2E2] text-[#991B1B] border-[#FCA5A5]"
+        return "destructive" as const
       case "CREATE":
-        return "bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]"
+        return "bagus" as const
       case "IMPORT":
       case "RESTORE":
-        return "bg-[#DBEAFE] text-[#1E40AF] border-[#BFDBFE]"
+        return "secondary" as const
       default:
-        return "bg-neutral-100 text-neutral-800 border-neutral-200"
+        return "outline" as const
     }
   }
 
   // Tampilan jika pengguna BUKAN Admin (Staff GA / Viewer)
   if (!canViewAuditLog) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50/50 p-4 text-[#1C1C1E]">
-        <div className="flex max-w-md flex-col items-center rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-2xs">
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4 text-[#1C1C1E]">
+        <Card className="flex max-w-md flex-col items-center p-8 text-center">
           <div className="grid size-12 place-items-center rounded-full bg-rose-100 text-rose-600">
             <ShieldAlert size={24} />
           </div>
           <h1 className="mt-4 text-lg font-semibold">Akses Terbatas</h1>
-          <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             Halaman Audit Log hanya dapat diakses oleh Admin sistem. Anda tidak
             memiliki izin yang cukup untuk melihat catatan aktivitas ini.
           </p>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -167,36 +172,55 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => void refetch()}
-              className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50"
             >
               Refresh
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={onExport}
-              className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50"
             >
               Export log
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* State Handler */}
         {isLoading ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white p-12 text-center text-xs text-neutral-500">
-            Memuat audit log dari database...
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card
+                key={i}
+                className="flex flex-col justify-between gap-4 p-5 md:flex-row"
+              >
+                <div className="w-full shrink-0 space-y-2 md:w-56">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-4 w-32 rounded-md" />
+                  <Skeleton className="h-3 w-24 rounded-md" />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40 rounded-md" />
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                </div>
+              </Card>
+            ))}
           </div>
         ) : isError ? (
-          <div className="rounded-2xl border border-rose-200 bg-white p-12 text-center text-xs text-rose-600">
-            Gagal mengambil audit log. Pastikan server backend berjalan.
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>
+              Gagal mengambil audit log. Pastikan server backend berjalan.
+            </AlertDescription>
+          </Alert>
         ) : logs.length === 0 ? (
-          <div className="rounded-2xl border border-neutral-200 bg-white p-12 text-center text-xs text-neutral-500">
+          <Card className="p-12 text-center text-xs text-muted-foreground">
             Belum ada rekam jejak aktivitas pada filter ini.
-          </div>
+          </Card>
         ) : (
           <div className="space-y-4">
             {logs.map((log) => {
@@ -208,27 +232,23 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               const targetCode = targetParts[1]?.trim() || ""
 
               return (
-                <div
+                <Card
                   key={log.id}
-                  className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200/70 bg-white p-5 shadow-2xs md:flex-row"
+                  className="flex flex-col justify-between gap-4 p-5 md:flex-row"
                 >
                   {/* KOLOM KIRI: User Info, Action Badge & Timestamp */}
                   <div className="w-full shrink-0 space-y-1.5 md:w-56">
-                    <span
-                      className={`inline-block rounded-md border px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${getBadgeStyle(
-                        log.type
-                      )}`}
-                    >
+                    <Badge variant={getBadgeVariant(log.type)}>
                       {log.type}
-                    </span>
+                    </Badge>
                     <div>
-                      <h4 className="text-xs font-bold text-neutral-900">
+                      <h4 className="text-xs font-bold text-foreground">
                         {log.user.name}
                       </h4>
-                      <p className="text-[11px] text-neutral-400">
+                      <p className="text-[11px] text-muted-foreground">
                         {log.user.role} · {log.user.ip}
                       </p>
-                      <p className="mt-1 font-mono text-[11px] text-neutral-400">
+                      <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                         {log.timestamp}
                       </p>
                     </div>
@@ -237,22 +257,22 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                   {/* KOLOM KANAN: Target & Diff / Description */}
                   <div className="flex-1 space-y-3">
                     {/* Target Label */}
-                    <div className="flex justify-start font-mono text-xs font-semibold text-neutral-700 md:justify-start">
-                      <span className="font-normal text-neutral-500">
+                    <div className="flex justify-start font-mono text-xs font-semibold text-foreground md:justify-start">
+                      <span className="font-normal text-muted-foreground">
                         {entityName} ·{" "}
                       </span>
-                      <span className="ml-1 text-[#3B82F6]">{targetCode}</span>
+                      <span className="ml-1 text-primary">{targetCode}</span>
                     </div>
 
                     {/* Body Content: JSON Diff vs Text Description */}
                     {log.oldValues || log.newValues ? (
                       <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
                         {/* OLD VALUES BOX */}
-                        <div className="space-y-1 rounded-xl border border-neutral-200/80 bg-[#FAFAFA] p-3 font-mono text-[11px]">
-                          <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                        <div className="space-y-1 rounded-xl border border-hairline bg-muted/30 p-3 font-mono text-[11px]">
+                          <div className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                             OLD_VALUES
                           </div>
-                          <pre className="leading-relaxed whitespace-pre-wrap text-[#991B1B]">
+                          <pre className="leading-relaxed whitespace-pre-wrap text-destructive">
                             {log.oldValues
                               ? JSON.stringify(log.oldValues, null, 2)
                               : "(Kosong)"}
@@ -260,11 +280,11 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                         </div>
 
                         {/* NEW VALUES BOX */}
-                        <div className="space-y-1 rounded-xl border border-neutral-200/80 bg-[#FAFAFA] p-3 font-mono text-[11px]">
-                          <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                        <div className="space-y-1 rounded-xl border border-hairline bg-muted/30 p-3 font-mono text-[11px]">
+                          <div className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                             NEW_VALUES
                           </div>
-                          <pre className="leading-relaxed whitespace-pre-wrap text-[#065F46]">
+                          <pre className="leading-relaxed whitespace-pre-wrap text-[#187574]">
                             {log.newValues
                               ? JSON.stringify(log.newValues, null, 2)
                               : "(Kosong)"}
@@ -272,12 +292,12 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-xl border border-neutral-100 bg-neutral-50/60 p-3 text-xs leading-relaxed text-neutral-600">
+                      <div className="rounded-xl border border-hairline bg-muted/20 p-3 text-xs leading-relaxed text-muted-foreground">
                         {log.description}
                       </div>
                     )}
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>

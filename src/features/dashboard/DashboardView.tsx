@@ -13,7 +13,11 @@ import { CategoryBarChart } from "./components/charts/CategoryBarChart"
 import { ConditionDonutChart } from "./components/charts/ConditionDonutChart"
 import { BrandProgressBar } from "./components/charts/BrandProgressBar"
 import { HeaderSearchDropdown } from "./components/HeaderSearchDropdown"
-import { ChevronDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ChevronDown, LogOut, User } from "lucide-react"
 import { toast } from "sonner"
 
 interface DashboardData {
@@ -192,30 +196,53 @@ export function DashboardView() {
 
   if (loading) {
     return (
-      <div className="flex h-64 w-full items-center justify-center text-sm text-neutral-500">
-        Memuat data dashboard...
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64 rounded-md" />
+            <Skeleton className="h-4 w-48 rounded-md" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-28 rounded-2xl" />
+            <Skeleton className="h-10 w-32 rounded-2xl" />
+          </div>
+        </div>
+        <Skeleton className="h-48 w-full rounded-3xl" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Skeleton className="h-64 rounded-3xl" />
+          <Skeleton className="h-64 rounded-3xl" />
+          <Skeleton className="h-64 rounded-3xl" />
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex h-64 w-full flex-col items-center justify-center gap-3 text-sm text-rose-500">
-        <span>Gagal memuat data dashboard dari server.</span>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="cursor-pointer rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold text-white"
+      <div className="mx-auto max-w-xl p-8">
+        <Alert
+          variant="destructive"
+          className="flex flex-col items-center gap-3 text-center"
         >
-          Coba lagi
-        </button>
+          <AlertDescription>
+            Gagal memuat data dashboard dari server.
+          </AlertDescription>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => refetch()}
+          >
+            Coba lagi
+          </Button>
+        </Alert>
       </div>
     )
   }
 
   return (
     <div className="w-full text-[#1C1C1E]">
-      <header className="sticky top-0 z-10 w-full border-b border-neutral-200 bg-white px-3 py-3 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-10 w-full border-b border-hairline bg-white/90 px-3 py-3 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
           <div className="flex max-w-md flex-1 items-center pl-14 lg:pl-0">
             <HeaderSearchDropdown />
@@ -224,17 +251,19 @@ export function DashboardView() {
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             {canExportLaporan && (
               <div className="relative hidden sm:inline-block" ref={exportRef}>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsExportOpen((prev) => !prev)}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-900 shadow-2xs transition hover:bg-neutral-50"
+                  className="gap-1.5 rounded-full"
                 >
                   <span>{exporting ? "Mengekspor..." : "Export"}</span>
                   <ChevronDown size={13} strokeWidth={2.5} />
-                </button>
+                </Button>
 
                 {isExportOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                  <Card className="absolute right-0 z-50 mt-2 w-44 overflow-hidden p-1.5 shadow-lg">
                     <button
                       type="button"
                       onClick={handleExportExcel}
@@ -257,7 +286,7 @@ export function DashboardView() {
                       </span>
                       {exporting === "pdf" ? "Mengekspor..." : "Export PDF"}
                     </button>
-                  </div>
+                  </Card>
                 )}
               </div>
             )}
@@ -274,12 +303,12 @@ export function DashboardView() {
 
               {/* Menu Dropdown Profile */}
               {isProfileOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white py-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
+                <Card className="absolute right-0 z-50 mt-2 w-48 py-1.5 shadow-lg">
                   <div className="border-b border-neutral-100 px-4 py-2">
-                    <p className="truncate text-xs font-semibold text-neutral-900">
+                    <p className="truncate text-xs font-semibold text-foreground">
                       {displayName || "Dzaki Admin"}
                     </p>
-                    <p className="text-[10px] text-neutral-500">
+                    <p className="text-[10px] text-muted-foreground">
                       Akun Terverifikasi
                     </p>
                   </div>
@@ -292,19 +321,7 @@ export function DashboardView() {
                     }}
                     className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
                   >
-                    <svg
-                      className="h-4 w-4 text-neutral-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
+                    <User className="h-4 w-4 text-muted-foreground" />
                     Detail Profile
                   </button>
 
@@ -314,22 +331,10 @@ export function DashboardView() {
                     onClick={handleLogout}
                     className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                   >
-                    <svg
-                      className="h-4 w-4 text-rose-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                      />
-                    </svg>
+                    <LogOut className="h-4 w-4 text-rose-500" />
                     Logout
                   </button>
-                </div>
+                </Card>
               )}
             </div>
           </div>
@@ -339,41 +344,43 @@ export function DashboardView() {
       <main className="mx-auto w-full max-w-7xl space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Selamat datang, {displayName ? `Pak ${displayName}` : "Pak Dzaki"}
             </h1>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               Data terhubung langsung dari Database Server Inventaris
             </p>
           </div>
 
           <div className="flex items-center gap-2.5">
             {canImportExcel && (
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 onClick={() =>
                   navigate({
                     to: "/import/preview",
                     search: { action: "preview" },
                   })
                 }
-                className="cursor-pointer rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-900 shadow-2xs transition hover:bg-neutral-50"
               >
                 Import Excel
-              </button>
+              </Button>
             )}
 
             {canCreateEditAsset && (
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={() =>
                   navigate({
                     to: "/asset/new",
                     search: { action: "new" },
                   })
                 }
-                className="cursor-pointer rounded-2xl bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-neutral-800"
               >
                 + Tambah Aset
-              </button>
+              </Button>
             )}
           </div>
         </div>

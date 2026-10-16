@@ -1,4 +1,15 @@
 import { useNavigate } from "@tanstack/react-router"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 export interface ActivityItem {
   id: number
@@ -9,11 +20,13 @@ export interface ActivityItem {
   created_at: string
 }
 
-const ACTION_BADGE_STYLES: Record<string, string> = {
-  CREATE: "bg-teal-100 text-teal-800",
-  UPDATE: "bg-amber-100 text-amber-800",
-  DELETE: "bg-rose-100 text-rose-800",
-  RESTORE: "bg-purple-100 text-purple-800",
+function getActivityBadgeVariant(action: string) {
+  const a = action?.toUpperCase()
+  if (a === "CREATE") return "bagus" as const
+  if (a === "UPDATE") return "rusak-ringan" as const
+  if (a === "DELETE") return "destructive" as const
+  if (a === "RESTORE") return "secondary" as const
+  return "outline" as const
 }
 
 interface RecentActivityTableProps {
@@ -24,77 +37,85 @@ export function RecentActivityTable({ data = [] }: RecentActivityTableProps) {
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-4 rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <Card className="space-y-4 p-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold text-neutral-900">
+        <h3 className="text-xs font-bold text-foreground">
           10 aktivitas terakhir{" "}
-          <span className="font-normal text-neutral-400">FR-005</span>
+          <span className="font-normal text-muted-foreground">FR-005</span>
         </h3>
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="sm"
           onClick={() => navigate({ to: "/audit-log" })}
-          className="cursor-pointer text-xs font-semibold text-blue-600 hover:underline"
+          className="h-auto p-0 font-semibold text-blue-600 hover:underline"
         >
           Lihat audit log →
-        </button>
+        </Button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-xs">
-          <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50/50 text-[10px] font-semibold tracking-wider text-neutral-400 uppercase">
-              <th className="px-4 py-3">Aksi</th>
-              <th className="px-4 py-3">Entitas</th>
-              <th className="px-4 py-3">ID Entitas</th>
-              <th className="px-4 py-3">Pelaku (User ID)</th>
-              <th className="px-4 py-3 text-right">Waktu</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100 text-neutral-800">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-hairline bg-muted/50">
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                Aksi
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                Entitas
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                ID Entitas
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                Pelaku (User ID)
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-[10px] font-semibold tracking-wider uppercase">
+                Waktu
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {data.length > 0 ? (
               data.map((item) => {
-                const actionKey = item.action ? item.action.toUpperCase() : ""
-                const badgeStyle =
-                  ACTION_BADGE_STYLES[actionKey] || "bg-gray-100 text-gray-800"
-
                 return (
-                  <tr
+                  <TableRow
                     key={item.id}
-                    className="transition hover:bg-neutral-50/50"
+                    className="transition hover:bg-muted/50"
                   >
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${badgeStyle}`}
-                      >
+                    <TableCell className="px-4 py-3">
+                      <Badge variant={getActivityBadgeVariant(item.action)}>
                         {item.action}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium capitalize">
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-medium capitalize">
                       {item.entity_type}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-medium text-blue-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-mono font-medium text-blue-600">
                       {item.entity_id}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{item.changed_by}</td>
-                    <td className="px-4 py-3 text-right text-[11px] text-neutral-400">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-medium">
+                      {item.changed_by}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right text-[11px] text-muted-foreground">
                       {item.created_at}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             ) : (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={5}
-                  className="py-6 text-center text-xs text-neutral-400"
+                  className="py-6 text-center text-xs text-muted-foreground"
                 >
                   Belum ada riwayat aktivitas terbaru.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
-    </div>
+    </Card>
   )
 }

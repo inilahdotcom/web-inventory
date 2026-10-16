@@ -4,6 +4,12 @@ import { useQueryClient } from "@tanstack/react-query"
 import { profileService } from "@/services/profileService"
 import { authService } from "@/services/authServices"
 import { toast } from "sonner"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/Input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import type { Profile } from "@/types/profile"
 
 type PasswordValues = {
@@ -158,121 +164,168 @@ export function ProfileView() {
       </header>
       <div className="flex min-h-[calc(100svh-4rem)] justify-center bg-[#f7f8fa] p-4 sm:p-7">
         <div className="flex w-full max-w-205 flex-col gap-4.5">
-          <section className="flex flex-col gap-4 rounded-2xl border border-[#eef0f3] bg-white p-5 sm:flex-row sm:items-center sm:gap-4.5 sm:p-5.5">
+          <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-4.5 sm:p-5.5">
             <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-[#ffc6c6] text-xl font-semibold text-[#600000]">
               {initials}
             </span>
-            <span className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-2xl font-semibold tracking-tight">
                 {isLoading
                   ? "Memuat profil..."
                   : profile?.attributes.name || "-"}
               </span>
-              <span className="text-xs text-[#6b6f7e]">
-                {profile
-                  ? `${profile.attributes.email} · ${profile.attributes.role}`
-                  : "-"}
-              </span>
-            </span>
-          </section>
+              <div className="flex items-center gap-2 text-xs text-[#6b6f7e]">
+                <span>{profile ? profile.attributes.email : "-"}</span>
+                {profile?.attributes.role && (
+                  <Badge
+                    variant={
+                      profile.attributes.role === "admin"
+                        ? "rusak-berat"
+                        : "bagus"
+                    }
+                  >
+                    {profile.attributes.role}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </Card>
 
           {notice && (
-            <button
-              type="button"
+            <Alert
+              variant="success"
+              className="cursor-pointer"
               onClick={() => setNotice("")}
-              className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-xs text-[#187574]"
             >
-              {notice} &times;
-            </button>
+              <AlertDescription className="flex items-center justify-between">
+                <span>{notice}</span>
+                <span className="text-xs font-bold">&times;</span>
+              </AlertDescription>
+            </Alert>
           )}
 
           {error && (
-            <button
-              type="button"
+            <Alert
+              variant="destructive"
+              className="cursor-pointer"
               onClick={() => setError("")}
-              className="rounded-lg bg-[#ffe3e3] px-4 py-3 text-left text-xs text-[#a21c1c]"
             >
-              {error} &times;
-            </button>
+              <AlertDescription className="flex items-center justify-between">
+                <span>{error}</span>
+                <span className="text-xs font-bold">&times;</span>
+              </AlertDescription>
+            </Alert>
           )}
 
-          <section className="flex flex-col gap-4.5 rounded-2xl border border-[#eef0f3] bg-white p-5.5">
+          <Card className="flex flex-col gap-4.5 p-5.5">
             <span className="text-base font-semibold">Data akun</span>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ProfileField
-                label="Nama lengkap"
-                value={name}
-                onChange={setName}
-                disabled={isLoading || isSavingProfile}
-              />
-              <ProfileField
-                label="Email"
-                value={profile?.attributes.email ?? ""}
-                muted
-                readOnly
-              />
-              <ProfileField
-                label="Peran"
-                value={profile?.attributes.role ?? ""}
-                muted
-                readOnly
-              />
-              <ProfileField
-                label="Nomor telepon"
-                value={phone}
-                onChange={setPhone}
-                disabled={isLoading || isSavingProfile}
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="profile-name">Nama lengkap</Label>
+                <Input
+                  id="profile-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isLoading || isSavingProfile}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="profile-email">Email</Label>
+                <Input
+                  id="profile-email"
+                  value={profile?.attributes.email ?? ""}
+                  disabled
+                  readOnly
+                  className="bg-muted text-muted-foreground"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="profile-role">Peran</Label>
+                <Input
+                  id="profile-role"
+                  value={profile?.attributes.role ?? ""}
+                  disabled
+                  readOnly
+                  className="bg-muted text-muted-foreground"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="profile-phone">Nomor telepon</Label>
+                <Input
+                  id="profile-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={isLoading || isSavingProfile}
+                  placeholder="08xxxxxxxxxx"
+                />
+              </div>
             </div>
-            <ActionButton
-              variant="dark"
-              className="h-11 self-end px-5.5 text-sm"
-              onClick={handleProfileSave}
-              disabled={isLoading || isSavingProfile}
-            >
-              {isSavingProfile ? "Menyimpan..." : "Simpan profil"}
-            </ActionButton>
-          </section>
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={handleProfileSave}
+                disabled={isLoading || isSavingProfile}
+              >
+                {isSavingProfile ? "Menyimpan..." : "Simpan profil"}
+              </Button>
+            </div>
+          </Card>
 
-          <section className="flex flex-col gap-4.5 rounded-2xl border border-[#eef0f3] bg-white p-5.5">
+          <Card className="flex flex-col gap-4.5 p-5.5">
             <span className="text-base font-semibold">Ganti password</span>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <PasswordField
-                label="Password lama"
-                value={passwords.current}
-                onChange={(value) => updatePassword("current", value)}
-                disabled={isSavingPassword}
-              />
-              <PasswordField
-                label="Password baru"
-                value={passwords.next}
-                onChange={(value) => updatePassword("next", value)}
-                disabled={isSavingPassword}
-              />
-              <PasswordField
-                label="Ulangi password baru"
-                value={passwords.confirmation}
-                onChange={(value) => updatePassword("confirmation", value)}
-                disabled={isSavingPassword}
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="pass-current">Password lama</Label>
+                <Input
+                  id="pass-current"
+                  type="password"
+                  value={passwords.current}
+                  onChange={(e) => updatePassword("current", e.target.value)}
+                  disabled={isSavingPassword}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pass-next">Password baru</Label>
+                <Input
+                  id="pass-next"
+                  type="password"
+                  value={passwords.next}
+                  onChange={(e) => updatePassword("next", e.target.value)}
+                  disabled={isSavingPassword}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pass-confirmation">Ulangi password baru</Label>
+                <Input
+                  id="pass-confirmation"
+                  type="password"
+                  value={passwords.confirmation}
+                  onChange={(e) =>
+                    updatePassword("confirmation", e.target.value)
+                  }
+                  disabled={isSavingPassword}
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center">
-              <span className="text-xs text-[#8e91a0]">
+              <span className="text-xs text-muted-foreground">
                 Minimal 8 karakter, kombinasi huruf dan angka.
               </span>
-              <ActionButton
-                variant="dark"
-                className="h-11 px-5.5 text-sm sm:ml-auto"
+              <Button
+                variant="primary"
+                size="md"
+                className="sm:ml-auto"
                 onClick={handlePasswordSave}
                 disabled={isSavingPassword}
               >
                 {isSavingPassword ? "Menyimpan..." : "Simpan password"}
-              </ActionButton>
+              </Button>
             </div>
-          </section>
+          </Card>
 
           {/* Card Sesi Aktif & Logout */}
-          <section className="flex flex-col gap-3 rounded-2xl border border-[#fce8b3] bg-[#fff8e1] p-5.5 sm:flex-row sm:items-center sm:justify-between">
+          <Card className="flex flex-col gap-3 border-[#fce8b3] bg-[#fff8e1] p-5.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-bold text-[#5c3c00]">
                 Sesi aktif
@@ -282,96 +335,17 @@ export function ProfileView() {
                 setelah 60 menit tidak aktif (FR-A01)
               </span>
             </div>
-            <ActionButton
-              variant="dark"
-              className="h-10 px-5 text-xs font-bold"
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleLogout}
               disabled={isLoggingOut}
             >
               {isLoggingOut ? "Keluar..." : "Keluar"}
-            </ActionButton>
-          </section>
+            </Button>
+          </Card>
         </div>
       </div>
     </div>
-  )
-}
-
-function ProfileField({
-  label,
-  value,
-  muted = false,
-  readOnly = false,
-  disabled = false,
-  onChange,
-}: {
-  label: string
-  value: string
-  muted?: boolean
-  readOnly?: boolean
-  disabled?: boolean
-  onChange?: (value: string) => void
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold">{label}</span>
-      <input
-        value={value}
-        readOnly={readOnly}
-        disabled={disabled}
-        onChange={(event) => onChange?.(event.target.value)}
-        className={`h-11 rounded-lg border px-3.5 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-60 ${muted ? "border-[#e0e2e8] bg-[#f7f8fa] text-[#555a6a]" : "border-[#c7cad5] bg-white"}`}
-      />
-    </label>
-  )
-}
-
-function PasswordField({
-  label,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold">{label}</span>
-      <input
-        type="password"
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-lg border border-[#c7cad5] bg-white px-3.5 text-sm tracking-widest outline-none disabled:cursor-not-allowed disabled:opacity-60"
-      />
-    </label>
-  )
-}
-
-function ActionButton({
-  children,
-  onClick,
-  variant,
-  className = "",
-  disabled = false,
-}: {
-  children: string
-  onClick: () => void
-  variant: "dark" | "outline"
-  className?: string
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex h-10 w-fit items-center rounded-full px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${variant === "dark" ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white text-[#1c1c1e]"} ${className}`}
-    >
-      {children}
-    </button>
   )
 }

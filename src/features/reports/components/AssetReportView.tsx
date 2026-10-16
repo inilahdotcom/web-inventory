@@ -2,6 +2,19 @@ import { useMemo, useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { reportService } from "@/services/reportService"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 import {
   createExportTable,
   exportExcel,
@@ -149,19 +162,22 @@ export function AssetReportView() {
           ))}
         </div>
         <div className="ml-auto flex min-w-max gap-2">
-          <ActionButton
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={exporting || !reportQuery.isSuccess}
             onClick={() => void handleExport("excel")}
           >
             Export Excel
-          </ActionButton>
-          <ActionButton
-            dark
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             disabled={exporting || !reportQuery.isSuccess}
             onClick={() => void handleExport("pdf")}
           >
             Export PDF
-          </ActionButton>
+          </Button>
         </div>
       </header>
 
@@ -171,9 +187,12 @@ export function AssetReportView() {
             <h1 className="text-3xl font-semibold tracking-tight">
               {table.title}
             </h1>
-            <p className="mt-1 text-sm text-[#6b6f7e]">
-              Periode: {period === allPeriod.value ? "seluruh data" : selectedPeriod.label} ·
-              dihitung ulang &lt; 10 detik (G-04)
+            <p className="mt-1 text-sm text-muted-foreground">
+              Periode:{" "}
+              {period === allPeriod.value
+                ? "seluruh data"
+                : selectedPeriod.label}{" "}
+              · dihitung ulang &lt; 10 detik (G-04)
             </p>
           </div>
           <div className="flex flex-wrap gap-2 lg:ml-auto">
@@ -197,21 +216,42 @@ export function AssetReportView() {
             />
           </div>
         </section>
-        {(notice || reportQuery.isError || locationsQuery.isError || periodsQuery.isError) && (
-          <Notice onClose={() => setNotice("")}>
-            {notice ||
-              (reportQuery.isError
-                ? errorMessage(reportQuery.error)
-                : locationsQuery.isError
-                  ? "Pilihan lokasi gagal dimuat dari server."
-                  : "Pilihan periode gagal dimuat dari server.")}
-          </Notice>
+        {(notice ||
+          reportQuery.isError ||
+          locationsQuery.isError ||
+          periodsQuery.isError) && (
+          <Alert
+            variant="destructive"
+            className="cursor-pointer"
+            onClick={() => setNotice("")}
+          >
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                {notice ||
+                  (reportQuery.isError
+                    ? errorMessage(reportQuery.error)
+                    : locationsQuery.isError
+                      ? "Pilihan lokasi gagal dimuat dari server."
+                      : "Pilihan periode gagal dimuat dari server.")}
+              </span>
+              <span className="text-xs font-bold">&times;</span>
+            </AlertDescription>
+          </Alert>
         )}
         <section className="grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_21.25rem]">
           {reportQuery.isLoading ? (
-            <ReportState>Memuat laporan...</ReportState>
+            <Card className="p-6">
+              <Skeleton className="mb-4 h-6 w-48 rounded-md" />
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                ))}
+              </div>
+            </Card>
           ) : reportQuery.isError ? (
-            <ReportState>Laporan tidak dapat ditampilkan.</ReportState>
+            <Card className="p-6 text-sm text-muted-foreground">
+              Laporan tidak dapat ditampilkan.
+            </Card>
           ) : activeTab === "Rekap per kategori" ? (
             <CategoryTable rows={data as CategoryReportRow[]} />
           ) : (
@@ -242,8 +282,8 @@ function CategoryTable({ rows }: { rows: CategoryReportRow[] }) {
     ? Math.round((totals.priced * 100) / totals.types)
     : 0
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
-      <div className="hidden min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5 py-3 text-[10.5px] font-semibold tracking-wide text-[#6b6f7e] uppercase md:grid">
+    <Card className="overflow-hidden">
+      <div className="hidden min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] gap-3.5 border-b border-hairline bg-muted/50 px-5 py-3 text-[10.5px] font-semibold tracking-wide text-muted-foreground uppercase md:grid">
         <span>Kategori</span>
         <span className="text-right">Jenis</span>
         <span className="text-right">Unit</span>
@@ -264,12 +304,12 @@ function CategoryTable({ rows }: { rows: CategoryReportRow[] }) {
         {rows.length === 0 && <EmptyRows />}
         <TotalCard totals={totals} completeness={completeness} />
       </div>
-    </section>
+    </Card>
   )
 }
 function CategoryRow({ row }: { row: CategoryReportRow }) {
   return (
-    <div className="grid min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 border-b border-[#eef0f3] px-5 py-4">
+    <div className="grid min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 border-b border-hairline px-5 py-4">
       <span className="text-sm font-semibold">{row.name}</span>
       <Mono>{number(row.assetTypes)}</Mono>
       <Mono>{number(row.units)}</Mono>
@@ -294,26 +334,26 @@ function TotalRow({
       <Mono>{number(totals.units)}</Mono>
       <Mono yellow>{number(totals.value)}</Mono>
       <span className="text-right">
-        <span className="rounded-full bg-[#ffd02f] px-2.5 py-1 text-xs font-semibold text-[#1c1c1e]">
+        <Badge variant="warning" className="bg-[#ffd02f] text-[#1c1c1e]">
           {completeness}%
-        </span>
+        </Badge>
       </span>
     </div>
   )
 }
 function CategoryCard({ row }: { row: CategoryReportRow }) {
   return (
-    <article className="rounded-xl border border-[#eef0f3] p-4">
+    <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold">{row.name}</h2>
         <Completion value={row.priceCompletenessPercent} />
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-[#6b6f7e]">
+      <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-muted-foreground">
         <Metric label="Jenis" value={number(row.assetTypes)} />
         <Metric label="Unit" value={number(row.units)} />
         <Metric label="Total nilai" value={number(row.totalValue)} />
       </div>
-    </article>
+    </Card>
   )
 }
 function TotalCard({
@@ -324,57 +364,57 @@ function TotalCard({
   completeness: number
 }) {
   return (
-    <article className="rounded-xl bg-[#1c1c1e] p-4 text-white">
+    <Card className="border-transparent bg-[#1c1c1e] p-4 text-white">
       <div className="flex justify-between">
         <span className="font-semibold">Total</span>
-        <span className="rounded-full bg-[#ffd02f] px-2.5 py-1 text-xs font-semibold text-[#1c1c1e]">
+        <Badge variant="warning" className="bg-[#ffd02f] text-[#1c1c1e]">
           {completeness}%
-        </span>
+        </Badge>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
         <Metric label="Jenis" value={number(totals.types)} dark />
         <Metric label="Unit" value={number(totals.units)} dark />
         <Metric label="Total nilai" value={number(totals.value)} yellow />
       </div>
-    </article>
+    </Card>
   )
 }
 function DataTable({ table }: { table: ExportTable }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white">
+    <Card className="overflow-hidden">
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-180 text-left">
-          <thead className="border-b border-[#e0e2e8] bg-[#f7f8fa] text-[10.5px] font-semibold tracking-wide text-[#6b6f7e] uppercase">
-            <tr>
+        <Table className="w-full min-w-180">
+          <TableHeader>
+            <TableRow className="border-b border-hairline bg-muted/50">
               {table.columns.map((column) => (
-                <th key={column} className="px-5 py-3 whitespace-nowrap">
+                <TableHead
+                  key={column}
+                  className="px-5 py-3 text-[10.5px] font-semibold tracking-wide whitespace-nowrap uppercase"
+                >
                   {column}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {table.rows.map((row, index) => (
-              <tr key={index} className="border-b border-[#eef0f3]">
+              <TableRow key={index} className="border-b border-hairline">
                 {row.map((cell, cellIndex) => (
-                  <td
+                  <TableCell
                     key={cellIndex}
-                    className={`px-5 py-4 text-sm ${typeof cell === "number" ? "text-right font-mono" : cellIndex === 0 ? "font-semibold" : "text-[#6b6f7e]"}`}
+                    className={`px-5 py-4 text-sm ${typeof cell === "number" ? "text-right font-mono" : cellIndex === 0 ? "font-semibold text-foreground" : "text-muted-foreground"}`}
                   >
                     {typeof cell === "number" ? number(cell) : cell}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <div className="space-y-3 p-3 md:hidden">
         {table.rows.map((row, index) => (
-          <article
-            key={index}
-            className="rounded-xl border border-[#eef0f3] p-4"
-          >
+          <Card key={index} className="p-4">
             <h2 className="text-sm font-semibold">{String(row[0])}</h2>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {row.slice(1).map((cell, cellIndex) => (
@@ -385,23 +425,16 @@ function DataTable({ table }: { table: ExportTable }) {
                 />
               ))}
             </div>
-          </article>
+          </Card>
         ))}
       </div>
       {table.rows.length === 0 && <EmptyRows />}
-    </section>
-  )
-}
-function ReportState({ children }: { children: ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-[#eef0f3] bg-white p-6 text-sm text-[#6b6f7e]">
-      {children}
-    </section>
+    </Card>
   )
 }
 function EmptyRows() {
   return (
-    <div className="px-5 py-8 text-center text-sm text-[#8e91a0]">
+    <div className="px-5 py-8 text-center text-sm text-muted-foreground">
       Tidak ada data untuk filter ini.
     </div>
   )
@@ -420,7 +453,7 @@ function Metric({
   return (
     <span>
       <span
-        className={`block text-xs ${dark ? "text-[#a5a8b5]" : "text-[#8e91a0]"}`}
+        className={`block text-xs ${dark ? "text-[#a5a8b5]" : "text-muted-foreground"}`}
       >
         {label}
       </span>
@@ -442,33 +475,29 @@ function Mono({ children, yellow }: { children: ReactNode; yellow?: boolean }) {
   )
 }
 function Completion({ value }: { value: number }) {
-  const tone =
+  const variant =
     value >= 70
-      ? "bg-[#c3faf5] text-[#187574]"
+      ? ("bagus" as const)
       : value >= 30
-        ? "bg-[#fff8e0] text-[#746019]"
-        : "bg-[#ffc6c6] text-[#600000]"
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
-      {number(value)}%
-    </span>
-  )
+        ? ("rusak-ringan" as const)
+        : ("rusak-berat" as const)
+  return <Badge variant={variant}>{number(value)}%</Badge>
 }
 
 function PdfPreview() {
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-[#eef0f3] bg-white p-5">
+    <Card className="flex flex-col gap-3 p-5">
       <h2 className="text-base font-semibold">Pratinjau PDF</h2>
-      <div className="flex flex-col gap-3 rounded-lg border border-[#e0e2e8] bg-[#fafbfc] p-3.5">
-        <div className="flex items-center gap-2.5 border-b border-[#e0e2e8] pb-2.5">
-          <span className="grid size-6 place-items-center rounded-md bg-[#ffd02f] text-[10px] font-bold">
+      <div className="flex flex-col gap-3 rounded-lg border border-hairline bg-muted/30 p-3.5">
+        <div className="flex items-center gap-2.5 border-b border-hairline pb-2.5">
+          <span className="grid size-6 place-items-center rounded-md bg-[#ffd02f] text-[10px] font-bold text-[#1c1c1e]">
             GA
           </span>
           <span>
-            <span className="block text-[10px] font-semibold">
+            <span className="block text-[10px] font-semibold text-foreground">
               PT. INDONESIA NEWS CENTER
             </span>
-            <span className="block text-[9px] text-[#6b6f7e]">
+            <span className="block text-[9px] text-muted-foreground">
               Laporan Rekap Aset — General Affairs
             </span>
           </span>
@@ -485,27 +514,29 @@ function PdfPreview() {
           <Signature label="Disetujui" value="Kepala GA" />
         </div>
       </div>
-      <p className="text-xs leading-relaxed text-[#8e91a0]">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         Kop perusahaan dan kolom tanda tangan disertakan sesuai FR-I07.
       </p>
-    </section>
+    </Card>
   )
 }
 function Line({ width = "w-full" }: { width?: string }) {
-  return <span className={`block h-1.5 rounded-sm bg-[#eef0f3] ${width}`} />
+  return <span className={`block h-1.5 rounded-sm bg-muted ${width}`} />
 }
 function Signature({ label, value }: { label: string; value: string }) {
   return (
     <span>
-      <span className="block text-[9px] text-[#8e91a0]">{label}</span>
-      <span className="mt-2 block h-5 border-b border-[#c7cad5]" />
-      <span className="mt-1 block text-[9px] text-[#6b6f7e]">{value}</span>
+      <span className="block text-[9px] text-muted-foreground">{label}</span>
+      <span className="mt-2 block h-5 border-b border-hairline" />
+      <span className="mt-1 block text-[9px] text-muted-foreground">
+        {value}
+      </span>
     </span>
   )
 }
 function CompletenessNote({ table }: { table: ExportTable }) {
   return (
-    <section className="flex flex-col gap-2 rounded-2xl bg-[#ffc6c6] p-5">
+    <Card className="flex flex-col gap-2 border-rose-200 bg-rose-50/70 p-5">
       <h2 className="text-base font-semibold text-[#600000]">
         Catatan kelengkapan data
       </h2>
@@ -514,7 +545,7 @@ function CompletenessNote({ table }: { table: ExportTable }) {
           ? "Laporan mutasi tidak memuat nilai aset. Data disajikan sesuai periode dan lokasi yang dipilih."
           : `Total nilai hanya menghitung ${number(table.pricedCount ?? 0)} aset yang punya harga. Setiap laporan nilai aset menyertakan persentase kelengkapan agar angka tidak dibaca sebagai nilai penuh inventaris.`}
       </p>
-    </section>
+    </Card>
   )
 }
 function FilterSelect({
@@ -531,17 +562,20 @@ function FilterSelect({
   const [open, setOpen] = useState(false)
   return (
     <div className="relative">
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex h-9 items-center gap-1 rounded-full border border-[#c7cad5] bg-white px-3.5 text-xs font-semibold"
+        className="gap-1 rounded-full"
       >
-        {label}: {options.find((option) => option.value === value)?.label ?? value}
+        {label}:{" "}
+        {options.find((option) => option.value === value)?.label ?? value}
         <span aria-hidden="true">▾</span>
-      </button>
+      </Button>
       {open && (
-        <div className="absolute top-10 right-0 z-20 min-w-full overflow-hidden rounded-xl border border-[#e0e2e8] bg-white p-1 shadow-lg">
+        <Card className="absolute top-10 right-0 z-20 min-w-full overflow-hidden p-1 shadow-lg">
           {options.map((option) => (
             <button
               key={option.value}
@@ -550,52 +584,13 @@ function FilterSelect({
                 onChange(option.value)
                 setOpen(false)
               }}
-              className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option.value === value ? "bg-[#1c1c1e] text-white" : "hover:bg-[#f7f8fa]"}`}
+              className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option.value === value ? "bg-[#1c1c1e] text-white" : "hover:bg-muted"}`}
             >
               {option.label}
             </button>
           ))}
-        </div>
+        </Card>
       )}
     </div>
-  )
-}
-function ActionButton({
-  children,
-  onClick,
-  dark = false,
-  disabled = false,
-}: {
-  children: ReactNode
-  onClick: () => void
-  dark?: boolean
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex h-9 items-center rounded-full px-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${dark ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white"}`}
-    >
-      {children}
-    </button>
-  )
-}
-function Notice({
-  children,
-  onClose,
-}: {
-  children: ReactNode
-  onClose: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      className="w-fit rounded-lg bg-[#ffc6c6] px-4 py-3 text-left text-sm text-[#600000]"
-    >
-      {children} ×
-    </button>
   )
 }

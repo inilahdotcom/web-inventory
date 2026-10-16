@@ -1,51 +1,74 @@
-import React from 'react'
+import * as React from "react"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
-  errorText?: string | string[] 
+  errorText?: string | string[]
   helperText?: string
-  isLoading?: boolean 
+  isLoading?: boolean
 }
 
 export function InputField({
   label,
   errorText,
   helperText,
-  className = '',
+  className,
   disabled,
   isLoading,
+  id,
   ...props
 }: InputFieldProps) {
-
+  const generatedId = React.useId()
+  const inputId = id ?? generatedId
   const errorMessage = Array.isArray(errorText) ? errorText[0] : errorText
+  const hasError = Boolean(errorMessage)
 
   return (
-    <div className="space-y-1 w-full">
+    <div className="w-full space-y-1.5">
       {label && (
-        <label className="text-xs font-medium text-neutral-700 flex justify-between items-center">
-          <span>{label}</span>
-          {isLoading && <span className="text-[10px] text-neutral-400 animate-pulse">Memuat...</span>}
-        </label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={inputId}>{label}</Label>
+          {isLoading && (
+            <span className="animate-pulse text-[10px] text-muted-foreground">
+              Memuat...
+            </span>
+          )}
+        </div>
       )}
-      
-      <input
+
+      <Input
+        id={inputId}
         disabled={disabled || isLoading}
-        className={`w-full rounded-lg border px-3 py-2 text-sm outline-none transition disabled:bg-neutral-100 disabled:cursor-not-allowed ${
+        aria-invalid={hasError || undefined}
+        aria-describedby={
           errorMessage
-            ? 'border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/10 text-rose-900 placeholder:text-rose-300'
-            : 'border-neutral-300 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
-        } ${className}`}
+            ? `${inputId}-error`
+            : helperText
+              ? `${inputId}-helper`
+              : undefined
+        }
+        className={className}
         {...props}
       />
 
       {errorMessage && (
-        <p className="text-[11px] text-rose-600 bg-rose-50 p-2 rounded border border-rose-100">
+        <p
+          id={`${inputId}-error`}
+          role="alert"
+          className="rounded-md border border-destructive/15 bg-destructive/5 px-2 py-1.5 text-[11px] text-destructive"
+        >
           {errorMessage}
         </p>
       )}
 
       {helperText && !errorMessage && (
-        <p className="text-[10px] text-neutral-400">{helperText}</p>
+        <p
+          id={`${inputId}-helper`}
+          className="text-[10px] text-muted-foreground"
+        >
+          {helperText}
+        </p>
       )}
     </div>
   )
