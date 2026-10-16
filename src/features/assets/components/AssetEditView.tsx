@@ -16,6 +16,7 @@ import {
   type MasterDataItem,
 } from "@/services/masterDataService"
 import { profileService } from "@/services/profileService"
+import { authService } from "@/services/authServices"
 import { toast } from "sonner"
 
 const MAX_PHOTOS = 5
@@ -39,7 +40,7 @@ export function AssetEditView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Profil user (queryKey disamakan dengan AssetListView, AssetCreateView, & Sidebar)
+  // Profil user
   const { data: profile } = useQuery({
     queryKey: ["dashboard", "profile"],
     queryFn: () => profileService.get(),
@@ -57,6 +58,26 @@ export function AssetEditView() {
   // Popover dropdown profile
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+
+  // Handler Logout Aktif
+  const handleLogout = async () => {
+    setIsProfileOpen(false)
+    try {
+      if (authService?.logout) {
+        await authService.logout()
+      }
+    } catch (err) {
+      console.error("Gagal request logout:", err)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+
+      queryClient.clear()
+      toast.success("Berhasil keluar dari akun")
+      navigate({ to: "/auth/login" })
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -222,7 +243,6 @@ export function AssetEditView() {
     setNewFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // POPUP KONFIRMASI FOTO UTAMA
   const handleOpenPrimaryModal = (photoId: number) => {
     setPendingPrimaryId(photoId)
   }
@@ -241,7 +261,6 @@ export function AssetEditView() {
     setPendingPrimaryId(null)
   }
 
-  // POPUP KONFIRMASI HAPUS FOTO
   const handleOpenDeleteModal = (photoId: number) => {
     setPendingDeleteId(photoId)
   }
@@ -333,7 +352,6 @@ export function AssetEditView() {
       setNewFiles([])
       toast.success("Perubahan berhasil disimpan!")
 
-      // Kirim kode aset spesifik yang baru di-edit agar sorotan tepat sasaran
       navigate({
         to: "/asset",
         search: {
@@ -417,7 +435,6 @@ export function AssetEditView() {
             <span className="font-semibold text-neutral-900">Ubah</span>
           </div>
 
-          {/* Avatar Profile dengan Popover Dropdown (Disamakan persis dengan AssetListView & AssetCreateView) */}
           <div className="relative" ref={profileRef}>
             <button
               type="button"
@@ -464,11 +481,10 @@ export function AssetEditView() {
                   Detail Profile
                 </button>
 
+                {/* Tombol Logout Aktif */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsProfileOpen(false)
-                  }}
+                  onClick={handleLogout}
                   className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                 >
                   <svg
@@ -635,7 +651,6 @@ export function AssetEditView() {
                   />
                 </div>
 
-                {/* KELOLA FOTO (FR-UD4) */}
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-neutral-900">
@@ -740,7 +755,6 @@ export function AssetEditView() {
               </div>
             </div>
 
-            {/* RINGKASAN PERUBAHAN */}
             <div className="space-y-6">
               <div className="space-y-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 shadow-2xs">
                 <h3 className="text-xs font-bold text-neutral-900">

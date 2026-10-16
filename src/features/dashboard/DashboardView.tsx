@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "../../lib/axios"
 import { profileService } from "@/services/profileService"
 import { assetService } from "@/services/assetServices"
+import { authService } from "@/services/authServices"
 import { usePermission } from "@/hooks/usePermission"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import { DashboardStats } from "./components/DashboardStats"
@@ -47,12 +48,13 @@ type ExportType = "excel" | "pdf"
 
 export function DashboardView() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // Ambil permission untuk menyembunyikan tombol UI bagi Viewer
   const { canCreateEditAsset, canImportExcel, canExportLaporan } =
     usePermission()
 
-  // Data dashboard (React Query: tanpa setState di dalam useEffect)
+  // Data dashboard
   const {
     data,
     isLoading: loading,
@@ -91,6 +93,26 @@ export function DashboardView() {
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false)
   const [exporting, setExporting] = useState<ExportType | null>(null)
   const exportRef = useRef<HTMLDivElement>(null)
+
+  // Handler Logout Aktif
+  const handleLogout = async () => {
+    setIsProfileOpen(false)
+    try {
+      if (authService?.logout) {
+        await authService.logout()
+      }
+    } catch (err) {
+      console.error("Gagal request logout:", err)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+
+      queryClient.clear()
+      toast.success("Berhasil keluar dari akun")
+      navigate({ to: "/auth/login" })
+    }
+  }
 
   // Tutup dropdown saat klik di luar
   useEffect(() => {
@@ -200,7 +222,6 @@ export function DashboardView() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-            {/* Dropdown Menu Export Header (Hanya jika diizinkan export) */}
             {canExportLaporan && (
               <div className="relative hidden sm:inline-block" ref={exportRef}>
                 <button
@@ -287,11 +308,10 @@ export function DashboardView() {
                     Detail Profile
                   </button>
 
+                  {/* Tombol Logout Aktif */}
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsProfileOpen(false)
-                    }}
+                    onClick={handleLogout}
                     className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                   >
                     <svg
@@ -328,7 +348,6 @@ export function DashboardView() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Sembunyikan Tombol Import Excel jika Viewer */}
             {canImportExcel && (
               <button
                 onClick={() =>
@@ -343,7 +362,6 @@ export function DashboardView() {
               </button>
             )}
 
-            {/* Sembunyikan Tombol + Tambah Aset jika Viewer */}
             {canCreateEditAsset && (
               <button
                 onClick={() =>

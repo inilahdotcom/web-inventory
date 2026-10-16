@@ -75,9 +75,7 @@ export function RecentActivityTable({ data = [] }: RecentActivityTableProps) {
                     <td className="px-4 py-3 font-mono font-medium text-blue-600">
                       {item.entity_id}
                     </td>
-                    <td className="px-4 py-3 font-medium">
-                      User #{item.changed_by}
-                    </td>
+                    <td className="px-4 py-3 font-medium">{item.changed_by}</td>
                     <td className="px-4 py-3 text-right text-[11px] text-neutral-400">
                       {item.created_at}
                     </td>

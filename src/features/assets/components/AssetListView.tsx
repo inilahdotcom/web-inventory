@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
 import { assetService } from "@/services/assetServices"
 import { profileService } from "@/services/profileService"
+import { authService } from "@/services/authServices"
 import { usePermission } from "@/hooks/usePermission"
 import { toast } from "sonner"
 import { downloadBlob } from "@/lib/DownloadBlob"
@@ -184,6 +185,26 @@ export function AssetListView() {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+
+  // Handler Logout Aktif
+  const handleLogout = async () => {
+    setIsProfileOpen(false)
+    try {
+      if (authService?.logout) {
+        await authService.logout()
+      }
+    } catch (err) {
+      console.error("Gagal request logout:", err)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+
+      queryClient.clear()
+      toast.success("Berhasil keluar dari akun")
+      navigate({ to: "/auth/login" })
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -826,11 +847,10 @@ export function AssetListView() {
                   Detail Profile
                 </button>
 
+                {/* Tombol Logout Aktif */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsProfileOpen(false)
-                  }}
+                  onClick={handleLogout}
                   className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                 >
                   <svg
@@ -872,7 +892,6 @@ export function AssetListView() {
               <span className="text-xs font-normal text-[#6b6f7e]">10/12</span>
             </Pill>
 
-            {/* Sembunyikan Tombol Export jika tidak boleh export */}
             {canExportLaporan && (
               <Pill
                 className="h-10 px-4 text-sm"
@@ -883,7 +902,6 @@ export function AssetListView() {
               </Pill>
             )}
 
-            {/* Sembunyikan Tombol + Tambah Aset untuk Viewer */}
             {canCreateEditAsset && (
               <button
                 type="button"
@@ -1098,7 +1116,6 @@ export function AssetListView() {
                 </button>
               ))}
 
-              {/* Sembunyikan Tombol Hapus Massal jika bukan ADMIN */}
               {canDeleteRestoreAsset && (
                 <button
                   type="button"
@@ -1436,7 +1453,6 @@ function ActionMenu({ asset }: { asset: Asset }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Ambil permission untuk menyembunyikan aksi di dropdown
   const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
 
   const goToEdit = () => {
@@ -1515,7 +1531,6 @@ function ActionMenu({ asset }: { asset: Asset }) {
             Detail
           </button>
 
-          {/* Sembunyikan Opsi Edit jika Viewer */}
           {canCreateEditAsset && (
             <button
               type="button"
@@ -1527,7 +1542,6 @@ function ActionMenu({ asset }: { asset: Asset }) {
             </button>
           )}
 
-          {/* Sembunyikan Opsi Hapus (Arsipkan) jika bukan Admin */}
           {canDeleteRestoreAsset && (
             <button
               type="button"

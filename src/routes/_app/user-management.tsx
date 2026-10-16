@@ -1,7 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { QueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import MasterDataPage from "@/features/master-data/components/MasterDataPage"
+// Ubah import ke komponen User Management
+import { UserManagementView } from "@/features/users/components/UserManagementView"
 import { profileService } from "@/services/profileService"
 
 export const Route = createFileRoute("/_app/user-management")({
@@ -18,10 +19,10 @@ export const Route = createFileRoute("/_app/user-management")({
 
       const role = profile?.attributes?.role?.toLowerCase() || ""
 
-      // Hanya Admin yang diizinkan mengakses halaman Master Data
+      // Hanya Admin yang diizinkan mengakses halaman User Management
       if (role !== "admin") {
         toast.error(
-          "Akses ditolak. Halaman Master Data hanya dapat diakses oleh Admin."
+          "Akses ditolak. Halaman User Management hanya dapat diakses oleh Admin."
         )
         throw redirect({
           to: "/",
@@ -33,5 +34,6 @@ export const Route = createFileRoute("/_app/user-management")({
       throw redirect({ to: "/" })
     }
   },
-  component: MasterDataPage,
+  // Gunakan komponen User Management di sini
+  component: UserManagementView,
 })
