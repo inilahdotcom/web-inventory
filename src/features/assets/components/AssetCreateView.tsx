@@ -4,6 +4,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import { InputField } from "@/components/ui/InputField"
 import { SelectedField } from "@/components/ui/SelectedField"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { assetService, type CreateAssetPayload } from "@/services/assetServices"
 import {
   masterDataService,
@@ -461,20 +472,22 @@ export function AssetCreateView() {
           </div>
 
           {errorMessage && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
-              {errorMessage}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
           )}
 
           {warningMessage && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
-              <strong>Peringatan Kemiripan Aset:</strong> {warningMessage}
-            </div>
+            <Alert variant="warning">
+              <AlertDescription>
+                <strong>Peringatan Kemiripan Aset:</strong> {warningMessage}
+              </AlertDescription>
+            </Alert>
           )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
-              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+              <Card className="space-y-4 p-6">
                 <h2 className="text-sm font-bold text-neutral-900">
                   Identitas barang
                 </h2>
@@ -571,9 +584,9 @@ export function AssetCreateView() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
 
-              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+              <Card className="space-y-4 p-6">
                 <h2 className="text-sm font-bold text-neutral-900">
                   Kondisi, lokasi, dan nilai
                 </h2>
@@ -697,21 +710,21 @@ export function AssetCreateView() {
                   <label className="text-xs font-medium text-neutral-700">
                     Keterangan barang
                   </label>
-                  <textarea
+                  <Textarea
                     rows={3}
                     name="keterangan"
                     value={formData.keterangan}
                     onChange={handleChange}
                     disabled={loading}
                     placeholder="Spesifikasi, nomor seri, catatan kondisi per unit..."
-                    className="w-full resize-none rounded-xl border border-neutral-300 p-3 text-xs outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 disabled:bg-neutral-100"
-                  ></textarea>
+                    className="text-xs"
+                  />
                 </div>
-              </div>
+              </Card>
             </div>
 
             <div className="space-y-6">
-              <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+              <Card className="space-y-3 p-6">
                 <label className="block text-xs font-semibold text-neutral-900">
                   Kode aset
                 </label>
@@ -728,9 +741,9 @@ export function AssetCreateView() {
                   Kosongkan agar dibuat otomatis oleh server dengan format
                   NNN/INC-GA/M/YY (BR-01).
                 </p>
-              </div>
+              </Card>
 
-              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+              <Card className="space-y-4 p-6">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-neutral-900">
                     Foto aset
@@ -824,70 +837,69 @@ export function AssetCreateView() {
                   Foto pertama otomatis jadi foto utama (BR-10). Klik foto lain
                   untuk menjadikannya foto utama.
                 </p>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
       </div>
 
-      {selectedPhotoIndexForPrimary !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-xs">
-          <div className="w-full max-w-sm animate-in space-y-4 rounded-2xl bg-white p-6 shadow-xl duration-150 zoom-in-95 fade-in">
-            <h3 className="text-sm font-bold text-neutral-900">
+      <Dialog
+        open={selectedPhotoIndexForPrimary !== null}
+        onOpenChange={(open) => !open && setSelectedPhotoIndexForPrimary(null)}
+      >
+        <DialogContent className="max-w-sm rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold">
               Jadikan Foto Utama?
-            </h3>
-            <p className="text-xs text-neutral-500">
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
               Apakah anda yakin akan menjadikan foto ini sebagai foto utama
               aset?
-            </p>
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedPhotoIndexForPrimary(null)}
-                className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSetPrimary}
-                className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-xs hover:bg-neutral-800"
-              >
-                Simpan
-              </button>
-            </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setSelectedPhotoIndexForPrimary(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleConfirmSetPrimary}
+            >
+              Simpan
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      <div className="sticky bottom-0 z-20 flex flex-col items-center justify-between gap-4 border-t border-neutral-200/80 bg-white/90 px-6 py-4 shadow-md backdrop-blur-md sm:flex-row lg:px-8">
-        <span className="text-xs text-neutral-400">
+      <div className="sticky bottom-0 z-20 flex flex-col items-center justify-between gap-4 border-t border-hairline bg-card/90 px-6 py-4 shadow-md backdrop-blur-md sm:flex-row lg:px-8">
+        <span className="text-xs text-muted-foreground">
           Perubahan belum tersimpan
         </span>
         <div className="flex w-full flex-wrap justify-end gap-3 sm:w-auto">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => navigate({ to: "/asset" })}
             disabled={loading}
-            className="cursor-pointer rounded-xl border border-neutral-300 px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
           >
             Batal
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
             onClick={(e) => handleSubmit(e, true)}
             disabled={loading}
-            className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-900 shadow-2xs hover:bg-neutral-50 disabled:opacity-50"
           >
             {loading ? "Menyimpan..." : "Simpan & Tambah Lagi"}
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-2xs hover:bg-neutral-800 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" variant="primary" disabled={loading}>
             {loading ? "Menyimpan..." : "Simpan Aset"}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

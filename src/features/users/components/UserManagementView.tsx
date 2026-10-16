@@ -5,6 +5,10 @@ import { toast } from "sonner"
 import { ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/Modal"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Card } from "@/components/ui/card"
 import { UserFormDialog, type UserFormValues } from "./UserFormDialog"
 import { authStorage } from "@/lib/auth-storage"
 import { userService } from "@/services/userService"
@@ -102,12 +106,12 @@ function UserRow({
       : role === "staff_ga"
         ? "bg-[#c3faf5] text-[#187574]"
         : "bg-[#fff8e0] text-[#746019]"
-  const roleClass =
+  const roleBadgeVariant =
     role === "admin"
-      ? "bg-[#1c1c1e] text-white"
+      ? ("rusak-berat" as const)
       : role === "staff_ga"
-        ? "bg-[#f5f3ff] text-[#4262ff]"
-        : "border border-[#e0e2e8] bg-white text-[#555a6a]"
+        ? ("bagus" as const)
+        : ("outline" as const)
 
   return (
     <div
@@ -131,22 +135,12 @@ function UserRow({
         {email}
       </span>
       <span>
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleClass}`}
-        >
-          {roleLabels[role] ?? role}
-        </span>
+        <Badge variant={roleBadgeVariant}>{roleLabels[role] ?? role}</Badge>
       </span>
       <span>
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-            inactive
-              ? "bg-[#eef0f3] text-[#555a6a]"
-              : "bg-[#c3faf5] text-[#187574]"
-          }`}
-        >
+        <Badge variant={inactive ? "inactive" : "active"}>
           {inactive ? "Nonaktif" : "Aktif"}
-        </span>
+        </Badge>
       </span>
       <span
         className={`text-xs ${inactive ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
@@ -407,39 +401,38 @@ export function UserManagementView() {
         </div>
 
         {usersQuery.isError && (
-          <div
-            role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#ffc6c6] bg-white px-4 py-3 text-sm text-[#600000]"
+          <Alert
+            variant="destructive"
+            className="flex flex-wrap items-center justify-between gap-3"
           >
-            <span>
+            <AlertDescription>
               {forbidden
                 ? "Akses manajemen pengguna hanya tersedia untuk Admin."
                 : errorMessage(
                     usersQuery.error,
                     "Daftar pengguna gagal dimuat."
                   )}
-            </span>
+            </AlertDescription>
             {!forbidden && (
-              <button
+              <Button
                 type="button"
+                variant="link"
+                size="sm"
                 onClick={() => void usersQuery.refetch()}
-                className="font-semibold underline"
+                className="h-auto p-0 text-[#600000]"
               >
                 Coba lagi
-              </button>
+              </Button>
             )}
-          </div>
+          </Alert>
         )}
 
         {!usersQuery.isError && (
-          <section
-            className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white"
-            aria-label="Daftar pengguna"
-          >
+          <Card className="overflow-hidden" aria-label="Daftar pengguna">
             <div className="overflow-x-auto">
               <div className="min-w-250">
                 <div
-                  className={`grid h-10 ${tableColumns} items-center gap-3.5 border-b border-[#e0e2e8] bg-[#f7f8fa] px-5`}
+                  className={`grid h-10 ${tableColumns} items-center gap-3.5 border-b border-hairline bg-muted/50 px-5`}
                 >
                   {[
                     "Nama",
@@ -451,18 +444,30 @@ export function UserManagementView() {
                   ].map((label) => (
                     <span
                       key={label}
-                      className={`text-xs font-semibold tracking-wider text-[#6b6f7e] uppercase ${label === "Aksi" ? "text-right" : ""}`}
+                      className={`text-xs font-semibold tracking-wider text-muted-foreground uppercase ${label === "Aksi" ? "text-right" : ""}`}
                     >
                       {label}
                     </span>
                   ))}
                 </div>
                 {usersQuery.isPending ? (
-                  <div className="px-5 py-8 text-sm text-[#6b6f7e]">
-                    Memuat daftar pengguna…
+                  <div className="flex flex-col gap-0 px-5 py-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`grid ${tableColumns} items-center gap-3.5 border-b border-hairline py-3 last:border-b-0`}
+                      >
+                        <Skeleton className="h-4 rounded-full" />
+                        <Skeleton className="h-3 rounded-full" />
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                        <Skeleton className="h-5 w-12 rounded-full" />
+                        <Skeleton className="h-3 rounded-full" />
+                        <Skeleton className="h-3 rounded-full" />
+                      </div>
+                    ))}
                   </div>
                 ) : users.length === 0 ? (
-                  <div className="px-5 py-8 text-sm text-[#6b6f7e]">
+                  <div className="px-5 py-8 text-sm text-muted-foreground">
                     {search
                       ? "Tidak ada pengguna yang cocok dengan pencarian."
                       : "Belum ada pengguna."}
@@ -482,7 +487,7 @@ export function UserManagementView() {
                 )}
               </div>
             </div>
-          </section>
+          </Card>
         )}
 
         {!usersQuery.isError &&

@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { Search, Package, ArrowRight, Loader2, X } from "lucide-react"
 import { api } from "@/lib/axios"
+import { Input } from "@/components/ui/Input"
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
 
 interface AssetSearchResult {
   id: string
@@ -11,6 +14,15 @@ interface AssetSearchResult {
   condition?: string
 }
 
+function getConditionBadgeVariant(condition?: string) {
+  const c = condition?.toLowerCase() || ""
+  if (c.includes("ringan")) return "rusak-ringan" as const
+  if (c.includes("berat")) return "rusak-berat" as const
+  if (c.includes("bagus")) return "bagus" as const
+  if (c.includes("hilang")) return "hilang" as const
+  return "outline" as const
+}
+
 export function HeaderSearchDropdown() {
   const navigate = useNavigate()
   const [query, setQuery] = useState("")
@@ -18,20 +30,6 @@ export function HeaderSearchDropdown() {
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-
-  // Mapping warna badge kondisi sesuai standar status
-  const getConditionStyle = (condition?: string) => {
-    switch (condition) {
-      case "Bagus":
-        return "bg-[#c3faf5] text-[#187574]"
-      case "Rusak Ringan":
-        return "bg-[#fff8e0] text-[#746019]"
-      case "Rusak Berat":
-        return "bg-[#ffc6c6] text-[#600000]"
-      default:
-        return "bg-neutral-100 text-neutral-600"
-    }
-  }
 
   // Debounce API call saat user mengetik
   useEffect(() => {
@@ -131,7 +129,7 @@ export function HeaderSearchDropdown() {
           )}
         </div>
 
-        <input
+        <Input
           type="text"
           value={query}
           onFocus={() => setIsOpen(true)}
@@ -140,7 +138,7 @@ export function HeaderSearchDropdown() {
             setIsOpen(true)
           }}
           placeholder="Cari kode, nama barang, merek, keterangan..."
-          className="w-full rounded-2xl border border-neutral-200 bg-white py-2 pr-8 pl-9 text-xs shadow-2xs transition placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
+          className="rounded-2xl pr-8 pl-9"
         />
 
         {query && (
@@ -150,7 +148,7 @@ export function HeaderSearchDropdown() {
               setQuery("")
               setResults([])
             }}
-            className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-2.5 text-neutral-400 hover:text-neutral-600"
+            className="absolute inset-y-0 right-0 flex cursor-pointer items-center pr-2.5 text-muted-foreground hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -159,22 +157,22 @@ export function HeaderSearchDropdown() {
 
       {/* Popover Preview Results */}
       {isOpen && query.trim().length > 0 && (
-        <div className="absolute top-11 left-0 z-50 w-full min-w-85 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl transition-all">
+        <Card className="absolute top-11 left-0 z-50 w-full min-w-85 overflow-hidden p-2 shadow-xl">
           {loading && results.length === 0 && (
-            <div className="p-4 text-center text-xs text-neutral-400">
+            <div className="p-4 text-center text-xs text-muted-foreground">
               Mencari aset...
             </div>
           )}
 
           {!loading && results.length === 0 && (
-            <div className="p-4 text-center text-xs text-neutral-400">
+            <div className="p-4 text-center text-xs text-muted-foreground">
               Aset tidak ditemukan untuk "{query}"
             </div>
           )}
 
           {results.length > 0 && (
             <div className="space-y-1">
-              <div className="px-3 py-1.5 text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+              <div className="px-3 py-1.5 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                 HASIL PENCARIAN ASET
               </div>
 
@@ -194,28 +192,24 @@ export function HeaderSearchDropdown() {
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectAsset(item.id)}
-                    className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl p-2.5 text-left transition hover:bg-neutral-100"
+                    className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl p-2.5 text-left transition hover:bg-muted/70"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                         <Package className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-neutral-900">
+                        <p className="truncate text-xs font-semibold text-foreground">
                           {item.name}
                         </p>
-                        <p className="truncate font-mono text-[11px] text-neutral-400">
+                        <p className="truncate font-mono text-[11px] text-muted-foreground">
                           {subtext}
                         </p>
                       </div>
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${getConditionStyle(
-                        item.condition
-                      )}`}
-                    >
+                    <Badge variant={getConditionBadgeVariant(item.condition)}>
                       {item.condition}
-                    </span>
+                    </Badge>
                   </button>
                 )
               })}
@@ -223,14 +217,14 @@ export function HeaderSearchDropdown() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="mt-1 flex w-full cursor-pointer items-center justify-between rounded-xl bg-neutral-100/60 px-3.5 py-2.5 text-xs font-semibold text-neutral-800 transition hover:bg-neutral-200/70"
+                className="mt-1 flex w-full cursor-pointer items-center justify-between rounded-xl bg-muted/60 px-3.5 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted"
               >
                 <span>Lihat semua hasil untuk "{query}"</span>
-                <ArrowRight className="h-3.5 w-3.5 text-neutral-500" />
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   )

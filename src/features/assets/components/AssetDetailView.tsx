@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { Route } from "@/routes/_app/asset/$id/"
@@ -14,6 +14,22 @@ import {
   masterDataService,
   type MasterDataItem,
 } from "@/services/masterDataService"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
+import { TimelineItem, AuditItem } from "@/components/ui/timeline"
+import { SectionHeading } from "@/components/ui/section"
 
 type AssetDraft = Record<
   | "name"
@@ -383,30 +399,46 @@ export function AssetDetailView() {
     }
   }
 
-  if (loading) return <PageState>Memuat detail aset…</PageState>
-  if (error || !detail || !asset)
-    return <PageState error>{error || "Aset tidak ditemukan."}</PageState>
+  if (loading) {
+    return (
+      <div className="flex min-h-svh flex-col gap-4 p-8">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+  if (error || !detail || !asset) {
+    return (
+      <div className="p-8">
+        <Alert variant="destructive">
+          <AlertDescription>
+            {error || "Aset tidak ditemukan."}
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   const photos = detail.attributes.photos.map((photo) => photo.url)
 
   return (
-    <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:pr-6 sm:pl-16 lg:pl-6">
-        <div className="flex min-w-0 items-center gap-2 text-[13px] text-[#8e91a0]">
+    <div className="min-h-svh min-w-0 bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-hairline bg-card py-0 pr-4 pl-16 sm:pr-6 sm:pl-16 lg:pl-6">
+        <div className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
           <button
             type="button"
             onClick={() => void navigate({ to: "/asset" })}
-            className="shrink-0 text-[#6b6f7e]"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
           >
             Daftar Aset
           </button>
           <span>/</span>
-          <span className="truncate font-mono text-[#1c1c1e]">
+          <span className="truncate font-mono text-foreground">
             {detail.attributes.code}
           </span>
         </div>
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
+          <span className="grid size-9 place-items-center rounded-full border border-hairline text-[13px] text-muted-foreground">
             ?
           </span>
           <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-[11px] font-semibold text-[#600000]">
@@ -418,7 +450,7 @@ export function AssetDetailView() {
       <main className="flex flex-col gap-4.5 px-4 py-6 pb-7 sm:px-7">
         <section className="flex flex-col gap-4 xl:flex-row xl:items-start">
           <div className="flex flex-col gap-2.25">
-            <span className="font-mono text-[13px] text-[#4262ff]">
+            <span className="font-mono text-[13px] text-brand-blue">
               {detail.attributes.code}
             </span>
             <h1 className="text-[28px] leading-none font-semibold tracking-[-0.8px] sm:text-[32px]">
@@ -426,51 +458,55 @@ export function AssetDetailView() {
             </h1>
             <div className="flex flex-wrap gap-1.75">
               <Badge
-                tone={
+                variant={
                   asset.condition === "Rusak Berat"
-                    ? "danger"
+                    ? "rusak-berat"
                     : asset.condition === "Rusak Ringan"
-                      ? "warning"
-                      : "default"
+                      ? "rusak-ringan"
+                      : asset.condition === "Hilang"
+                        ? "hilang"
+                        : "bagus"
                 }
               >
                 {asset.condition}
               </Badge>
               <Badge
-                tone={asset.status === "Diperbaiki" ? "repair" : "default"}
+                variant={
+                  asset.status === "Diperbaiki" ? "diperbaiki" : "outline"
+                }
               >
                 {asset.status}
               </Badge>
-              <Badge>{asset.category}</Badge>
-              <Badge>
+              <Badge variant="outline">{asset.category}</Badge>
+              <Badge variant="outline">
                 {asset.quantity} {detail.attributes.unit}
               </Badge>
             </div>
           </div>
           <div className="flex flex-wrap gap-2.25 xl:ml-auto xl:flex-nowrap">
-            <ActionButton
-              variant="outline"
+            <Button
+              variant="secondary"
               disabled={busy}
               onClick={() => void navigate({ to: "/mutasi" })}
             >
               Mutasi
-            </ActionButton>
+            </Button>
 
             {/* Sembunyikan Tombol Hapus jika bukan Admin */}
             {canDeleteRestoreAsset && (
-              <ActionButton
-                variant="outline"
+              <Button
+                variant="secondary"
                 disabled={busy}
                 onClick={() => void deleteAsset()}
               >
                 Hapus
-              </ActionButton>
+              </Button>
             )}
 
             {/* Sembunyikan Tombol Ubah Aset jika Viewer */}
             {canCreateEditAsset && (
-              <ActionButton
-                variant="dark"
+              <Button
+                variant="primary"
                 disabled={busy}
                 onClick={() => void toggleEditing()}
               >
@@ -479,19 +515,23 @@ export function AssetDetailView() {
                   : editing
                     ? "Simpan perubahan"
                     : "Ubah Aset"}
-              </ActionButton>
+              </Button>
             )}
           </div>
         </section>
 
-        {notice && <Notice onClose={() => setNotice("")}>{notice}</Notice>}
+        {notice && (
+          <Alert onClick={() => setNotice("")} className="cursor-pointer">
+            <AlertDescription>{notice} ×</AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4.5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)]">
           <div className="flex flex-col gap-4.5">
-            <SectionCard>
+            <Card className="flex flex-col gap-4 rounded-[20px] p-5">
               <div className="flex items-baseline gap-2.25">
                 <h2 className="text-[16px] font-semibold">Foto aset</h2>
-                <span className="text-[11.5px] text-[#8e91a0]">
+                <span className="text-[11.5px] text-muted-foreground">
                   {photos.length} dari 5 terunggah
                 </span>
 
@@ -500,7 +540,7 @@ export function AssetDetailView() {
                   <button
                     type="button"
                     onClick={() => !busy && inputRef.current?.click()}
-                    className="ml-auto text-[13px] font-semibold text-[#4262ff]"
+                    className="ml-auto text-[13px] font-semibold text-brand-blue"
                   >
                     Unggah foto
                   </button>
@@ -556,9 +596,9 @@ export function AssetDetailView() {
                   />
                 </div>
               </div>
-            </SectionCard>
+            </Card>
 
-            <SectionCard>
+            <Card className="flex flex-col gap-4 rounded-[20px] p-5">
               <h2 className="text-[16px] font-semibold">Informasi aset</h2>
               <div className="grid gap-x-7 gap-y-4 sm:grid-cols-2">
                 <InfoField
@@ -632,24 +672,24 @@ export function AssetDetailView() {
                     sebagian unit menjadi record baru agar setiap kondisi
                     tercatat terpisah sesuai BR-09.
                   </span>
-                  <ActionButton
-                    variant="dark"
-                    small
+                  <Button
+                    variant="primary"
+                    size="sm"
                     disabled={busy || editing}
                     className="sm:ml-auto"
                     onClick={openSplitDialog}
                   >
                     Pecah record
-                  </ActionButton>
+                  </Button>
                 </div>
               )}
-            </SectionCard>
+            </Card>
           </div>
 
           <div className="flex flex-col gap-4.5">
             <CompletenessCard completeness={detail.attributes.completeness} />
-            <SectionCard>
-              <Heading
+            <Card className="flex flex-col gap-4 rounded-[20px] p-5">
+              <SectionHeading
                 title="Riwayat mutasi"
                 detail={`${detail.attributes.mutationHistory.length} catatan`}
               />
@@ -668,14 +708,14 @@ export function AssetDetailView() {
                     />
                   ))
                 ) : (
-                  <p className="text-xs text-[#8e91a0]">
+                  <p className="text-xs text-muted-foreground">
                     Belum ada riwayat mutasi.
                   </p>
                 )}
               </div>
-            </SectionCard>
-            <SectionCard>
-              <Heading
+            </Card>
+            <Card className="flex flex-col gap-4 rounded-[20px] p-5">
+              <SectionHeading
                 title="Perubahan terakhir"
                 action="Semua log →"
                 onAction={() =>
@@ -695,43 +735,43 @@ export function AssetDetailView() {
                       />
                     ))
                 ) : (
-                  <p className="text-xs text-[#8e91a0]">
+                  <p className="text-xs text-muted-foreground">
                     Belum ada perubahan tercatat.
                   </p>
                 )}
               </div>
-            </SectionCard>
+            </Card>
           </div>
         </div>
       </main>
-      {splitOpen && (
-        <SplitAssetDialog
-          assetCode={detail.attributes.code}
-          currentCondition={detail.attributes.condition}
-          currentQuantity={detail.attributes.quantity}
-          unit={detail.attributes.unit}
-          draft={splitDraft}
-          error={splitError}
-          busy={busy}
-          onChange={(change) =>
-            setSplitDraft((current) => ({ ...current, ...change }))
-          }
-          onConditionChange={(condition) =>
-            setSplitDraft((current) => ({
-              ...current,
-              condition,
-              status: defaultSplitStatus(condition, detail.attributes.status),
-            }))
-          }
-          onClose={() => !busy && setSplitOpen(false)}
-          onSubmit={() => void submitSplit()}
-        />
-      )}
+      <SplitAssetDialog
+        open={splitOpen}
+        assetCode={detail.attributes.code}
+        currentCondition={detail.attributes.condition}
+        currentQuantity={detail.attributes.quantity}
+        unit={detail.attributes.unit}
+        draft={splitDraft}
+        error={splitError}
+        busy={busy}
+        onChange={(change) =>
+          setSplitDraft((current) => ({ ...current, ...change }))
+        }
+        onConditionChange={(condition) =>
+          setSplitDraft((current) => ({
+            ...current,
+            condition,
+            status: defaultSplitStatus(condition, detail.attributes.status),
+          }))
+        }
+        onClose={() => !busy && setSplitOpen(false)}
+        onSubmit={() => void submitSplit()}
+      />
     </div>
   )
 }
 
 function SplitAssetDialog({
+  open,
   assetCode,
   currentCondition,
   currentQuantity,
@@ -744,6 +784,7 @@ function SplitAssetDialog({
   onClose,
   onSubmit,
 }: {
+  open: boolean
   assetCode: string
   currentCondition: string
   currentQuantity: number
@@ -770,45 +811,24 @@ function SplitAssetDialog({
         )
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-    >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="split-asset-title"
-        className="w-full max-w-lg rounded-[22px] bg-white p-5 shadow-2xl sm:p-6"
-      >
-        <div className="flex items-start gap-4">
-          <div>
-            <h2 id="split-asset-title" className="text-xl font-semibold">
-              Pecah record aset
-            </h2>
-            <p className="mt-1 text-xs leading-relaxed text-[#6b6f7e]">
-              {assetCode} saat ini memiliki {currentQuantity} {unit} dengan
-              kondisi
-              {` ${currentCondition}`}.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            aria-label="Tutup dialog"
-            className="ml-auto grid size-8 place-items-center rounded-full text-lg text-[#6b6f7e] hover:bg-[#f0f1f3] disabled:opacity-50"
-          >
-            ×
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="w-full max-w-lg rounded-[22px] bg-card p-5 text-card-foreground sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            Pecah record aset
+          </DialogTitle>
+          <DialogDescription className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {assetCode} saat ini memiliki {currentQuantity} {unit} dengan
+            kondisi {currentCondition}.
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="mt-5 grid items-start gap-4 sm:grid-cols-2">
-          <label className="grid gap-1.5 text-xs font-semibold text-[#555a6a]">
-            Jumlah yang dipecah
-            <div className="flex h-11 items-center rounded-xl border border-[#d9dce4] bg-white px-3 focus-within:border-[#4262ff]">
+          <div className="grid gap-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Jumlah yang dipecah
+            </Label>
+            <div className="flex h-11 items-center rounded-xl border border-hairline bg-card px-3 focus-within:border-primary">
               <input
                 type="number"
                 min={1}
@@ -819,20 +839,24 @@ function SplitAssetDialog({
                 onChange={(event) => onChange({ quantity: event.target.value })}
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none disabled:opacity-60"
               />
-              <span className="text-xs font-normal text-[#8e91a0]">{unit}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {unit}
+              </span>
             </div>
-            <span className="font-normal text-[#8e91a0]">
+            <span className="text-[11px] font-normal text-muted-foreground">
               Maksimal {currentQuantity - 1} {unit}
             </span>
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-xs font-semibold text-[#555a6a]">
-            Kondisi record baru
+          <div className="grid gap-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Kondisi record baru
+            </Label>
             <select
               value={draft.condition}
               disabled={busy}
               onChange={(event) => onConditionChange(event.target.value)}
-              className="h-11 rounded-xl border border-[#d9dce4] bg-white px-3 text-sm outline-none focus:border-[#4262ff] disabled:opacity-60"
+              className="h-11 rounded-xl border border-hairline bg-card px-3 text-sm outline-none focus:border-primary disabled:opacity-60"
             >
               {availableConditions.map((condition) => (
                 <option key={condition} value={condition}>
@@ -840,15 +864,17 @@ function SplitAssetDialog({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-xs font-semibold text-[#555a6a] sm:col-span-2">
-            Status record baru
+          <div className="grid gap-1.5 sm:col-span-2">
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Status record baru
+            </Label>
             <select
               value={draft.status}
               disabled={busy || draft.condition === "Hilang"}
               onChange={(event) => onChange({ status: event.target.value })}
-              className="h-11 rounded-xl border border-[#d9dce4] bg-white px-3 text-sm outline-none focus:border-[#4262ff] disabled:opacity-60"
+              className="h-11 rounded-xl border border-hairline bg-card px-3 text-sm outline-none focus:border-primary disabled:opacity-60"
             >
               {availableStatuses.map((status) => (
                 <option key={status} value={status}>
@@ -857,173 +883,43 @@ function SplitAssetDialog({
               ))}
             </select>
             {draft.condition === "Hilang" && (
-              <span className="font-normal text-[#8e91a0]">
+              <span className="text-[11px] font-normal text-muted-foreground">
                 Aset hilang otomatis berstatus Tidak Tersedia.
               </span>
             )}
-          </label>
+          </div>
 
-          <label className="grid gap-1.5 text-xs font-semibold text-[#555a6a] sm:col-span-2">
-            Catatan (opsional)
-            <textarea
+          <div className="grid gap-1.5 sm:col-span-2">
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Catatan (opsional)
+            </Label>
+            <Textarea
               rows={3}
               value={draft.notes}
               disabled={busy}
               onChange={(event) => onChange({ notes: event.target.value })}
               placeholder="Contoh: 1 unit rusak dan dipisahkan sesuai BR-09"
-              className="resize-none rounded-xl border border-[#d9dce4] bg-white px-3 py-2.5 text-sm font-normal outline-none placeholder:text-[#a5a8b5] focus:border-[#4262ff] disabled:opacity-60"
+              className="rounded-xl border border-hairline text-sm"
             />
-          </label>
+          </div>
         </div>
 
         {error && (
-          <p
-            role="alert"
-            className="mt-4 rounded-xl bg-[#fff0f0] px-3 py-2.5 text-xs text-[#a80000]"
-          >
-            {error}
-          </p>
+          <Alert variant="destructive" className="mt-4">
+            <AlertDescription className="text-xs">{error}</AlertDescription>
+          </Alert>
         )}
 
         <div className="mt-5 flex justify-end gap-2">
-          <ActionButton variant="outline" disabled={busy} onClick={onClose}>
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
             Batal
-          </ActionButton>
-          <ActionButton variant="dark" disabled={busy} onClick={onSubmit}>
+          </Button>
+          <Button variant="primary" disabled={busy} onClick={onSubmit}>
             {busy ? "Memproses…" : "Pecah record"}
-          </ActionButton>
+          </Button>
         </div>
-      </section>
-    </div>
-  )
-}
-
-function SectionCard({ children }: { children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-4 rounded-[20px] border border-[#eef0f3] bg-white p-5">
-      {children}
-    </section>
-  )
-}
-
-function PageState({
-  children,
-  error = false,
-}: {
-  children: ReactNode
-  error?: boolean
-}) {
-  return (
-    <div
-      className={`p-8 text-sm ${error ? "text-[#600000]" : "text-[#6b6f7e]"}`}
-      role={error ? "alert" : undefined}
-    >
-      {children}
-    </div>
-  )
-}
-
-function auditTitle(log: AssetAuditLog) {
-  if (log.fieldName) return `${log.fieldName} diubah`
-  return (
-    {
-      CREATE: "Aset dibuat",
-      UPDATE: "Aset diubah",
-      DELETE: "Aset dihapus",
-      IMPORT_CREATE: "Aset diimpor",
-    }[log.action] || log.action.replaceAll("_", " ")
-  )
-}
-
-function auditDetail(log: AssetAuditLog) {
-  const oldValue = readableAuditValue(log.oldValue)
-  const newValue = readableAuditValue(log.newValue)
-
-  if (log.fieldName && log.oldValue && log.newValue)
-    return `${oldValue} → ${newValue}`
-  return newValue || oldValue || "Perubahan tercatat di audit log"
-}
-
-function readableAuditValue(value: string | null) {
-  if (!value) return ""
-
-  try {
-    const parsed = JSON.parse(value) as { Name?: string; AssetCode?: string }
-    if (parsed.Name && parsed.AssetCode)
-      return `Aset ${parsed.Name} (${parsed.AssetCode})`
-    if (parsed.Name) return `Aset ${parsed.Name}`
-    if (parsed.AssetCode) return `Aset ${parsed.AssetCode}`
-    return "Data aset diperbarui"
-  } catch {
-    return value
-  }
-}
-
-function Badge({
-  children,
-  tone = "default",
-}: {
-  children: ReactNode
-  tone?: "default" | "danger" | "warning" | "repair" | "missing"
-}) {
-  const tones = {
-    default: "border border-[#e0e2e8] bg-white text-[#555a6a]",
-    danger: "bg-[#ffc6c6] text-[#600000]",
-    warning: "bg-[#fff8e0] text-[#746019]",
-    repair: "bg-[#fde0f0] text-[#600000]",
-    missing: "bg-white text-[#600000]",
-  }
-  return (
-    <span
-      className={`rounded-full px-3 py-1.25 text-[12px] font-semibold ${tones[tone]}`}
-    >
-      {children}
-    </span>
-  )
-}
-
-function ActionButton({
-  children,
-  onClick,
-  variant,
-  small = false,
-  disabled = false,
-  className = "",
-}: {
-  children: string
-  onClick: () => void
-  variant: "dark" | "outline"
-  small?: boolean
-  disabled?: boolean
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex w-fit shrink-0 items-center rounded-full font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${small ? "h-8 px-3.5 text-[12.5px]" : "h-10 px-4 text-[13.5px]"} ${variant === "dark" ? "bg-[#1c1c1e] text-white" : "border border-[#c7cad5] bg-white text-[#1c1c1e]"} ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Notice({
-  children,
-  onClose,
-}: {
-  children: ReactNode
-  onClose: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-[13px] text-[#187574]"
-    >
-      {children} ×
-    </button>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1122,32 +1018,40 @@ function InfoField({
   )
 }
 
-function Heading({
-  title,
-  detail,
-  action,
-  onAction,
-}: {
-  title: string
-  detail?: string
-  action?: string
-  onAction?: () => void
-}) {
+function auditTitle(log: AssetAuditLog) {
+  if (log.fieldName) return `${log.fieldName} diubah`
   return (
-    <div className="flex items-baseline gap-2.25">
-      <h2 className="text-[16px] font-semibold">{title}</h2>
-      {detail && <span className="text-[11.5px] text-[#8e91a0]">{detail}</span>}
-      {action && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="ml-auto text-[12.5px] font-semibold text-[#4262ff]"
-        >
-          {action}
-        </button>
-      )}
-    </div>
+    {
+      CREATE: "Aset dibuat",
+      UPDATE: "Aset diubah",
+      DELETE: "Aset dihapus",
+      IMPORT_CREATE: "Aset diimpor",
+    }[log.action] || log.action.replaceAll("_", " ")
   )
+}
+
+function auditDetail(log: AssetAuditLog) {
+  const oldValue = readableAuditValue(log.oldValue)
+  const newValue = readableAuditValue(log.newValue)
+
+  if (log.fieldName && log.oldValue && log.newValue)
+    return `${oldValue} → ${newValue}`
+  return newValue || oldValue || "Perubahan tercatat di audit log"
+}
+
+function readableAuditValue(value: string | null) {
+  if (!value) return ""
+
+  try {
+    const parsed = JSON.parse(value) as { Name?: string; AssetCode?: string }
+    if (parsed.Name && parsed.AssetCode)
+      return `Aset ${parsed.Name} (${parsed.AssetCode})`
+    if (parsed.Name) return `Aset ${parsed.Name}`
+    if (parsed.AssetCode) return `Aset ${parsed.AssetCode}`
+    return "Data aset diperbarui"
+  } catch {
+    return value
+  }
 }
 
 function CompletenessCard({
@@ -1177,7 +1081,7 @@ function CompletenessCard({
       <div className="flex flex-wrap gap-1.5">
         {completeness.missingFields.length ? (
           completeness.missingFields.map((field) => (
-            <Badge key={field} tone="missing">
+            <Badge key={field} variant="destructive">
               {field}
             </Badge>
           ))
@@ -1186,56 +1090,5 @@ function CompletenessCard({
         )}
       </div>
     </section>
-  )
-}
-
-function TimelineItem({
-  title,
-  subtitle,
-  meta,
-  active = false,
-  last = false,
-}: {
-  title: string
-  subtitle?: string
-  meta: string
-  active?: boolean
-  last?: boolean
-}) {
-  return (
-    <div
-      className={`relative ml-1.25 border-l-2 border-[#eef0f3] pl-4 ${last ? "" : "pb-4"}`}
-    >
-      <span
-        className={`absolute top-0.5 -left-1.5 size-2.5 rounded-full ${active ? "bg-[#1c1c1e]" : "bg-[#c7cad5]"}`}
-      />
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[13px] font-semibold">{title}</span>
-        {subtitle && (
-          <span className="text-[12px] text-[#6b6f7e]">{subtitle}</span>
-        )}
-        <span className="text-[11.5px] text-[#8e91a0]">{meta}</span>
-      </div>
-    </div>
-  )
-}
-
-function AuditItem({
-  title,
-  detail,
-  meta,
-}: {
-  title: string
-  detail: ReactNode
-  meta: string
-}) {
-  return (
-    <div className="flex flex-col gap-0.75 border-b border-[#eef0f3] pb-2.75 last:border-0 last:pb-0">
-      <span className="text-[12.5px] font-semibold">{title}</span>
-      <span className="wrap-break-words line-clamp-2 text-[12px] text-[#6b6f7e]">
-        {detail}
-      </span>
-      <span className="text-[11px] text-[#8e91a0]">{meta}</span>
-    </div>
   )
 }

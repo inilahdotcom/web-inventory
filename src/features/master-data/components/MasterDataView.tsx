@@ -1,5 +1,27 @@
 import React, { useState } from "react"
 import { usePermission } from "@/hooks/usePermission"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 export interface UIMasterDataItem {
   id: string | number
@@ -204,192 +226,207 @@ export function MasterDataView({
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
           {/* TABEL DATA */}
-          <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xs lg:col-span-2">
+          <Card className="overflow-hidden lg:col-span-2">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-137.5 border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-neutral-200 bg-neutral-50/70 text-[10px] font-semibold tracking-wider text-neutral-400 uppercase">
-                    <th className="px-6 py-3.5">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-hairline bg-muted/50">
+                    <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
                       {tabConfig[activeTab].labelNama}
-                    </th>
-                    <th className="px-6 py-3.5">Kode</th>
-                    <th className="px-6 py-3.5">Aset</th>
+                    </TableHead>
+                    <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                      Kode
+                    </TableHead>
+                    <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                      Aset
+                    </TableHead>
                     {/* Tampilkan kolom Aksi hanya jika Admin */}
                     {canManageMasterData && (
-                      <th className="px-6 py-3.5 text-right">Aksi</th>
+                      <TableHead className="px-6 py-3.5 text-right text-[10px] font-semibold tracking-wider uppercase">
+                        Aksi
+                      </TableHead>
                     )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200 text-neutral-800">
-                  {currentData.map((item) => {
-                    const count = item.asetCount ?? item.asset_count ?? 0
-                    const hasAssets = count > 0
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className="transition-colors hover:bg-neutral-50/50"
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentData.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={canManageMasterData ? 4 : 3}
+                        className="px-6 py-8 text-center text-xs text-muted-foreground"
                       >
-                        <td className="px-6 py-4 font-semibold text-neutral-900">
-                          {item.nama}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-neutral-600">
-                          {item.kode}
-                        </td>
-                        <td className="px-6 py-4 font-mono font-medium text-neutral-700">
-                          {count}
-                        </td>
+                        Belum ada data {activeTab}.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    currentData.map((item) => {
+                      const count = item.asetCount ?? item.asset_count ?? 0
+                      const hasAssets = count > 0
 
-                        {/* Tombol Ubah & Hapus hanya tampil jika Admin */}
-                        {canManageMasterData && (
-                          <td className="space-x-3 px-6 py-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(item)}
-                              className="cursor-pointer font-medium text-blue-600 hover:underline"
-                            >
-                              Ubah
-                            </button>
+                      return (
+                        <TableRow
+                          key={item.id}
+                          className="transition-colors hover:bg-muted/50"
+                        >
+                          <TableCell className="px-6 py-4 font-semibold text-foreground">
+                            {item.nama}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 font-mono text-muted-foreground">
+                            {item.kode}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 font-mono font-medium">
+                            <Badge variant="outline">{count}</Badge>
+                          </TableCell>
 
-                            <button
-                              type="button"
-                              disabled={hasAssets}
-                              onClick={() => onDelete?.(activeTab, item.id)}
-                              className={`font-medium transition-colors ${
-                                hasAssets
-                                  ? "cursor-not-allowed text-neutral-300 opacity-50"
-                                  : "cursor-pointer text-rose-600 hover:underline"
-                              }`}
-                              title={
-                                hasAssets
-                                  ? tabConfig[activeTab].warning
-                                  : "Hapus data"
-                              }
-                            >
-                              Hapus
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                          {/* Tombol Ubah & Hapus hanya tampil jika Admin */}
+                          {canManageMasterData && (
+                            <TableCell className="space-x-3 px-6 py-4 text-right">
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                onClick={() => handleOpenEdit(item)}
+                                className="h-auto p-0 font-medium text-blue-600 hover:underline"
+                              >
+                                Ubah
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                disabled={hasAssets}
+                                onClick={() => onDelete?.(activeTab, item.id)}
+                                className={`h-auto p-0 font-medium transition-colors ${
+                                  hasAssets
+                                    ? "cursor-not-allowed text-muted-foreground/40 opacity-50"
+                                    : "text-destructive hover:underline"
+                                }`}
+                                title={
+                                  hasAssets
+                                    ? tabConfig[activeTab].warning
+                                    : "Hapus data"
+                                }
+                              >
+                                Hapus
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          </div>
+          </Card>
 
           {/* FORM SIDEBAR / READ-ONLY NOTICE */}
           <div className="space-y-6">
             {canManageMasterData ? (
-              <div className="space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
-                <h3 className="text-sm font-bold text-neutral-900">
+              <Card className="p-6">
+                <h3 className="mb-4 text-sm font-bold text-foreground">
                   {tabConfig[activeTab].formTitle}
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-neutral-700">
-                      Nama *
-                    </label>
-                    <input
-                      type="text"
+                    <Label htmlFor="master-nama">Nama *</Label>
+                    <Input
+                      id="master-nama"
                       name="nama"
                       value={formData.nama}
                       onChange={handleChange}
                       placeholder={tabConfig[activeTab].placeholderNama}
-                      className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
                       required
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-neutral-700">
-                      Kode
-                    </label>
-                    <input
-                      type="text"
+                    <Label htmlFor="master-kode">Kode</Label>
+                    <Input
+                      id="master-kode"
                       name="kode"
                       value={formData.kode}
                       onChange={handleChange}
                       placeholder="KODE"
-                      className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 font-mono text-xs text-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
+                      className="font-mono"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-neutral-700">
-                      Deskripsi
-                    </label>
-                    <textarea
+                    <Label htmlFor="master-deskripsi">Deskripsi</Label>
+                    <Textarea
+                      id="master-deskripsi"
                       name="deskripsi"
                       value={formData.deskripsi}
                       onChange={handleChange}
                       rows={3}
                       placeholder="Opsional"
-                      className="w-full resize-none rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
                     />
                   </div>
-                  <button
+                  <Button
                     type="submit"
-                    className="w-full cursor-pointer rounded-xl bg-neutral-900 py-3 text-xs font-medium text-white shadow-2xs transition-all hover:bg-neutral-800"
+                    variant="primary"
+                    size="md"
+                    className="w-full"
                   >
                     {tabConfig[activeTab].btnSubmit}
-                  </button>
+                  </Button>
                 </form>
-              </div>
+              </Card>
             ) : (
-              <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
-                <h3 className="text-xs font-bold text-amber-900">
+              <Alert variant="warning">
+                <AlertTitle className="text-xs font-bold">
                   Mode Pratinjau (Read-Only)
-                </h3>
-                <p className="text-xs leading-relaxed text-amber-800">
+                </AlertTitle>
+                <AlertDescription className="text-xs leading-relaxed">
                   Pengelolaan master data (tambah, ubah, dan hapus) hanya dapat
                   dilakukan oleh pengguna dengan hak akses{" "}
                   <strong>Admin</strong>.
-                </p>
-              </div>
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </div>
       </div>
 
       {/* MODAL POPUP EDIT (Khusus Admin) */}
-      {canManageMasterData && isEditOpen && editingItem && (
-        <div className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/40 p-4 backdrop-blur-xs duration-200 fade-in">
-          <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-base font-bold text-neutral-900">
-              Ubah {activeTab}
-            </h3>
+      <Dialog
+        open={Boolean(canManageMasterData && isEditOpen && editingItem)}
+        onOpenChange={(open) => {
+          if (!open) setIsEditOpen(false)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ubah {activeTab}</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-neutral-700">
-                  Nama *
-                </label>
-                <input
-                  type="text"
+                <Label htmlFor="edit-nama">Nama *</Label>
+                <Input
+                  id="edit-nama"
                   value={editingItem.nama}
                   onChange={(e) =>
                     setEditingItem({ ...editingItem, nama: e.target.value })
                   }
-                  className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-neutral-700">
-                  Kode
-                </label>
-                <input
-                  type="text"
+                <Label htmlFor="edit-kode">Kode</Label>
+                <Input
+                  id="edit-kode"
                   value={editingItem.kode}
                   onChange={(e) =>
                     setEditingItem({ ...editingItem, kode: e.target.value })
                   }
-                  className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 font-mono text-xs text-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
+                  className="font-mono"
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-neutral-700">
-                  Deskripsi
-                </label>
-                <textarea
+                <Label htmlFor="edit-deskripsi">Deskripsi</Label>
+                <Textarea
+                  id="edit-deskripsi"
                   value={editingItem.deskripsi}
                   onChange={(e) =>
                     setEditingItem({
@@ -398,28 +435,25 @@ export function MasterDataView({
                     })
                   }
                   rows={3}
-                  className="w-full resize-none rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:outline-none"
                 />
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
+              <DialogFooter>
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setIsEditOpen(false)}
-                  className="cursor-pointer rounded-xl px-4 py-2 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
                 >
                   Batal
-                </button>
-                <button
-                  type="submit"
-                  className="cursor-pointer rounded-xl bg-neutral-900 px-4 py-2 text-xs font-medium text-white shadow-2xs transition-all hover:bg-neutral-800"
-                >
+                </Button>
+                <Button type="submit" variant="primary" size="sm">
                   Simpan Perubahan
-                </button>
-              </div>
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

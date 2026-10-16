@@ -1,3 +1,7 @@
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
+
 export interface MainAssetStat {
   totalValue: number
   filledCount: number
@@ -79,7 +83,7 @@ export function DashboardStats({
     lastUpdated ||
     new Intl.DateTimeFormat("id-ID", {
       day: "numeric",
-      month: "long", // Dibereskan: 'long' dengan l kecil (bukan 'Long')
+      month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
@@ -129,7 +133,7 @@ export function DashboardStats({
   return (
     <div className="flex flex-col space-y-2">
       {/* 1. Teks Metadata Atas */}
-      <p className="text-[11px] text-neutral-400">
+      <p className="text-[11px] text-muted-foreground">
         Data per {formattedLastUpdated} &bull; {sourceInfo}
       </p>
 
@@ -165,12 +169,14 @@ export function DashboardStats({
           </div>
 
           {remainingCount > 0 && (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={onCompletePricesClick}
-              className="w-fit cursor-pointer rounded-full bg-neutral-900 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-neutral-800"
+              className="w-fit rounded-full"
             >
               Lengkapi {remainingCount} harga →
-            </button>
+            </Button>
           )}
         </div>
 
@@ -178,30 +184,27 @@ export function DashboardStats({
         <div className="flex flex-col justify-between space-y-4">
           <div className="grid shrink-0 grid-cols-3 gap-3">
             {displayMiniStats.map((stat, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-neutral-200 bg-white p-3.5 shadow-sm"
-              >
-                <p className="text-[10px] font-medium text-neutral-400">
+              <Card key={idx} className="p-3.5">
+                <p className="text-[10px] font-medium text-muted-foreground">
                   {stat.label}
                 </p>
-                <p className="mt-1 text-xl font-bold text-neutral-900">
+                <p className="mt-1 text-xl font-bold text-foreground">
                   {stat.value}
                 </p>
-                <p className="mt-0.5 text-[9px] text-neutral-400">
+                <p className="mt-0.5 text-[9px] text-muted-foreground">
                   {stat.subtext}
                 </p>
-              </div>
+              </Card>
             ))}
           </div>
 
           {/* Box Perlu Tindakan */}
-          <div className="flex max-h-52.5 flex-col justify-between space-y-2 rounded-2xl border border-rose-200 bg-rose-50/70 p-4 shadow-sm">
+          <Card className="flex max-h-52.5 flex-col justify-between space-y-2 border-rose-200 bg-rose-50/70 p-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded-md bg-rose-900 px-2 py-0.5 text-[10px] font-bold text-white">
+                <Badge variant="destructive" className="bg-rose-900 text-white">
                   Perlu tindakan
-                </span>
+                </Badge>
                 <span className="truncate text-[11px] font-medium text-rose-800">
                   {displayAlert.items.length} aset &bull;{" "}
                   {displayAlert.formCode}
@@ -230,17 +233,19 @@ export function DashboardStats({
                         ({item.qty})
                       </span>
                     </span>
-                    <button
+                    <Button
+                      variant="link"
+                      size="sm"
                       onClick={() => onActionClick?.(item.code)}
-                      className="ml-2 shrink-0 cursor-pointer text-[10px] font-semibold text-rose-600 hover:underline"
+                      className="ml-2 h-auto p-0 text-[10px] font-semibold text-rose-600 hover:underline"
                     >
                       Pecah record →
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>

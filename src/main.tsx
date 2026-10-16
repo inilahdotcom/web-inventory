@@ -24,8 +24,10 @@ declare module "@tanstack/react-router" {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}> {/* ✅ 3. Bungkus aplikasi dengan QueryClientProvider */}
-      <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      {" "}
+      {/* ✅ 3. Bungkus aplikasi dengan QueryClientProvider */}
+      <ThemeProvider defaultTheme="light">
         <RouterProvider router={router} />
       </ThemeProvider>
     </QueryClientProvider>

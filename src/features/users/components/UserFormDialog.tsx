@@ -1,5 +1,9 @@
-import { useId, useState, type FormEvent, type InputHTMLAttributes } from "react"
+import { useId, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectItem } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Modal } from "@/components/ui/Modal"
 import type {
   CreateUserPayload,
@@ -16,25 +20,6 @@ interface UserFormDialogProps {
   error: string
   onClose: () => void
   onSubmit: (values: UserFormValues) => Promise<void>
-}
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-[#e0e2e8] bg-white px-3 text-sm outline-none focus:border-[#4262ff] focus:ring-2 focus:ring-[#4262ff]/20"
-
-function TextField({
-  label,
-  id,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & {
-  label: string
-  id: string
-}) {
-  return (
-    <label htmlFor={id} className="flex flex-col gap-1.5 text-xs font-semibold">
-      {label}
-      <input id={id} className={fieldClass} {...props} />
-    </label>
-  )
 }
 
 export function UserFormDialog({
@@ -78,86 +63,117 @@ export function UserFormDialog({
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            id={`${id}-name`}
-            label="Nama lengkap"
-            autoComplete="name"
-            value={values.name}
-            onChange={(event) => update("name", event.target.value)}
+          {/* Nama */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-name`}>Nama lengkap</Label>
+            <Input
+              id={`${id}-name`}
+              autoComplete="name"
+              value={values.name}
+              onChange={(e) => update("name", e.target.value)}
+              required
+              disabled={busy}
+            />
+          </div>
+
+          {/* Telepon */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-phone`}>Nomor telepon</Label>
+            <Input
+              id={`${id}-phone`}
+              type="tel"
+              autoComplete="tel"
+              value={values.phone}
+              onChange={(e) => update("phone", e.target.value)}
+              disabled={busy}
+            />
+          </div>
+        </div>
+
+        {/* Email */}
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-email`}>Email</Label>
+          <Input
+            id={`${id}-email`}
+            type="email"
+            autoComplete="email"
+            value={values.email}
+            onChange={(e) => update("email", e.target.value)}
             required
             disabled={busy}
           />
-          <TextField
-            id={`${id}-phone`}
-            label="Nomor telepon"
-            type="tel"
-            autoComplete="tel"
-            value={values.phone}
-            onChange={(event) => update("phone", event.target.value)}
+        </div>
+
+        {/* Password */}
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-password`}>
+            {user ? "Password baru (opsional)" : "Password"}
+          </Label>
+          <Input
+            id={`${id}-password`}
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={values.password}
+            onChange={(e) => update("password", e.target.value)}
+            required={!user}
             disabled={busy}
           />
         </div>
-        <TextField
-          id={`${id}-email`}
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={values.email}
-          onChange={(event) => update("email", event.target.value)}
-          required
-          disabled={busy}
-        />
-        <TextField
-          id={`${id}-password`}
-          label={user ? "Password baru (opsional)" : "Password"}
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          value={values.password}
-          onChange={(event) => update("password", event.target.value)}
-          required={!user}
-          disabled={busy}
-        />
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <label htmlFor={`${id}-role`} className="flex flex-col gap-1.5 text-xs font-semibold">
-            Peran
-            <select
+          {/* Peran */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-role`}>Peran</Label>
+            <Select
               id={`${id}-role`}
-              className={fieldClass}
               value={values.role}
-              onChange={(event) => update("role", event.target.value as UserRole)}
+              onChange={(e) => update("role", e.target.value as UserRole)}
               disabled={busy}
             >
-              <option value="admin">Admin</option>
-              <option value="staff_ga">Staff GA</option>
-              <option value="viewer">Viewer</option>
-            </select>
-          </label>
-          <label htmlFor={`${id}-status`} className="flex flex-col gap-1.5 text-xs font-semibold">
-            Status
-            <select
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="staff_ga">Staff GA</SelectItem>
+              <SelectItem value="viewer">Viewer</SelectItem>
+            </Select>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-status`}>Status</Label>
+            <Select
               id={`${id}-status`}
-              className={fieldClass}
               value={values.status}
-              onChange={(event) => update("status", event.target.value as UserStatus)}
+              onChange={(e) => update("status", e.target.value as UserStatus)}
               disabled={busy}
             >
-              <option value="active">Aktif</option>
-              <option value="inactive">Nonaktif</option>
-            </select>
-          </label>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="inactive">Nonaktif</SelectItem>
+            </Select>
+          </div>
         </div>
+
         {error && (
-          <p role="alert" className="rounded-lg bg-[#fff8e0] px-3 py-2 text-sm text-[#746019]">
-            {error}
-          </p>
+          <Alert variant="warning">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
+
         <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={busy}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            disabled={busy}
+          >
             Batal
           </Button>
           <Button type="submit" size="sm" disabled={busy}>
-            {busy ? "Menyimpan…" : user ? "Simpan perubahan" : "Tambah pengguna"}
+            {busy
+              ? "Menyimpan…"
+              : user
+                ? "Simpan perubahan"
+                : "Tambah pengguna"}
           </Button>
         </div>
       </form>

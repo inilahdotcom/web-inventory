@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
+import { LayoutGrid, MoreVertical, Table2, X, ChevronDown } from "lucide-react"
 import { assetService } from "@/services/assetServices"
-import { profileService } from "@/services/profileService"
-import { authService } from "@/services/authServices"
 import { usePermission } from "@/hooks/usePermission"
 import { toast } from "sonner"
 import { downloadBlob } from "@/lib/DownloadBlob"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Pill, FilterChip } from "@/components/ui/Pill"
+import { PagePagination } from "@/components/ui/pagination"
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
 import type {
   AssetCondition,
   AssetListItem,
@@ -62,11 +66,14 @@ type QuickFilter =
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
-const conditionClass: Record<AssetCondition, string> = {
-  Bagus: "bg-[#c3faf5] text-[#187574]",
-  "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
-  "Rusak Berat": "bg-[#ffc6c6] text-[#600000]",
-  Hilang: "bg-[#e0e2e8] text-[#555a6a]",
+const conditionVariantMap: Record<
+  AssetCondition,
+  "bagus" | "rusak-ringan" | "rusak-berat" | "hilang"
+> = {
+  Bagus: "bagus",
+  "Rusak Ringan": "rusak-ringan",
+  "Rusak Berat": "rusak-berat",
+  Hilang: "hilang",
 }
 
 const emptyPagination: AssetPagination = {
@@ -168,56 +175,6 @@ export function AssetListView() {
   // Ambil data permission untuk kontrol hak akses UI
   const { canCreateEditAsset, canDeleteRestoreAsset, canExportLaporan } =
     usePermission()
-
-  const { data: profile } = useQuery({
-    queryKey: ["dashboard", "profile"],
-    queryFn: () => profileService.get(),
-  })
-
-  const displayName: string = profile?.attributes?.name || ""
-  const userInitials = displayName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const profileRef = useRef<HTMLDivElement>(null)
-
-  // Handler Logout Aktif
-  const handleLogout = async () => {
-    setIsProfileOpen(false)
-    try {
-      if (authService?.logout) {
-        await authService.logout()
-      }
-    } catch (err) {
-      console.error("Gagal request logout:", err)
-    } finally {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      sessionStorage.clear()
-
-      queryClient.clear()
-      toast.success("Berhasil keluar dari akun")
-      navigate({ to: "/auth/login" })
-    }
-  }
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target as Node)
-      ) {
-        setIsProfileOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
 
   const searchParam = useSearch({ strict: false }) as {
     search?: string
@@ -801,76 +758,7 @@ export function AssetListView() {
         </form>
 
         <div className="ml-auto flex items-center gap-2.5">
-          <div className="relative" ref={profileRef}>
-            <button
-              type="button"
-              onClick={() => setIsProfileOpen((prev) => !prev)}
-              aria-label="Menu profil"
-              aria-expanded={isProfileOpen}
-              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600 transition select-none hover:ring-2 hover:ring-rose-300 focus:outline-none"
-            >
-              {userInitials || "DZ"}
-            </button>
-
-            {isProfileOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white py-1.5 shadow-lg ring-1 ring-black/5 focus:outline-none">
-                <div className="border-b border-neutral-100 px-4 py-2">
-                  <p className="truncate text-xs font-semibold text-neutral-900">
-                    {displayName || "Dzaki Admin"}
-                  </p>
-                  <p className="text-[10px] text-neutral-500">
-                    Akun Terverifikasi
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileOpen(false)
-                    navigate({ to: "/profile" })
-                  }}
-                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
-                >
-                  <svg
-                    className="h-4 w-4 text-neutral-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  Detail Profile
-                </button>
-
-                {/* Tombol Logout Aktif */}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                >
-                  <svg
-                    className="h-4 w-4 text-rose-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
+          <ProfileDropdown />
         </div>
       </header>
 
@@ -903,13 +791,13 @@ export function AssetListView() {
             )}
 
             {canCreateEditAsset && (
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 onClick={() => navigate({ to: "/asset/new" })}
-                className="col-span-2 flex h-10 cursor-pointer items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
+                className="col-span-2 h-10 px-5 text-sm sm:col-auto"
               >
                 + Tambah Aset
-              </button>
+              </Button>
             )}
           </div>
         </section>
@@ -921,7 +809,7 @@ export function AssetListView() {
               <span className="text-[10px] opacity-75">{assets.length}</span>
             </Pill>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "needsAttention"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -931,9 +819,9 @@ export function AssetListView() {
               }}
             >
               Perlu tindakan
-            </ReferenceChip>
+            </FilterChip>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "withoutPrice"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -943,9 +831,9 @@ export function AssetListView() {
               }}
             >
               Tanpa harga
-            </ReferenceChip>
+            </FilterChip>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "withoutPhoto"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -955,9 +843,9 @@ export function AssetListView() {
               }}
             >
               Tanpa foto
-            </ReferenceChip>
+            </FilterChip>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "duplicateCondition"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -967,7 +855,7 @@ export function AssetListView() {
               }}
             >
               Kondisi duplikat
-            </ReferenceChip>
+            </FilterChip>
 
             {hasActiveFilters && !hasSavedPreset && (
               <button
@@ -1165,37 +1053,21 @@ export function AssetListView() {
         </div>
 
         {loading && (
-          <div
-            role="status"
-            className="rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center text-sm text-[#6b6f7e]"
-          >
-            Memuat daftar aset dari server...
-          </div>
+          <LoadingState message="Memuat daftar aset dari server..." />
         )}
         {!loading && errorMessage && (
-          <div
-            role="alert"
-            className="flex flex-col items-center gap-3 rounded-2xl border border-[#ffc6c6] bg-white px-5 py-10 text-center"
-          >
-            <p className="text-sm text-[#600000]">{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() =>
-                queryClient.invalidateQueries({ queryKey: ["assets"] })
-              }
-              className="h-9 cursor-pointer rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white"
-            >
-              Coba lagi
-            </button>
-          </div>
+          <ErrorState
+            message={errorMessage}
+            onRetry={() =>
+              queryClient.invalidateQueries({ queryKey: ["assets"] })
+            }
+          />
         )}
         {!loading && !errorMessage && visibleAssets.length === 0 && (
-          <div className="rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center">
-            <p className="text-sm font-semibold">Aset tidak ditemukan</p>
-            <p className="mt-1 text-xs text-[#6b6f7e]">
-              Ubah kata pencarian atau reset filter untuk melihat data lain.
-            </p>
-          </div>
+          <EmptyState
+            title="Aset tidak ditemukan"
+            description="Ubah kata pencarian atau reset filter untuk melihat data lain."
+          />
         )}
 
         <section
@@ -1269,83 +1141,23 @@ export function AssetListView() {
               ))}
             </div>
           </div>
-          <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3">
-            <span className="text-xs text-[#6b6f7e]">
-              Menampilkan {visibleAssets.length} aset &middot; Halaman{" "}
-              {cursorHistory.length + 1}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <PageSizeMenu
-                pageSize={pageSize}
-                onChange={handlePageSizeChange}
-              />
-              <Page
-                bordered
-                disabled={cursorHistory.length === 0}
-                onClick={goToPreviousPage}
-              >
-                &lsaquo;
-              </Page>
-              <Page active>{cursorHistory.length + 1}</Page>
-              <Page
-                bordered
-                disabled={!pagination.hasNextPage}
-                onClick={goToNextPage}
-              >
-                &rsaquo;
-              </Page>
-            </div>
-          </footer>
+          <PagePagination
+            currentPage={cursorHistory.length + 1}
+            hasPreviousPage={cursorHistory.length > 0}
+            hasNextPage={pagination.hasNextPage}
+            onPrevious={goToPreviousPage}
+            onNext={goToNextPage}
+            totalVisible={visibleAssets.length}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </section>
       </div>
     </div>
   )
 }
 
-function PageSizeMenu({
-  pageSize,
-  onChange,
-}: {
-  pageSize: number
-  onChange: (size: number) => void
-}) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#e0e2e8] bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5]"
-      >
-        <span>{pageSize} / halaman</span>
-        <ChevronDown size={13} strokeWidth={2.5} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 bottom-10 z-20 w-32 rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
-          {[10, 25, 100].map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => {
-                onChange(size)
-                setOpen(false)
-              }}
-              className={`flex w-full cursor-pointer rounded-lg px-3 py-1.5 text-left text-xs font-medium hover:bg-[#f5f6f8] ${
-                pageSize === size
-                  ? "bg-[#f0efff] text-[#4262ff]"
-                  : "text-[#555a6a]"
-              }`}
-            >
-              {size} / halaman
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+// Pill, FilterChip, PagePagination sudah dipindahkan ke @/components/ui
 
 function AssetRow({
   asset,
@@ -1428,11 +1240,9 @@ function AssetRow({
       </span>
       <span className="text-xs text-[#555a6a]">{asset.unit}</span>
       <span>
-        <span
-          className={`rounded-full px-2.25 py-0.75 text-[11px] font-semibold ${conditionClass[asset.condition]}`}
-        >
+        <Badge variant={conditionVariantMap[asset.condition]}>
           {asset.condition}
-        </span>
+        </Badge>
       </span>
       <span className="min-w-0 truncate text-xs text-[#555a6a]">
         {asset.location}
@@ -1617,11 +1427,12 @@ function AssetCard({
                   </span>
                 ))}
             </button>
-            <span
-              className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
+            <Badge
+              variant={conditionVariantMap[asset.condition]}
+              className="ml-auto shrink-0"
             >
               {asset.condition}
-            </span>
+            </Badge>
           </div>
           <button
             type="button"
@@ -1669,52 +1480,6 @@ function CheckBox({
       className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
-    </button>
-  )
-}
-
-function Pill({
-  children,
-  active = false,
-  disabled = false,
-  className = "",
-  onClick,
-}: {
-  children: ReactNode
-  active?: boolean
-  disabled?: boolean
-  className?: string
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex h-8.5 cursor-pointer items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function ReferenceChip({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean
-  children: ReactNode
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`flex h-8.5 cursor-pointer items-center rounded-full border px-3.75 text-xs font-semibold transition ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
-    >
-      {children}
     </button>
   )
 }
@@ -1966,30 +1731,5 @@ function PriceRangeFilter({
         </div>
       )}
     </div>
-  )
-}
-
-function Page({
-  children,
-  active = false,
-  bordered = false,
-  disabled = false,
-  onClick,
-}: {
-  children: ReactNode
-  active?: boolean
-  bordered?: boolean
-  disabled?: boolean
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`grid size-8 cursor-pointer place-items-center rounded-full text-xs disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
-    >
-      {children}
-    </button>
   )
 }
