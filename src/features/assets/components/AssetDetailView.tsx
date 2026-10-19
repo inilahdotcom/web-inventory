@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Route } from "@/routes/_app/asset/$id/"
 import { usePermission } from "@/hooks/usePermission"
 import {
@@ -14,6 +14,9 @@ import {
   masterDataService,
   type MasterDataItem,
 } from "@/services/masterDataService"
+import { profileService } from "@/services/profileService"
+import { authService } from "@/services/authServices"
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -30,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TimelineItem, AuditItem } from "@/components/ui/timeline"
 import { SectionHeading } from "@/components/ui/section"
+import { LogOut, User } from "lucide-react"
+import { toast } from "sonner"
 
 type AssetDraft = Record<
   | "name"
@@ -138,6 +143,56 @@ export function AssetDetailView() {
 
   // Memanggil permission hook untuk mengontrol hak akses UI
   const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
+
+  // Profile data & Dropdown state (Disamakan dengan DashboardView)
+  const { data: profile } = useQuery({
+    queryKey: ["dashboard", "profile"],
+    queryFn: () => profileService.get(),
+  })
+
+  const displayName: string = profile?.attributes?.name || ""
+  const userInitials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const handleLogout = async () => {
+    setIsProfileOpen(false)
+    try {
+      if (authService?.logout) {
+        await authService.logout()
+      }
+    } catch (err) {
+      console.error("Gagal request logout:", err)
+    } finally {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+
+      queryClient.clear()
+      toast.success("Berhasil keluar dari akun")
+      navigate({ to: "/auth/login" })
+    }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const [detail, setDetail] = useState<AssetDetailAttr | null>(null)
   const [asset, setAsset] = useState<AssetDraft | null>(null)
@@ -437,13 +492,52 @@ export function AssetDetailView() {
             {detail.attributes.code}
           </span>
         </div>
+
+        {/* PROFILE DROPDOWN SAMAA PERSIS DENGAN DASHBOARDVIEW */}
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-hairline text-[13px] text-muted-foreground">
-            ?
-          </span>
-          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-[11px] font-semibold text-[#600000]">
-            RS
-          </span>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600 transition select-none hover:ring-2 hover:ring-rose-300 focus:outline-none"
+            >
+              {userInitials || "DZ"}
+            </button>
+
+            {isProfileOpen && (
+              <Card className="absolute right-0 z-50 mt-2 w-48 py-1.5 shadow-lg">
+                <div className="border-b border-neutral-100 px-4 py-2">
+                  <p className="truncate text-xs font-semibold text-foreground">
+                    {displayName || "Dzaki Admin"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Akun Terverifikasi
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                    navigate({ to: "/profile" })
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50"
+                >
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  Detail Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                >
+                  <LogOut className="h-4 w-4 text-rose-500" />
+                  Logout
+                </button>
+              </Card>
+            )}
+          </div>
         </div>
       </header>
 
@@ -492,7 +586,6 @@ export function AssetDetailView() {
               Mutasi
             </Button>
 
-            {/* Sembunyikan Tombol Hapus jika bukan Admin */}
             {canDeleteRestoreAsset && (
               <Button
                 variant="secondary"
@@ -503,7 +596,6 @@ export function AssetDetailView() {
               </Button>
             )}
 
-            {/* Sembunyikan Tombol Ubah Aset jika Viewer */}
             {canCreateEditAsset && (
               <Button
                 variant="primary"
@@ -535,7 +627,6 @@ export function AssetDetailView() {
                   {photos.length} dari 5 terunggah
                 </span>
 
-                {/* Sembunyikan Tombol Unggah Foto jika Viewer */}
                 {canCreateEditAsset && (
                   <button
                     type="button"
@@ -663,7 +754,6 @@ export function AssetDetailView() {
                 />
               </div>
 
-              {/* Sembunyikan Opsi Pecah Record jika Viewer */}
               {detail.attributes.quantity > 1 && canCreateEditAsset && (
                 <div className="flex flex-col gap-3 rounded-xl bg-[#fff8e0] px-3.5 py-3 sm:flex-row sm:items-center">
                   <span className="text-[12.5px] leading-[1.45] text-[#746019]">

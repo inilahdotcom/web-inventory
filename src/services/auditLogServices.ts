@@ -21,6 +21,30 @@ export interface AuditLogQueryParams {
   pageSize?: number
 }
 
+export interface AuditLogMappedUI {
+  id: number
+  type:
+    | "UPDATE"
+    | "DELETE"
+    | "CREATE"
+    | "IMPORT"
+    | "IMPORT_UPDATE"
+    | "RESTORE"
+    | "MOVE"
+    | "SPLIT"
+    | string
+  user: {
+    name: string
+    role: string
+    ip: string
+  }
+  timestamp: string
+  target: string
+  oldValues?: Record<string, unknown>
+  newValues?: Record<string, unknown>
+  description?: string
+}
+
 // 1. Helper Parse JSON aman (Mendukung wrapper `attributes` maupun objek langsung)
 const safeParseJSON = (str?: string | null): Record<string, unknown> | null => {
   if (!str) return null
@@ -80,7 +104,6 @@ const normalizeObject = (obj: unknown) => {
     else if (stdKey === "notes" || stdKey === "description") stdKey = "notes"
 
     const val = typedObj[key]
-    // Menyeragamkan nilai null/kosong/empty string
     res[stdKey] =
       val === null || val === undefined || val === "" || val === "-" ? "-" : val
   })
@@ -106,7 +129,6 @@ const getDiffValues = (oldObj: unknown, newObj: unknown) => {
     const valOld = cleanOld[key]
     const valNew = cleanNew[key]
 
-    // Hanya masukkan ke diff jika nilainya terbukti BERBEDA secara nyata
     if (JSON.stringify(valOld) !== JSON.stringify(valNew)) {
       oldDiff[key] = valOld ?? "-"
       newDiff[key] = valNew ?? "-"
@@ -119,7 +141,7 @@ const getDiffValues = (oldObj: unknown, newObj: unknown) => {
   }
 }
 
-// 4. Helper Formatter Deskripsi untuk CREATE, DELETE, RESTORE, & IMPORT
+// 4. Helper Formatter Deskripsi Ramah Pengguna
 const formatDescription = (
   action: string,
   entityType: string,
@@ -144,7 +166,27 @@ const formatDescription = (
     return desc
   }
 
-  if (upperAction === "DELETE" || upperAction === "PERMANENT_DELETE") {
+  if (upperAction === "IMPORT_CREATE" || upperAction === "IMPORT") {
+    return `Impor aset ${name ? `'${name}'` : ""} (${code}) dari file Excel berhasil disimpan ke sistem.`
+  }
+
+  if (upperAction === "IMPORT_UPDATE") {
+    return `Aset ${name ? `'${name}'` : ""} (${code}) diperbarui lewat impor Excel. Tidak ada perubahan field yang terdeteksi.`
+  }
+
+  if (upperAction === "MOVE") {
+    return `Mutasi aset. Perubahan lokasi atau pemegang aset (${code}) berhasil dicatat.`
+  }
+
+  if (upperAction === "SPLIT" || upperAction === "CREATE_SPLIT") {
+    return `Pemecahan unit aset (${code}) berhasil dilakukan.`
+  }
+
+  if (
+    upperAction === "DELETE" ||
+    upperAction === "SOFT_DELETE" ||
+    upperAction === "PERMANENT_DELETE"
+  ) {
     return `Soft delete. Record dipindahkan ke arsip/dihapus dari sistem. Target: ${code}`
   }
 
@@ -152,25 +194,22 @@ const formatDescription = (
     return `Record ${entityType} ${name ? `${name} (${code})` : code} berhasil dipulihkan dari arsip.`
   }
 
-  if (upperAction === "IMPORT") {
-    return `Import data master ${entityType} berhasil diproses.`
-  }
-
   return `Aktivitas ${action} pada ${entityType} berhasil dicatat.`
 }
 
 export const auditLogService = {
-  getLogs: async (params?: AuditLogQueryParams) => {
+  getLogs: async (
+    params?: AuditLogQueryParams
+  ): Promise<AuditLogMappedUI[]> => {
     const response = await api.get("/audit-logs", { params })
     const rawList: RawAuditLogFromGo[] =
       response.data?.data || response.data || []
 
-    // 1. DEDUPLIKASI CERDAS: Menghapus record ganda (asset & assets) dari backend
     const seenMap = new Set<string>()
     const uniqueRawList: RawAuditLogFromGo[] = []
 
     for (const item of rawList) {
-      const timeKey = item.createdAt.substring(0, 19)
+      const timeKey = item.createdAt ? item.createdAt.substring(0, 19) : ""
       const uniqueKey = `${item.action.toUpperCase()}_${item.entityId}_${timeKey}`
 
       if (!seenMap.has(uniqueKey)) {
@@ -179,7 +218,6 @@ export const auditLogService = {
       }
     }
 
-    // 2. MAPPING KE FORMAT UI FIGMA
     return uniqueRawList.map((item) => {
       const actionUpper = item.action.toUpperCase()
       const oldParsed = safeParseJSON(item.oldData)
@@ -189,21 +227,43 @@ export const auditLogService = {
       let newValues: Record<string, unknown> | undefined = undefined
       let description: string | undefined = undefined
 
-      if (actionUpper === "UPDATE" && (oldParsed || newParsed)) {
-        const diff = getDiffValues(oldParsed, newParsed)
-        oldValues = diff.oldValues
-        newValues = diff.newValues
-      } else {
-        description = formatDescription(
+      const describe = () =>
+        formatDescription(
           item.action,
           item.entityType,
           oldParsed,
           newParsed,
           item.entityId
         )
+
+      if (
+        (actionUpper === "UPDATE" || actionUpper === "IMPORT_UPDATE") &&
+        (oldParsed || newParsed)
+      ) {
+        const diff = getDiffValues(oldParsed, newParsed)
+        oldValues = diff.oldValues
+        newValues = diff.newValues
+        if (!oldValues && !newValues) {
+          description = describe()
+        }
+      } else {
+        description = describe()
       }
 
-      // Ambil kode aset / ID entitas
+      let uiType: AuditLogMappedUI["type"]
+      if (actionUpper === "UPDATE") uiType = "UPDATE"
+      else if (actionUpper === "IMPORT_UPDATE") uiType = "IMPORT_UPDATE"
+      else if (actionUpper === "DELETE" || actionUpper === "SOFT_DELETE")
+        uiType = "DELETE"
+      else if (actionUpper === "IMPORT" || actionUpper === "IMPORT_CREATE")
+        uiType = "IMPORT"
+      else if (actionUpper === "RESTORE") uiType = "RESTORE"
+      else if (actionUpper === "MOVE") uiType = "MOVE"
+      else if (actionUpper === "SPLIT" || actionUpper === "CREATE_SPLIT")
+        uiType = "SPLIT"
+      else if (actionUpper === "CREATE") uiType = "CREATE"
+      else uiType = actionUpper as AuditLogMappedUI["type"]
+
       const assetCode = String(
         newParsed?.asset_code ||
           newParsed?.AssetCode ||
@@ -214,11 +274,10 @@ export const auditLogService = {
 
       return {
         id: item.id,
-        type: actionUpper as
-          "UPDATE" | "DELETE" | "CREATE" | "IMPORT" | "RESTORE",
+        type: uiType,
         user: {
           name: item.userName || `User #${item.changedBy}`,
-          role: "Admin",
+          role: "Admin / Staff",
           ip: "192.168.1.10",
         },
         timestamp: new Date(item.createdAt).toLocaleString("id-ID", {
@@ -235,5 +294,25 @@ export const auditLogService = {
         description,
       }
     })
+  },
+
+  // FUNGSI BARU: Memanggil endpoint Backend Go untuk ekspor .xlsx
+  exportLog: async (params?: AuditLogQueryParams) => {
+    const response = await api.get("/audit-logs/export", {
+      params,
+      responseType: "blob",
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute(
+      "download",
+      `Audit_Logs_${new Date().toISOString().slice(0, 10)}.xlsx`
+    )
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   },
 }
