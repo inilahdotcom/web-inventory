@@ -32,6 +32,7 @@ export interface AuditLogMappedUI {
     | "RESTORE"
     | "MOVE"
     | "SPLIT"
+    | string
   user: {
     name: string
     role: string
@@ -103,7 +104,6 @@ const normalizeObject = (obj: unknown) => {
     else if (stdKey === "notes" || stdKey === "description") stdKey = "notes"
 
     const val = typedObj[key]
-    // Menyeragamkan nilai null/kosong/empty string
     res[stdKey] =
       val === null || val === undefined || val === "" || val === "-" ? "-" : val
   })
@@ -129,7 +129,6 @@ const getDiffValues = (oldObj: unknown, newObj: unknown) => {
     const valOld = cleanOld[key]
     const valNew = cleanNew[key]
 
-    // Hanya masukkan ke diff jika nilainya terbukti BERBEDA secara nyata
     if (JSON.stringify(valOld) !== JSON.stringify(valNew)) {
       oldDiff[key] = valOld ?? "-"
       newDiff[key] = valNew ?? "-"
@@ -206,7 +205,6 @@ export const auditLogService = {
     const rawList: RawAuditLogFromGo[] =
       response.data?.data || response.data || []
 
-    // 1. DEDUPLIKASI CERDAS: Menghapus record ganda dari backend
     const seenMap = new Set<string>()
     const uniqueRawList: RawAuditLogFromGo[] = []
 
@@ -220,7 +218,6 @@ export const auditLogService = {
       }
     }
 
-    // 2. MAPPING KE FORMAT UI FIGMA
     return uniqueRawList.map((item) => {
       const actionUpper = item.action.toUpperCase()
       const oldParsed = safeParseJSON(item.oldData)
@@ -239,7 +236,6 @@ export const auditLogService = {
           item.entityId
         )
 
-      // UPDATE dan IMPORT_UPDATE punya data sebelum & sesudah, tampilkan diff-nya
       if (
         (actionUpper === "UPDATE" || actionUpper === "IMPORT_UPDATE") &&
         (oldParsed || newParsed)
@@ -254,8 +250,6 @@ export const auditLogService = {
         description = describe()
       }
 
-      // Pemetaan tipe aksi ke enum UI.
-      // Aksi yang tidak dikenal ditampilkan apa adanya (bukan dianggap CREATE).
       let uiType: AuditLogMappedUI["type"]
       if (actionUpper === "UPDATE") uiType = "UPDATE"
       else if (actionUpper === "IMPORT_UPDATE") uiType = "IMPORT_UPDATE"
@@ -270,7 +264,6 @@ export const auditLogService = {
       else if (actionUpper === "CREATE") uiType = "CREATE"
       else uiType = actionUpper as AuditLogMappedUI["type"]
 
-      // Ambil kode aset / ID entitas
       const assetCode = String(
         newParsed?.asset_code ||
           newParsed?.AssetCode ||
@@ -301,5 +294,25 @@ export const auditLogService = {
         description,
       }
     })
+  },
+
+  // FUNGSI BARU: Memanggil endpoint Backend Go untuk ekspor .xlsx
+  exportLog: async (params?: AuditLogQueryParams) => {
+    const response = await api.get("/audit-logs/export", {
+      params,
+      responseType: "blob",
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute(
+      "download",
+      `Audit_Logs_${new Date().toISOString().slice(0, 10)}.xlsx`
+    )
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   },
 }
