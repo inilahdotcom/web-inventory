@@ -17,7 +17,14 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ChevronDown, LogOut, User } from "lucide-react"
+import {
+  ChevronDown,
+  LogOut,
+  User,
+  Inbox,
+  Plus,
+  FileSpreadsheet,
+} from "lucide-react"
 import { toast } from "sonner"
 
 interface DashboardData {
@@ -98,7 +105,7 @@ export function DashboardView() {
   const [exporting, setExporting] = useState<ExportType | null>(null)
   const exportRef = useRef<HTMLDivElement>(null)
 
-  // Handler Logout Aktif
+  // Handler Logout
   const handleLogout = async () => {
     setIsProfileOpen(false)
     try {
@@ -170,6 +177,7 @@ export function DashboardView() {
   const handleExportExcel = () => runExport("excel")
   const handleExportPdf = () => runExport("pdf")
 
+  // Safe Mappings
   const categoryData = (data?.categories ?? []).map((c) => ({
     name: c.category_name,
     total: c.total_assets,
@@ -193,6 +201,13 @@ export function DashboardView() {
     count: b.total_assets,
     pct: Math.round((b.total_assets / maxBrandCount) * 100),
   }))
+
+  // PENGECEKAN KONDISI DATA TOTAL KOSONG
+  const isDashboardEmpty =
+    !data?.summary ||
+    (data.summary.total_asset_types === 0 &&
+      data.summary.total_quantity === 0 &&
+      data.summary.total_asset_value === 0)
 
   if (loading) {
     return (
@@ -242,7 +257,7 @@ export function DashboardView() {
 
   return (
     <div className="w-full text-[#1C1C1E]">
-      <header className="sticky top-0 z-10 w-full border-b border-hairline bg-white/90 px-3 py-3 backdrop-blur-md sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-10 w-full border-b border-neutral-200/80 bg-white/90 px-3 py-3 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
           <div className="flex max-w-md flex-1 items-center pl-14 lg:pl-0">
             <HeaderSearchDropdown />
@@ -255,6 +270,7 @@ export function DashboardView() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={isDashboardEmpty}
                   onClick={() => setIsExportOpen((prev) => !prev)}
                   className="gap-1.5 rounded-full"
                 >
@@ -325,7 +341,6 @@ export function DashboardView() {
                     Detail Profile
                   </button>
 
-                  {/* Tombol Logout Aktif */}
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -385,6 +400,7 @@ export function DashboardView() {
           </div>
         </div>
 
+        {/* SUMMARY STATS & ALERTS */}
         <DashboardStats
           summary={data?.summary}
           miniStats={[
@@ -419,13 +435,67 @@ export function DashboardView() {
           }
         />
 
-        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-          <CategoryBarChart data={categoryData} />
-          <ConditionDonutChart data={conditionData} />
-          <BrandProgressBar data={brandData} />
-        </div>
+        {/* OVERALL EMPTY STATE BANNER */}
+        {isDashboardEmpty ? (
+          <Card className="flex flex-col items-center justify-center border-dashed border-neutral-300 bg-neutral-50/50 p-12 text-center shadow-none">
+            <div className="grid size-12 place-items-center rounded-2xl bg-neutral-100 text-neutral-400">
+              <Inbox size={24} />
+            </div>
+            <h3 className="mt-4 text-sm font-semibold text-neutral-900">
+              Belum ada data inventaris
+            </h3>
+            <p className="mt-1 max-w-sm text-xs leading-relaxed text-neutral-500">
+              Sistem inventaris Anda masih kosong. Mulai tambahkan data aset
+              secara manual atau import dari file Excel.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              {canImportExcel && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    navigate({
+                      to: "/import/preview",
+                      search: { action: "preview" },
+                    })
+                  }
+                  className="gap-2 border-neutral-200 bg-white"
+                >
+                  <FileSpreadsheet size={14} />
+                  Import file Excel
+                </Button>
+              )}
+              {canCreateEditAsset && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    navigate({
+                      to: "/asset/new",
+                      search: { action: "new" },
+                    })
+                  }
+                  className="gap-2"
+                >
+                  <Plus size={14} />
+                  Tambah Aset Baru
+                </Button>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <>
+            {/* CHARTS GRID */}
+            <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+              <CategoryBarChart data={categoryData} />
+              <ConditionDonutChart data={conditionData} />
+              <BrandProgressBar data={brandData} />
+            </div>
 
-        <RecentActivityTable data={data?.recent_activities ?? []} />
+            {/* RECENT ACTIVITIES TABLE */}
+            <RecentActivityTable data={data?.recent_activities ?? []} />
+          </>
+        )}
       </main>
     </div>
   )

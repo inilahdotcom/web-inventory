@@ -775,11 +775,6 @@ export function AssetListView() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2.25">
-            <Pill className="h-10 px-4 text-sm">
-              Kolom{" "}
-              <span className="text-xs font-normal text-[#6b6f7e]">10/12</span>
-            </Pill>
-
             {canExportLaporan && (
               <Pill
                 className="h-10 px-4 text-sm"
