@@ -11,7 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export interface AuditLogItem {
   id: string | number
-  type: "UPDATE" | "DELETE" | "CREATE" | "IMPORT" | "RESTORE" | string
+  type:
+    | "UPDATE"
+    | "DELETE"
+    | "CREATE"
+    | "IMPORT"
+    | "IMPORT_UPDATE"
+    | "RESTORE"
+    | "MOVE"
+    | "SPLIT"
+    | string
   user: {
     name: string
     role: string
@@ -67,6 +76,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
   const getBadgeVariant = (type: string) => {
     switch (type.toUpperCase()) {
       case "UPDATE":
+      case "IMPORT_UPDATE":
         return "rusak-ringan" as const
       case "DELETE":
       case "PERMANENT_DELETE":
@@ -75,6 +85,8 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
         return "bagus" as const
       case "IMPORT":
       case "RESTORE":
+      case "MOVE":
+      case "SPLIT":
         return "secondary" as const
       default:
         return "outline" as const
@@ -121,7 +133,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               </select>
             </div>
 
-            {/* Filter Aksi */}
+            {/* Filter Aksi: value harus sama dengan kolom `action` di database */}
             <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
               <span className="text-neutral-500">Aksi:</span>
               <select
@@ -134,6 +146,11 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 <option value="UPDATE">UPDATE</option>
                 <option value="DELETE">DELETE</option>
                 <option value="RESTORE">RESTORE</option>
+                <option value="IMPORT_CREATE">IMPORT_CREATE</option>
+                <option value="IMPORT_UPDATE">IMPORT_UPDATE</option>
+                <option value="move">MOVE</option>
+                <option value="SPLIT">SPLIT</option>
+                <option value="CREATE_SPLIT">CREATE_SPLIT</option>
               </select>
             </div>
 
@@ -239,7 +256,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                   {/* KOLOM KIRI: User Info, Action Badge & Timestamp */}
                   <div className="w-full shrink-0 space-y-1.5 md:w-56">
                     <Badge variant={getBadgeVariant(log.type)}>
-                      {log.type}
+                      {log.type.replace("_", " ")}
                     </Badge>
                     <div>
                       <h4 className="text-xs font-bold text-foreground">

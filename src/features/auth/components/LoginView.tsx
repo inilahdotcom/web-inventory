@@ -7,7 +7,7 @@ export function LoginView() {
   const { data: publicStats, isLoading } = useQuery({
     queryKey: ["public-dashboard-stats"],
     queryFn: () => authService.getPublicStats(),
-    staleTime: 1000 * 60 * 5, // Cache selama 5 menit
+    staleTime: 1000 * 60 * 5,
   })
 
   // Angka riil dari backend (dengan fallback ke 44 & 122 jika loading/gagal)
@@ -58,7 +58,6 @@ export function LoginView() {
             terbaca.
           </p>
 
-          {/* Counter Statistik */}
           <div className="flex space-x-12 pt-4">
             <div>
               <div className="text-2xl font-bold text-amber-400">

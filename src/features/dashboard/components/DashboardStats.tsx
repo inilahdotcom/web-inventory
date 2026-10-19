@@ -71,14 +71,11 @@ export function DashboardStats({
   const filledCount = summary?.filled_price_count ?? mainStat?.filledCount ?? 0
   const totalValue = summary?.total_asset_value ?? mainStat?.totalValue ?? 0
 
-  // Sisa aset yang belum diisi harganya
   const remainingCount = Math.max(0, totalCount - filledCount)
 
-  // Hitung persentase untuk Progress Bar
   const progressPercentage =
     totalCount > 0 ? (filledCount / totalCount) * 100 : 0
 
-  // Tanggal otomatis realtime jika prop lastUpdated tidak dikirim
   const formattedLastUpdated =
     lastUpdated ||
     new Intl.DateTimeFormat("id-ID", {

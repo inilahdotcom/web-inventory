@@ -1178,16 +1178,16 @@ function AssetRow({
     isHighlighted && (asset.attention || asset.condition !== "Bagus")
 
   const rowStyle = isNeedsAttention
-    ? "border-l-4 border-l-rose-500 bg-rose-50/80 font-medium"
+    ? "bg-rose-50/60 shadow-[inset_3px_0_0_0_#f43f5e]"
     : isHighlighted || isNewImport
-      ? "border-l-4 border-l-emerald-500 bg-emerald-50/80 font-medium"
+      ? "bg-emerald-50/60 shadow-[inset_3px_0_0_0_#10b981]"
       : selected
         ? "bg-[#f5f3ff]"
         : "bg-white"
 
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-colors duration-1000 last:border-b-0 ${rowStyle}`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-all duration-700 last:border-b-0 ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
       <button
@@ -1195,22 +1195,22 @@ function AssetRow({
         onClick={onOpen}
         className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
       >
-        <span className="truncate font-mono text-xs text-[#4262ff]">
+        <span className="truncate font-mono text-xs font-semibold text-[#4262ff]">
           {asset.code}
         </span>
         {isNewImport && (
-          <span className="shrink-0 animate-pulse rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800">
+          <span className="shrink-0 animate-pulse rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
             Baru
           </span>
         )}
         {!isNewImport &&
           isHighlighted &&
           (isNeedsAttention ? (
-            <span className="shrink-0 rounded bg-rose-100 px-1 py-0.5 text-[9px] font-bold text-rose-800">
+            <span className="shrink-0 rounded-full bg-rose-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-rose-800">
               Perlu Tindakan
             </span>
           ) : (
-            <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800">
+            <span className="shrink-0 rounded-full bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
               Diperbarui
             </span>
           ))}
@@ -1387,16 +1387,16 @@ function AssetCard({
     isHighlighted && (asset.attention || asset.condition !== "Bagus")
 
   const cardStyle = isNeedsAttention
-    ? "border-rose-300 bg-rose-50/80 ring-1 ring-rose-300"
+    ? "border-rose-200 bg-rose-50/50 shadow-sm ring-1 ring-rose-400/40"
     : isHighlighted || isNewImport
-      ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
+      ? "border-emerald-200 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-400/40"
       : selected
         ? "border-[#d8d2ff] bg-[#f5f3ff]"
         : "border-[#eef0f3] bg-white"
 
   return (
     <article
-      className={`rounded-2xl border p-4 transition-colors duration-1000 ${cardStyle}`}
+      className={`rounded-2xl border p-4 transition-all duration-700 ${cardStyle}`}
     >
       <div className="flex items-start gap-3">
         <CheckBox selected={selected} onClick={onToggle} />
@@ -1407,22 +1407,22 @@ function AssetCard({
               onClick={onOpen}
               className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
             >
-              <span className="font-mono text-xs text-[#4262ff]">
+              <span className="font-mono text-xs font-semibold text-[#4262ff]">
                 {asset.code}
               </span>
               {isNewImport && (
-                <span className="animate-pulse rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                <span className="animate-pulse rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
                   Baru
                 </span>
               )}
               {!isNewImport &&
                 isHighlighted &&
                 (isNeedsAttention ? (
-                  <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-800">
+                  <span className="rounded-full bg-rose-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-rose-800">
                     Perlu Tindakan
                   </span>
                 ) : (
-                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                  <span className="rounded-full bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
                     Diperbarui
                   </span>
                 ))}

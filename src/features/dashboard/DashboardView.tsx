@@ -414,7 +414,7 @@ export function DashboardView() {
           onActionClick={(code) =>
             navigate({
               to: "/asset",
-              search: { highlight: code },
+              search: { search: code, highlight: code },
             })
           }
         />
