@@ -1,12 +1,47 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { ChevronDown, LayoutGrid, Table2, X } from "lucide-react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
+import { useNavigate, useSearch } from "@tanstack/react-router"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { LayoutGrid, MoreVertical, Table2, X, ChevronDown } from "lucide-react"
 import { assetService } from "@/services/assetServices"
+import { usePermission } from "@/hooks/usePermission"
+import { toast } from "sonner"
+import { downloadBlob } from "@/lib/DownloadBlob"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Pill, FilterChip } from "@/components/ui/Pill"
+import { PagePagination } from "@/components/ui/pagination"
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
 import type {
   AssetCondition,
   AssetListItem,
-  AssetMasterItem,
   AssetPagination,
 } from "@/types/asset"
+
+const SAVED_VIEW_KEY = "asset_list_saved_view"
+const PAGE_SIZE_KEY = "asset_list_page_size"
+
+type SavedView = {
+  query: string
+  condition: AssetCondition | ""
+  status: string
+  brandId: number | undefined
+  categoryId: number | undefined
+  locationId: number | undefined
+  purchaseDateFrom: string
+  purchaseDateTo: string
+  priceMin: string
+  priceMax: string
+  quickFilter: QuickFilter
+  sort: SortOption
+  pageSize?: number
+}
+
+const formatNumber = new Intl.NumberFormat("id-ID")
+const rupiahInput = (value: string) =>
+  value ? `Rp. ${formatNumber.format(Number(value))}` : ""
+const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
   id: string
@@ -24,16 +59,22 @@ type Asset = {
   price?: string
   priceValue: number
   attention?: boolean
+  hasPhoto: boolean
 }
 
 type QuickFilter =
   "" | "needsAttention" | "withoutPrice" | "withoutPhoto" | "duplicateCondition"
 
-const conditionClass: Record<AssetCondition, string> = {
-  Bagus: "bg-[#c3faf5] text-[#187574]",
-  "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
-  "Rusak Berat": "bg-[#ffc6c6] text-[#600000]",
-  Hilang: "bg-[#e0e2e8] text-[#555a6a]",
+type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
+
+const conditionVariantMap: Record<
+  AssetCondition,
+  "bagus" | "rusak-ringan" | "rusak-berat" | "hilang"
+> = {
+  Bagus: "bagus",
+  "Rusak Ringan": "rusak-ringan",
+  "Rusak Berat": "rusak-berat",
+  Hilang: "hilang",
 }
 
 const emptyPagination: AssetPagination = {
@@ -42,41 +83,86 @@ const emptyPagination: AssetPagination = {
   nextCursor: "",
 }
 
-const formatNumber = new Intl.NumberFormat("id-ID")
-const rupiahInput = (value: string) =>
-  value ? formatNumber.format(Number(value)) : ""
-const numericInput = (value: string) => value.replace(/\D/g, "")
 const conditionOptions: AssetCondition[] = [
   "Bagus",
   "Rusak Ringan",
   "Rusak Berat",
   "Hilang",
 ]
-const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
+const statusOptions = [
+  "Digunakan",
+  "Tersedia",
+  "Diperbaiki",
+  "Dihapuskan",
+  "Tidak Tersedia",
+]
+
+type AssetListApiAttributes = Partial<AssetListItem["attributes"]> & {
+  id?: string
+  assetCode?: string
+  asset_code?: string
+  assetName?: string
+  asset_name?: string
+  categoryName?: string
+  category_name?: string
+  brandName?: string
+  brand_name?: string
+  locationName?: string
+  location_name?: string
+  holderName?: string
+  holder_name?: string
+  purchasePrice?: number
+  price?: number
+  qty?: number
+}
+
+function apiErrorMessage(error: unknown) {
+  const value = error as {
+    message?: string
+    response?: { data?: { message?: string; error?: string } }
+  }
+  return (
+    value.response?.data?.message ||
+    value.response?.data?.error ||
+    value.message
+  )
+}
 
 function toAsset(item: AssetListItem): Asset {
-  const attributes = item.attributes
-  const priceValue = attributes.acquisitionPrice ?? 0
+  const attr = (item.attributes || item) as AssetListApiAttributes
+
+  const priceValue = Number(
+    attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0
+  )
+  const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
+  const holderName = String(
+    attr.holder || attr.holderName || attr.holder_name || ""
+  )
 
   return {
-    id: item.id,
-    slug: attributes.slug,
-    code: attributes.code,
-    name: attributes.name,
-    detail: attributes.holder || attributes.status,
-    category: attributes.category || "—",
-    brand: attributes.brand || "—",
-    quantity: attributes.quantity,
-    unit: attributes.unit,
-    condition: attributes.condition,
-    status: attributes.status,
-    location: attributes.location || "—",
+    id: String(item.id || attr.id || ""),
+    slug: String(attr.slug || attr.code || attr.assetCode || ""),
+    code: String(attr.assetCode || attr.code || attr.asset_code || "—"),
+    name: String(
+      attr.name || attr.assetName || attr.asset_name || "Tanpa Nama"
+    ),
+    detail: holderName,
+    category: String(
+      attr.categoryName || attr.category || attr.category_name || "—"
+    ),
+    brand: String(attr.brandName || attr.brand || attr.brand_name || "—"),
+    location: String(
+      attr.locationName || attr.location || attr.location_name || "—"
+    ),
+    quantity: Number(attr.quantity ?? attr.qty ?? 1),
+    unit: String(attr.unit || "Unit"),
+    condition: (attr.condition as AssetCondition) || "Bagus",
+    status: String(attr.status || "Tersedia"),
     price:
-      attributes.acquisitionPrice !== null
-        ? formatNumber.format(attributes.acquisitionPrice)
-        : undefined,
+      priceValue > 0 ? `Rp. ${formatNumber.format(priceValue)}` : undefined,
     priceValue,
-    attention: attributes.condition !== "Bagus",
+    attention: ((attr.condition as AssetCondition) || "Bagus") !== "Bagus",
+    hasPhoto,
   }
 }
 
@@ -84,49 +170,313 @@ const tableColumns =
   "grid-cols-[30px_112px_minmax(150px,1.4fr)_minmax(84px,0.8fr)_minmax(64px,0.65fr)_38px_44px_92px_minmax(76px,0.75fr)_112px_32px]"
 
 export function AssetListView() {
-  const [query, setQuery] = useState("")
-  const [debouncedQuery, setDebouncedQuery] = useState("")
-  const [condition, setCondition] = useState<AssetCondition | "">("")
-  const [status, setStatus] = useState("")
-  const [brandId, setBrandId] = useState<number>()
-  const [categoryId, setCategoryId] = useState<number>()
-  const [locationId, setLocationId] = useState<number>()
-  const [purchaseDateFrom, setPurchaseDateFrom] = useState("")
-  const [purchaseDateTo, setPurchaseDateTo] = useState("")
-  const [priceMin, setPriceMin] = useState("")
-  const [priceMax, setPriceMax] = useState("")
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("")
-  const [brands, setBrands] = useState<AssetMasterItem[]>([])
-  const [categories, setCategories] = useState<AssetMasterItem[]>([])
-  const [locations, setLocations] = useState<AssetMasterItem[]>([])
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // Ambil data permission untuk kontrol hak akses UI
+  const { canCreateEditAsset, canDeleteRestoreAsset, canExportLaporan } =
+    usePermission()
+
+  const searchParam = useSearch({ strict: false }) as {
+    search?: string
+    filter?: string
+    highlight?: string
+    latest?: string | number
+    newCount?: string | number
+  }
+
+  const [highlightedCodes, setHighlightedCodes] = useState<string[]>([])
+  const [highlightedCount, setHighlightedCount] = useState<number>(0)
+
+  const getInitialSavedView = (): SavedView | null => {
+    try {
+      const saved = localStorage.getItem(SAVED_VIEW_KEY)
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  }
+
+  const getInitialPageSize = (): number => {
+    try {
+      const savedSize = localStorage.getItem(PAGE_SIZE_KEY)
+      if (savedSize) return Number(savedSize)
+
+      const savedView = getInitialSavedView()
+      if (savedView?.pageSize) return savedView.pageSize
+    } catch {
+      // fallback
+    }
+    return 25
+  }
+
+  const initialSavedView = getInitialSavedView()
+  const showLatestSplit = String(searchParam?.latest ?? "") === "1"
+
+  const [query, setQuery] = useState(
+    showLatestSplit ? "" : initialSavedView?.query || ""
+  )
+  const [debouncedQuery, setDebouncedQuery] = useState(
+    showLatestSplit ? "" : initialSavedView?.query || ""
+  )
+  const [condition, setCondition] = useState<AssetCondition | "">(
+    showLatestSplit ? "" : initialSavedView?.condition || ""
+  )
+  const [status, setStatus] = useState(
+    showLatestSplit ? "" : initialSavedView?.status || ""
+  )
+  const [brandId, setBrandId] = useState<number | undefined>(
+    showLatestSplit ? undefined : initialSavedView?.brandId
+  )
+  const [categoryId, setCategoryId] = useState<number | undefined>(
+    showLatestSplit ? undefined : initialSavedView?.categoryId
+  )
+  const [locationId, setLocationId] = useState<number | undefined>(
+    showLatestSplit ? undefined : initialSavedView?.locationId
+  )
+  const [purchaseDateFrom, setPurchaseDateFrom] = useState(
+    showLatestSplit ? "" : initialSavedView?.purchaseDateFrom || ""
+  )
+  const [purchaseDateTo, setPurchaseDateTo] = useState(
+    showLatestSplit ? "" : initialSavedView?.purchaseDateTo || ""
+  )
+  const [priceMin, setPriceMin] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMin || ""
+  )
+  const [priceMax, setPriceMax] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMax || ""
+  )
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(
+    showLatestSplit ? "" : initialSavedView?.quickFilter || ""
+  )
+  const [sort, setSort] = useState<SortOption>(
+    showLatestSplit ? "code:desc" : initialSavedView?.sort || "code:asc"
+  )
+
+  const [pageSize, setPageSize] = useState<number>(getInitialPageSize)
+  const [hasSavedPreset, setHasSavedPreset] = useState<boolean>(
+    Boolean(initialSavedView)
+  )
+
   const [openFilter, setOpenFilter] = useState<string | null>(null)
-  const [sort, setSort] = useState<
-    "code:asc" | "code:desc" | "name:asc" | "name:desc"
-  >("code:asc")
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [pagination, setPagination] = useState<AssetPagination>(emptyPagination)
   const [cursor, setCursor] = useState("")
   const [cursorHistory, setCursorHistory] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState("")
-  const [reloadKey, setReloadKey] = useState(0)
   const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 767px)").matches
   )
   const [selectedCodes, setSelectedCodes] = useState(() => new Set<string>())
   const [notice, setNotice] = useState("")
+  const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const queryFromUrl = searchParam?.search || urlParams.get("search") || ""
+    const filterFromUrl = searchParam?.filter || urlParams.get("filter") || ""
+
+    if (queryFromUrl) {
+      queueMicrotask(() => {
+        setQuery(queryFromUrl)
+        setDebouncedQuery(queryFromUrl)
+      })
+    }
+
+    if (filterFromUrl === "missing_price") {
+      queueMicrotask(() => {
+        setQuickFilter("withoutPrice")
+      })
+    }
+  }, [searchParam?.search, searchParam?.filter])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = query.trim()
+      if (trimmed.length === 0 || trimmed.length >= 2) {
+        setDebouncedQuery(trimmed)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [query])
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    localStorage.setItem(PAGE_SIZE_KEY, String(newSize))
+    resetPagination()
+  }
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)")
+    const syncViewport = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mediaQuery.addEventListener("change", syncViewport)
+    return () => mediaQuery.removeEventListener("change", syncViewport)
+  }, [])
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const rawHighlight = searchParam?.highlight || urlParams.get("highlight")
+    const rawCount = searchParam?.newCount || urlParams.get("newCount")
+
+    if (rawHighlight) {
+      const codes = decodeURIComponent(rawHighlight)
+        .split(",")
+        .map((c) => c.trim().toLowerCase())
+        .filter(Boolean)
+
+      queueMicrotask(() => {
+        setHighlightedCodes(codes)
+      })
+    }
+
+    if (rawCount) {
+      queueMicrotask(() => {
+        setHighlightedCount(Number(rawCount))
+      })
+    }
+
+    if (rawHighlight || rawCount) {
+      const timer = setTimeout(() => {
+        setHighlightedCodes([])
+        setHighlightedCount(0)
+
+        navigate({
+          to: "/asset",
+          search: (prev: Record<string, unknown>) => {
+            const next = { ...prev }
+            delete next.highlight
+            delete next.newCount
+            return next
+          },
+          replace: true,
+        })
+      }, 10000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [searchParam?.highlight, searchParam?.newCount, navigate])
+
+  const { data: brandData = [] } = useQuery({
+    queryKey: ["masters", "brands"],
+    queryFn: () => assetService.masters("brands"),
+  })
+
+  const { data: categoryData = [] } = useQuery({
+    queryKey: ["masters", "categories"],
+    queryFn: () => assetService.masters("categories"),
+  })
+
+  const { data: locationData = [] } = useQuery({
+    queryKey: ["masters", "locations"],
+    queryFn: () => assetService.masters("locations"),
+  })
+
+  const {
+    data: assetData,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: [
+      "assets",
+      {
+        pageSize,
+        sort,
+        debouncedQuery,
+        condition,
+        status,
+        brandId,
+        categoryId,
+        locationId,
+        purchaseDateFrom,
+        purchaseDateTo,
+        priceMin,
+        priceMax,
+        quickFilter,
+        cursor,
+        searchNewCount: searchParam?.newCount,
+      },
+    ],
+    queryFn: async () => {
+      const result = await assetService.list({
+        pageSize,
+        sort,
+        search: debouncedQuery || undefined,
+        condition: condition || undefined,
+        status: status || undefined,
+        brandId,
+        categoryId,
+        locationId,
+        purchaseDateFrom: purchaseDateFrom || undefined,
+        purchaseDateTo: purchaseDateTo || undefined,
+        priceMin: priceMin ? Number(priceMin) : undefined,
+        priceMax: priceMax ? Number(priceMax) : undefined,
+        needsAttention: quickFilter === "needsAttention" || undefined,
+        cursor: cursor || undefined,
+      })
+      return result
+    },
+  })
+
+  const assets = useMemo(
+    () => (assetData?.assets ? assetData.assets.map(toAsset) : []),
+    [assetData]
+  )
+  const pagination = assetData?.pagination || emptyPagination
+  const errorMessage = error
+    ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi."
+    : ""
+
+  const isHighlighted = (code: string) => {
+    return Boolean(code && highlightedCodes.includes(code.toLowerCase()))
+  }
+
+  const isNewItem = (index: number, code: string, totalVisible: number) => {
+    if (code && highlightedCodes.includes(code.toLowerCase())) return true
+
+    if (highlightedCount > 0) {
+      const startIndex = Math.max(0, totalVisible - highlightedCount)
+      return index >= startIndex
+    }
+    return false
+  }
 
   const visibleAssets = useMemo(() => {
     const minimum = priceMin ? Number(priceMin) : undefined
     const maximum = priceMax ? Number(priceMax) : undefined
 
-    return assets.filter(
-      (asset) =>
-        (minimum === undefined || asset.priceValue >= minimum) &&
-        (maximum === undefined || asset.priceValue <= maximum)
-    )
-  }, [assets, priceMax, priceMin])
+    return assets.filter((asset) => {
+      const matchMin = minimum === undefined || asset.priceValue >= minimum
+      const matchMax = maximum === undefined || asset.priceValue <= maximum
+      if (!matchMin || !matchMax) return false
+
+      if (quickFilter === "needsAttention") {
+        return asset.attention || asset.condition !== "Bagus"
+      }
+
+      if (quickFilter === "withoutPrice") {
+        return (
+          !asset.priceValue ||
+          asset.priceValue === 0 ||
+          asset.price === undefined ||
+          asset.price === "Belum diisi"
+        )
+      }
+
+      if (quickFilter === "withoutPhoto") {
+        return !asset.hasPhoto
+      }
+
+      if (quickFilter === "duplicateCondition") {
+        return assets.some(
+          (other) =>
+            other.code !== asset.code &&
+            other.condition === asset.condition &&
+            other.name === asset.name
+        )
+      }
+
+      return true
+    })
+  }, [assets, priceMax, priceMin, quickFilter])
 
   const pageSummary = useMemo(
     () => ({
@@ -168,13 +518,129 @@ export function AssetListView() {
         : new Set(visibleAssets.map((asset) => asset.code))
     )
 
+  const buildExportParams = () => ({
+    sort,
+    search: debouncedQuery || undefined,
+    condition: condition || undefined,
+    status: status || undefined,
+    brandId,
+    categoryId,
+    locationId,
+    purchaseDateFrom: purchaseDateFrom || undefined,
+    purchaseDateTo: purchaseDateTo || undefined,
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
+    needsAttention: quickFilter === "needsAttention" || undefined,
+    withoutPrice: quickFilter === "withoutPrice" || undefined,
+    withoutPhoto: quickFilter === "withoutPhoto" || undefined,
+    duplicateCondition: quickFilter === "duplicateCondition" || undefined,
+  })
+
+  const runExport = async (name: string, extra: { ids?: string[] } = {}) => {
+    if (exporting) return
+    setExporting(true)
+    const toastId = toast.loading("Menyiapkan file Excel...")
+    try {
+      const response = await assetService.exportExcel({
+        ...buildExportParams(),
+        ...extra,
+      })
+      downloadBlob(
+        response,
+        `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`
+      )
+      toast.success("Export berhasil.", { id: toastId })
+    } catch {
+      toast.error("Gagal mengekspor data.", { id: toastId })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportAll = () => runExport("daftar-aset")
+
+  const handleExportSelected = () => {
+    const ids = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (ids.length === 0) {
+      toast.error("Tidak ada aset terpilih.")
+      return
+    }
+    runExport("aset-terpilih", { ids })
+  }
+
+  const bulkActions = [
+    ...(canCreateEditAsset
+      ? [
+          {
+            label: "Ubah kondisi",
+            action: () =>
+              setNotice("Ubah kondisi siap diproses untuk aset terpilih."),
+          },
+          {
+            label: "Mutasi",
+            action: () =>
+              setNotice("Mutasi siap diproses untuk aset terpilih."),
+          },
+        ]
+      : []),
+    ...(canExportLaporan
+      ? [
+          {
+            label: exporting ? "Mengekspor..." : "Export terpilih",
+            action: handleExportSelected,
+          },
+        ]
+      : []),
+  ]
+
+  const handleBulkDelete = async () => {
+    const idsToDelete = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (idsToDelete.length === 0) {
+      toast.error("Tidak ada aset valid yang bisa dihapus.")
+      return
+    }
+
+    const reason = window.prompt(
+      `${idsToDelete.length} aset akan dipindahkan ke Arsip. Masukkan alasan:`,
+      "Dihapus massal dari daftar aset"
+    )
+    if (reason === null || reason.trim() === "") return
+
+    try {
+      await assetService.bulkDelete({
+        asset_ids: idsToDelete,
+        reason,
+      })
+      toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
+
+      setSelectedCodes(new Set())
+      queryClient.invalidateQueries({ queryKey: ["assets"] })
+    } catch (error: unknown) {
+      toast.error(
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
+      )
+    }
+  }
+
   const resetPagination = () => {
     setCursor("")
     setCursorHistory([])
   }
 
   const resetFilters = () => {
+    localStorage.removeItem(SAVED_VIEW_KEY)
+    setHasSavedPreset(false)
+
     setQuery("")
+    setDebouncedQuery("")
     setCondition("")
     setStatus("")
     setBrandId(undefined)
@@ -188,6 +654,48 @@ export function AssetListView() {
     setSort("code:asc")
     setOpenFilter(null)
     resetPagination()
+
+    navigate({ to: "/asset" })
+  }
+
+  const handleSaveView = () => {
+    const currentView: SavedView = {
+      query,
+      condition,
+      status,
+      brandId,
+      categoryId,
+      locationId,
+      purchaseDateFrom,
+      purchaseDateTo,
+      priceMin,
+      priceMax,
+      quickFilter,
+      sort,
+      pageSize,
+    }
+
+    localStorage.setItem(SAVED_VIEW_KEY, JSON.stringify(currentView))
+    localStorage.setItem(PAGE_SIZE_KEY, String(pageSize))
+    setHasSavedPreset(true)
+    toast.success("Tampilan filter berhasil disimpan sebagai tampilan bawaan!")
+  }
+
+  const handleClearSavedView = () => {
+    resetFilters()
+    toast.info("Tampilan tersimpan berhasil dihapus.")
+  }
+
+  const openAssetDetail = (asset: Asset) => {
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
   }
 
   const hasActiveFilters = Boolean(
@@ -221,116 +729,22 @@ export function AssetListView() {
     viewMode === "table" || (viewMode === "auto" && !isMobile)
   const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)")
-    const syncViewport = () => setIsMobile(mediaQuery.matches)
-    mediaQuery.addEventListener("change", syncViewport)
-    return () => mediaQuery.removeEventListener("change", syncViewport)
-  }, [])
-
-  useEffect(() => {
-    let isCurrent = true
-
-    void Promise.all([
-      assetService.masters("brands"),
-      assetService.masters("categories"),
-      assetService.masters("locations"),
-    ])
-      .then(([brandData, categoryData, locationData]) => {
-        if (!isCurrent) return
-        setBrands(brandData)
-        setCategories(categoryData)
-        setLocations(locationData)
-      })
-      .catch(() => {
-        // Filter data utama tetap dapat digunakan bila master data gagal dimuat.
-      })
-
-    return () => {
-      isCurrent = false
-    }
-  }, [])
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedQuery(query.trim())
-      setCursor("")
-      setCursorHistory([])
-    }, 350)
-
-    return () => window.clearTimeout(timeout)
-  }, [query])
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    const loadAssets = async () => {
-      setLoading(true)
-      setErrorMessage("")
-
-      try {
-        const result = await assetService.list(
-          {
-            pageSize: 25,
-            sort,
-            search: debouncedQuery || undefined,
-            condition: condition || undefined,
-            status: status || undefined,
-            brandId,
-            categoryId,
-            locationId,
-            purchaseDateFrom: purchaseDateFrom || undefined,
-            purchaseDateTo: purchaseDateTo || undefined,
-            priceMin: priceMin ? Number(priceMin) : undefined,
-            priceMax: priceMax ? Number(priceMax) : undefined,
-            needsAttention: quickFilter === "needsAttention" || undefined,
-            withoutPrice: quickFilter === "withoutPrice" || undefined,
-            withoutPhoto: quickFilter === "withoutPhoto" || undefined,
-            duplicateCondition:
-              quickFilter === "duplicateCondition" || undefined,
-            cursor: cursor || undefined,
-          },
-          controller.signal
-        )
-        setAssets(result.assets.map(toAsset))
-        setPagination(result.pagination)
-        setSelectedCodes(new Set())
-      } catch {
-        if (!controller.signal.aborted) {
-          setAssets([])
-          setPagination(emptyPagination)
-          setErrorMessage(
-            "Daftar aset gagal dimuat. Periksa koneksi backend lalu coba lagi."
-          )
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }
-
-    void loadAssets()
-    return () => controller.abort()
-  }, [
-    brandId,
-    categoryId,
-    condition,
-    cursor,
-    debouncedQuery,
-    locationId,
-    priceMax,
-    priceMin,
-    purchaseDateFrom,
-    purchaseDateTo,
-    quickFilter,
-    reloadKey,
-    sort,
-    status,
-  ])
-
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-2.5 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-3.5 sm:pr-6 sm:pl-16 lg:pl-6">
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            navigate({
+              to: "/asset",
+              search: (prev: Record<string, unknown>) => ({
+                ...prev,
+                search: query.trim(),
+              }),
+            })
+          }}
+          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85"
+        >
           <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
           <input
             value={query}
@@ -342,14 +756,10 @@ export function AssetListView() {
           <span className="ml-auto hidden text-xs text-[#8e91a0] sm:block">
             {loading ? "Memuat..." : `${visibleAssets.length} hasil`}
           </span>
-        </label>
+        </form>
+
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
-            ?
-          </span>
-          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-xs font-semibold text-[#600000]">
-            RS
-          </span>
+          <ProfileDropdown />
         </div>
       </header>
 
@@ -360,24 +770,31 @@ export function AssetListView() {
               Daftar Aset
             </h1>
             <span className="text-sm text-[#6b6f7e]">
-              {assets.length} aset di halaman ini &middot; {pageSummary.units}{" "}
-              unit &middot; nilai tercatat Rp{" "}
+              {visibleAssets.length} aset ditampilkan &middot;{" "}
+              {pageSummary.units} unit &middot; nilai tercatat Rp{" "}
               {formatNumber.format(pageSummary.value)}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2.25">
-            <Pill className="h-10 px-4 text-sm">
-              Kolom{" "}
-              <span className="text-xs font-normal text-[#6b6f7e]">10/12</span>
-            </Pill>
-            <Pill className="h-10 px-4 text-sm">Export Excel</Pill>
-            <button
-              type="button"
-              onClick={() => setNotice("Form tambah aset belum tersedia.")}
-              className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto"
-            >
-              + Tambah Aset
-            </button>
+            {canExportLaporan && (
+              <Pill
+                className="h-10 px-4 text-sm"
+                onClick={handleExportAll}
+                disabled={exporting}
+              >
+                {exporting ? "Mengekspor..." : "Export Excel"}
+              </Pill>
+            )}
+
+            {canCreateEditAsset && (
+              <Button
+                variant="primary"
+                onClick={() => navigate({ to: "/asset/new" })}
+                className="col-span-2 h-10 px-5 text-sm sm:col-auto"
+              >
+                + Tambah Aset
+              </Button>
+            )}
           </div>
         </section>
 
@@ -387,7 +804,8 @@ export function AssetListView() {
               Semua{" "}
               <span className="text-[10px] opacity-75">{assets.length}</span>
             </Pill>
-            <ReferenceChip
+
+            <FilterChip
               active={quickFilter === "needsAttention"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -397,8 +815,9 @@ export function AssetListView() {
               }}
             >
               Perlu tindakan
-            </ReferenceChip>
-            <ReferenceChip
+            </FilterChip>
+
+            <FilterChip
               active={quickFilter === "withoutPrice"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -408,8 +827,9 @@ export function AssetListView() {
               }}
             >
               Tanpa harga
-            </ReferenceChip>
-            <ReferenceChip
+            </FilterChip>
+
+            <FilterChip
               active={quickFilter === "withoutPhoto"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -419,8 +839,9 @@ export function AssetListView() {
               }}
             >
               Tanpa foto
-            </ReferenceChip>
-            <ReferenceChip
+            </FilterChip>
+
+            <FilterChip
               active={quickFilter === "duplicateCondition"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -430,21 +851,39 @@ export function AssetListView() {
               }}
             >
               Kondisi duplikat
-            </ReferenceChip>
-            <button
-              type="button"
-              onClick={() => setNotice("Simpan tampilan akan tersedia segera.")}
-              className="h-8.5 rounded-full px-3 text-xs font-semibold text-[#8e91a0] transition hover:text-[#555a6a]"
-            >
-              + Simpan tampilan ini
-            </button>
+            </FilterChip>
+
+            {hasActiveFilters && !hasSavedPreset && (
+              <button
+                type="button"
+                onClick={handleSaveView}
+                className="h-8.5 cursor-pointer rounded-full px-3 text-xs font-semibold text-[#4262ff] transition hover:bg-[#f0efff]"
+              >
+                + Simpan tampilan ini
+              </button>
+            )}
+
+            {hasSavedPreset && (
+              <div className="flex items-center gap-1.5 rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#4262ff]">
+                <span>✓ Tampilan tersimpan</span>
+                <button
+                  type="button"
+                  onClick={handleClearSavedView}
+                  title="Hapus tampilan tersimpan default"
+                  className="ml-1 cursor-pointer text-[11px] text-[#6b6f7e] hover:text-[#600000]"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
           </div>
+
           <div className="flex flex-wrap items-center gap-1.5">
             <FilterMenu
               id="brand"
               label="Merek"
               value={brandId}
-              options={brands}
+              options={brandData}
               openFilter={openFilter}
               onOpenChange={setOpenFilter}
               onChange={(value) => {
@@ -468,7 +907,7 @@ export function AssetListView() {
               id="category"
               label="Kategori"
               value={categoryId}
-              options={categories}
+              options={categoryData}
               openFilter={openFilter}
               onOpenChange={setOpenFilter}
               onChange={(value) => {
@@ -492,7 +931,7 @@ export function AssetListView() {
               id="location"
               label="Lokasi"
               value={locationId}
-              options={locations}
+              options={locationData}
               openFilter={openFilter}
               onOpenChange={setOpenFilter}
               onChange={(value) => {
@@ -529,7 +968,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={resetFilters}
-              className="ml-1 h-8.5 px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5]"
+              className="ml-1 h-8.5 cursor-pointer px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5]"
               disabled={!hasActiveFilters}
             >
               Reset Filter
@@ -549,30 +988,36 @@ export function AssetListView() {
               </span>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
-              {["Ubah kondisi", "Mutasi", "Export terpilih"].map((label) => (
+              {bulkActions.map(({ label, action }) => (
                 <button
-                  onClick={() =>
-                    setNotice(`${label} siap diproses untuk aset terpilih.`)
-                  }
+                  type="button"
+                  onClick={action}
                   key={label}
-                  className="flex h-8 flex-1 items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none"
+                  disabled={exporting}
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                 >
                   {label}
                 </button>
               ))}
-              <button
-                onClick={() => setSelectedCodes(new Set())}
-                className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
-              >
-                Hapus
-              </button>
+
+              {canDeleteRestoreAsset && (
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
+                >
+                  Hapus
+                </button>
+              )}
             </div>
           </section>
         )}
+
         {notice && (
           <button
+            type="button"
             onClick={() => setNotice("")}
-            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
+            className="cursor-pointer rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
           >
             {notice} &times;
           </button>
@@ -581,20 +1026,22 @@ export function AssetListView() {
         <div className="flex justify-start">
           <div className="inline-flex h-10 rounded-full border border-[#c7cad5] bg-white p-1">
             <button
+              type="button"
               onClick={() => setViewMode("table")}
               aria-label="Tampilan tabel"
               title="Tampilan tabel"
               aria-pressed={tableIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <Table2 size={16} strokeWidth={2} aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("card")}
               aria-label="Tampilan kartu"
               title="Tampilan kartu"
               aria-pressed={cardIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -602,35 +1049,21 @@ export function AssetListView() {
         </div>
 
         {loading && (
-          <div
-            role="status"
-            className="rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center text-sm text-[#6b6f7e]"
-          >
-            Memuat daftar aset dari server...
-          </div>
+          <LoadingState message="Memuat daftar aset dari server..." />
         )}
         {!loading && errorMessage && (
-          <div
-            role="alert"
-            className="flex flex-col items-center gap-3 rounded-2xl border border-[#ffc6c6] bg-white px-5 py-10 text-center"
-          >
-            <p className="text-sm text-[#600000]">{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() => setReloadKey((value) => value + 1)}
-              className="h-9 rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white"
-            >
-              Coba lagi
-            </button>
-          </div>
+          <ErrorState
+            message={errorMessage}
+            onRetry={() =>
+              queryClient.invalidateQueries({ queryKey: ["assets"] })
+            }
+          />
         )}
         {!loading && !errorMessage && visibleAssets.length === 0 && (
-          <div className="rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center">
-            <p className="text-sm font-semibold">Aset tidak ditemukan</p>
-            <p className="mt-1 text-xs text-[#6b6f7e]">
-              Ubah kata pencarian atau reset filter untuk melihat data lain.
-            </p>
-          </div>
+          <EmptyState
+            title="Aset tidak ditemukan"
+            description="Ubah kata pencarian atau reset filter untuk melihat data lain."
+          />
         )}
 
         <section
@@ -645,12 +1078,15 @@ export function AssetListView() {
           }
         >
           <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0 xl:grid-cols-3">
-            {visibleAssets.map((asset) => (
+            {visibleAssets.map((asset, index) => (
               <AssetCard
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
+                isHighlighted={isHighlighted(asset.code)}
+                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
                 onToggle={() => toggleSelection(asset.code)}
+                onOpen={() => openAssetDetail(asset)}
               />
             ))}
           </div>
@@ -684,73 +1120,109 @@ export function AssetListView() {
                 <span className="text-right">Harga</span>
                 <span />
               </div>
-              {visibleAssets.map((asset) => (
+              {visibleAssets.map((asset, index) => (
                 <AssetRow
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
+                  isHighlighted={isHighlighted(asset.code)}
+                  isNewImport={isNewItem(
+                    index,
+                    asset.code,
+                    visibleAssets.length
+                  )}
                   onToggle={() => toggleSelection(asset.code)}
+                  onOpen={() => openAssetDetail(asset)}
                 />
               ))}
             </div>
           </div>
-          <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3">
-            <span className="text-xs text-[#6b6f7e]">
-              Menampilkan {visibleAssets.length} aset &middot; Halaman{" "}
-              {cursorHistory.length + 1}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <Pill className="h-8 px-3.25">
-                {pagination.pageSize} / halaman
-              </Pill>
-              <Page
-                bordered
-                disabled={cursorHistory.length === 0}
-                onClick={goToPreviousPage}
-              >
-                &lsaquo;
-              </Page>
-              <Page active>{cursorHistory.length + 1}</Page>
-              <Page
-                bordered
-                disabled={!pagination.hasNextPage}
-                onClick={goToNextPage}
-              >
-                &rsaquo;
-              </Page>
-            </div>
-          </footer>
+          <PagePagination
+            currentPage={cursorHistory.length + 1}
+            hasPreviousPage={cursorHistory.length > 0}
+            hasNextPage={pagination.hasNextPage}
+            onPrevious={goToPreviousPage}
+            onNext={goToNextPage}
+            totalVisible={visibleAssets.length}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </section>
       </div>
     </div>
   )
 }
 
+// Pill, FilterChip, PagePagination sudah dipindahkan ke @/components/ui
+
 function AssetRow({
   asset,
   selected,
+  isHighlighted = false,
+  isNewImport = false,
   onToggle,
+  onOpen,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
+  isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const rowStyle = isNeedsAttention
+    ? "bg-rose-50/60 shadow-[inset_3px_0_0_0_#f43f5e]"
+    : isHighlighted || isNewImport
+      ? "bg-emerald-50/60 shadow-[inset_3px_0_0_0_#10b981]"
+      : selected
+        ? "bg-[#f5f3ff]"
+        : "bg-white"
+
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 last:border-b-0 ${selected ? "bg-[#f5f3ff]" : "bg-white"}`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-all duration-700 last:border-b-0 ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
-      <span className="font-mono text-xs text-[#4262ff]">{asset.code}</span>
-      <span className="min-w-0">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
+      >
+        <span className="truncate font-mono text-xs font-semibold text-[#4262ff]">
+          {asset.code}
+        </span>
+        {isNewImport && (
+          <span className="shrink-0 animate-pulse rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
+            Baru
+          </span>
+        )}
+        {!isNewImport &&
+          isHighlighted &&
+          (isNeedsAttention ? (
+            <span className="shrink-0 rounded-full bg-rose-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-rose-800">
+              Perlu Tindakan
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
+              Diperbarui
+            </span>
+          ))}
+      </button>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="min-w-0 cursor-pointer text-left hover:underline"
+      >
         <span className="block truncate text-sm font-semibold">
           {asset.name}
         </span>
-        <span
-          className={`block truncate text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
-        >
+        <span className="block truncate text-xs text-[#8e91a0]">
           {asset.detail}
         </span>
-      </span>
+      </button>
       <span className="min-w-0 truncate text-xs text-[#555a6a]">
         {asset.category}
       </span>
@@ -764,11 +1236,9 @@ function AssetRow({
       </span>
       <span className="text-xs text-[#555a6a]">{asset.unit}</span>
       <span>
-        <span
-          className={`rounded-full px-2.25 py-0.75 text-[11px] font-semibold ${conditionClass[asset.condition]}`}
-        >
+        <Badge variant={conditionVariantMap[asset.condition]}>
           {asset.condition}
-        </span>
+        </Badge>
       </span>
       <span className="min-w-0 truncate text-xs text-[#555a6a]">
         {asset.location}
@@ -778,7 +1248,155 @@ function AssetRow({
       >
         {asset.price ?? "Belum diisi"}
       </span>
-      <span className="text-center text-sm text-[#8e91a0]">&#8943;</span>
+      <ActionMenu asset={asset} />
+    </div>
+  )
+}
+
+function ActionMenu({ asset }: { asset: Asset }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
+  const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+
+    const updatePosition = () => {
+      const triggerRect = triggerRef.current?.getBoundingClientRect()
+      if (!triggerRect) return
+
+      const estimatedMenuHeight = 116
+      const offset = 8
+      const shouldOpenUpward =
+        window.innerHeight - triggerRect.bottom < estimatedMenuHeight + offset
+
+      setMenuPosition({
+        top: shouldOpenUpward
+          ? Math.max(offset, triggerRect.top - estimatedMenuHeight - offset)
+          : triggerRect.bottom + offset,
+        right: Math.max(offset, window.innerWidth - triggerRect.right),
+      })
+    }
+
+    updatePosition()
+    window.addEventListener("resize", updatePosition)
+    window.addEventListener("scroll", updatePosition, true)
+
+    return () => {
+      window.removeEventListener("resize", updatePosition)
+      window.removeEventListener("scroll", updatePosition, true)
+    }
+  }, [open])
+
+  const goToEdit = () => {
+    setOpen(false)
+
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id/edit",
+      params: { id: String(asset.id) },
+    })
+  }
+
+  const goToDetail = () => {
+    setOpen(false)
+
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
+  }
+
+  const handleSoftDelete = async () => {
+    setOpen(false)
+
+    const reason = window.prompt(
+      `Masukkan alasan penghapusan aset "${asset.name}":`,
+      "Dihapus dari daftar aset"
+    )
+
+    if (reason === null) return
+
+    try {
+      await assetService.delete(asset.id, reason)
+      toast.success("Aset berhasil diarsipkan.")
+      queryClient.invalidateQueries({ queryKey: ["assets"] })
+    } catch (error: unknown) {
+      console.error("Detail Error Delete:", error)
+      toast.error(
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
+      )
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="Menu aksi"
+        aria-expanded={open}
+        className="grid size-7 cursor-pointer place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3]"
+      >
+        <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
+      </button>
+
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={menuPosition}
+            className="fixed z-[100] min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={goToDetail}
+              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            >
+              Detail
+            </button>
+
+            {canCreateEditAsset && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={goToEdit}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+              >
+                Edit
+              </button>
+            )}
+
+            {canDeleteRestoreAsset && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleSoftDelete}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
+              >
+                Hapus (Arsipkan)
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
@@ -786,35 +1404,77 @@ function AssetRow({
 function AssetCard({
   asset,
   selected,
+  isHighlighted = false,
+  isNewImport = false,
   onToggle,
+  onOpen,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
+  isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const cardStyle = isNeedsAttention
+    ? "border-rose-200 bg-rose-50/50 shadow-sm ring-1 ring-rose-400/40"
+    : isHighlighted || isNewImport
+      ? "border-emerald-200 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-400/40"
+      : selected
+        ? "border-[#d8d2ff] bg-[#f5f3ff]"
+        : "border-[#eef0f3] bg-white"
+
   return (
     <article
-      className={`rounded-2xl border p-4 ${selected ? "border-[#d8d2ff] bg-[#f5f3ff]" : "border-[#eef0f3] bg-white"}`}
+      className={`rounded-2xl border p-4 transition-all duration-700 ${cardStyle}`}
     >
       <div className="flex items-start gap-3">
         <CheckBox selected={selected} onClick={onToggle} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <span className="font-mono text-xs text-[#4262ff]">
-              {asset.code}
-            </span>
-            <span
-              className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
+            <button
+              type="button"
+              onClick={onOpen}
+              className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
+            >
+              <span className="font-mono text-xs font-semibold text-[#4262ff]">
+                {asset.code}
+              </span>
+              {isNewImport && (
+                <span className="animate-pulse rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
+                  Baru
+                </span>
+              )}
+              {!isNewImport &&
+                isHighlighted &&
+                (isNeedsAttention ? (
+                  <span className="rounded-full bg-rose-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-rose-800">
+                    Perlu Tindakan
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
+                    Diperbarui
+                  </span>
+                ))}
+            </button>
+            <Badge
+              variant={conditionVariantMap[asset.condition]}
+              className="ml-auto shrink-0"
             >
               {asset.condition}
-            </span>
+            </Badge>
           </div>
-          <h2 className="mt-2 truncate text-sm font-semibold">{asset.name}</h2>
-          <p
-            className={`mt-0.5 text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-2 block max-w-full cursor-pointer truncate text-left text-sm font-semibold hover:underline"
           >
-            {asset.detail}
-          </p>
+            {asset.name}
+          </button>
+          <p className="mt-0.5 text-xs text-[#8e91a0]">{asset.detail}</p>
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-xs text-[#6b6f7e]">
             <span>
               <b className="block text-[#1c1c1e]">Kategori</b>
@@ -830,7 +1490,7 @@ function AssetCard({
             </span>
             <span>
               <b className="block text-[#1c1c1e]">Harga</b>
-              {asset.price ? `Rp ${asset.price}` : "Belum diisi"}
+              {asset.price ?? "Belum diisi"}
             </span>
           </div>
         </div>
@@ -848,52 +1508,11 @@ function CheckBox({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`grid size-4 place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
+      className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
-    </button>
-  )
-}
-
-function Pill({
-  children,
-  active = false,
-  className = "",
-  onClick,
-}: {
-  children: ReactNode
-  active?: boolean
-  className?: string
-  onClick?: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function ReferenceChip({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean
-  children: ReactNode
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`flex h-8.5 items-center rounded-full border px-3.75 text-xs font-semibold transition ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
-    >
-      {children}
     </button>
   )
 }
@@ -934,7 +1553,7 @@ function FilterMenu<T extends string | number>({
           onClick={() => onOpenChange(isOpen ? null : id)}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
-          className="flex h-full items-center gap-1.5 px-3.25"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{isActive ? `${label}: ${selected.name}` : label}</span>
           {!isActive && (
@@ -949,7 +1568,7 @@ function FilterMenu<T extends string | number>({
               onOpenChange(null)
             }}
             aria-label={`Hapus filter ${label}`}
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} aria-hidden="true" />
           </button>
@@ -969,7 +1588,7 @@ function FilterMenu<T extends string | number>({
               onChange(undefined)
               onOpenChange(null)
             }}
-            className="flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            className="flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
           >
             Semua
           </button>
@@ -983,7 +1602,7 @@ function FilterMenu<T extends string | number>({
                 onChange(option.id)
                 onOpenChange(null)
               }}
-              className={`flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
+              className={`flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
             >
               {option.name}
             </button>
@@ -1013,7 +1632,7 @@ function DateRangeFilter({
     from && to ? `${from} – ${to}` : from || to || "Tanggal perolehan"
 
   return (
-    <div className={open ? "relative w-full lg:w-auto" : "relative"}>
+    <div className="relative w-full lg:w-auto">
       <div
         className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
@@ -1021,7 +1640,7 @@ function DateRangeFilter({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1034,7 +1653,7 @@ function DateRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter tanggal perolehan"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -1083,7 +1702,7 @@ function PriceRangeFilter({
   onChange: (min: string, max: string) => void
 }) {
   const label = value
-    ? `Rp ${rupiahInput(min || "0")} – ${max ? rupiahInput(max) : "∞"}`
+    ? `${rupiahInput(min || "0")} – ${max ? rupiahInput(max) : "∞"}`
     : "Rentang harga"
 
   return (
@@ -1095,7 +1714,7 @@ function PriceRangeFilter({
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1108,7 +1727,7 @@ function PriceRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter rentang harga"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -1125,7 +1744,7 @@ function PriceRangeFilter({
               onChange={(event) =>
                 onChange(numericInput(event.target.value), max)
               }
-              placeholder="Contoh: 20.000.000"
+              placeholder="Rp. 20.000.000"
               className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>
@@ -1145,30 +1764,5 @@ function PriceRangeFilter({
         </div>
       )}
     </div>
-  )
-}
-
-function Page({
-  children,
-  active = false,
-  bordered = false,
-  disabled = false,
-  onClick,
-}: {
-  children: ReactNode
-  active?: boolean
-  bordered?: boolean
-  disabled?: boolean
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`grid size-8 place-items-center rounded-full text-xs disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
-    >
-      {children}
-    </button>
   )
 }

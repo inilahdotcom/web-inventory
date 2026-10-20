@@ -1,248 +1,459 @@
-import React, { useState } from 'react'
+import React, { useState } from "react"
+import { usePermission } from "@/hooks/usePermission"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
-export interface MasterDataItem {
-    id: string | number
-    nama: string
-    kode: string
-    asetCount: number
+export interface UIMasterDataItem {
+  id: string | number
+  nama: string
+  kode: string
+  deskripsi?: string
+  asetCount: number
+  asset_count?: number
 }
 
-interface AssetCategoryViewProps {
-    categories?: MasterDataItem[]
-    merekList?: MasterDataItem[]
-    lokasiList?: MasterDataItem[]
-    onAddItem?: (type: 'kategori' | 'merek' | 'lokasi', data: { nama: string; kode: string; deskripsi: string }) => void
-    onEdit?: (type: 'kategori' | 'merek' | 'lokasi', id: string | number) => void
-    onDelete?: (type: 'kategori' | 'merek' | 'lokasi', id: string | number) => void
+interface MasterDataViewProps {
+  categories?: UIMasterDataItem[]
+  merekList?: UIMasterDataItem[]
+  lokasiList?: UIMasterDataItem[]
+  onAddItem?: (
+    type: "kategori" | "merek" | "lokasi",
+    data: { nama: string; kode: string; deskripsi: string }
+  ) => void
+  onEditItem?: (
+    type: "kategori" | "merek" | "lokasi",
+    id: string | number,
+    data: { nama: string; kode: string; deskripsi: string }
+  ) => void
+  onDelete?: (
+    type: "kategori" | "merek" | "lokasi",
+    id: string | number
+  ) => void
 }
 
 export function MasterDataView({
-    categories = [
-        { id: 1, nama: 'Perangkat IT & Server', kode: 'IT-SRV', asetCount: 2 },
-        { id: 2, nama: 'Komputer & Laptop', kode: 'KOM-LPT', asetCount: 38 },
-        { id: 3, nama: 'Perangkat Jaringan', kode: 'NET', asetCount: 24 },
-        { id: 4, nama: 'Peralatan Kamera & Lighting', kode: 'CAM-LIGHT', asetCount: 18 },
-        { id: 5, nama: 'Peralatan Broadcast & Audio', kode: 'BRD-AUD', asetCount: 18 },
-    ],
-    merekList = [
-        { id: 1, nama: 'Lenovo', kode: 'LNV', asetCount: 12 },
-        { id: 2, nama: 'Macbook', kode: 'APPLE', asetCount: 38 },
-        { id: 3, nama: 'Biznet', kode: 'BZN', asetCount: 8 },
-        { id: 4, nama: 'Leica', kode: 'LCA', asetCount: 5 },
-        { id: 5, nama: 'Sony', kode: 'SNY', asetCount: 18 },
-    ],
-    lokasiList = [
-        { id: 1, nama: 'Lantai 3 - Server Room', kode: 'L3-SRV', asetCount: 2 },
-        { id: 2, nama: 'Lantai 3 - Studio Utama', kode: 'L3-STD', asetCount: 38 },
-        { id: 3, nama: 'Lantai 2 - Ruang IT', kode: 'L2-IT', asetCount: 24 },
-        { id: 4, nama: 'Lantai 1 - Gudang Aset', kode: 'L1-GDG', asetCount: 18 },
-        { id: 5, nama: 'Lantai 3 - Ruang Redaksi', kode: 'L3-RDK', asetCount: 18 },
-    ],
-    onAddItem,
-    onEdit,
-    onDelete
-}: AssetCategoryViewProps) {
-    const [activeTab, setActiveTab] = useState<'kategori' | 'merek' | 'lokasi'>('kategori')
-    const [formData, setFormData] = useState({ nama: '', kode: '', deskripsi: '' })
+  categories = [],
+  merekList = [],
+  lokasiList = [],
+  onAddItem,
+  onEditItem,
+  onDelete,
+}: MasterDataViewProps) {
+  // Panggil hook permission untuk mengontrol hak akses kelola master data (Khusus Admin)
+  const { canManageMasterData } = usePermission()
 
-    const currentData = activeTab === 'kategori' ? categories : activeTab === 'merek' ? merekList : lokasiList
+  const [activeTab, setActiveTab] = useState<"kategori" | "merek" | "lokasi">(
+    "kategori"
+  )
+  const [formData, setFormData] = useState({
+    nama: "",
+    kode: "",
+    deskripsi: "",
+  })
 
-    const tabConfig = {
-        kategori: {
-            title: 'Kategori aset',
-            desc: 'Delapan kategori awal diturunkan dari isi kolom ITEM pada file Excel.',
-            labelNama: 'Nama Kategori',
-            placeholderNama: 'mis. Peralatan Kebersihan',
-            formTitle: 'Tambah kategori',
-            btnSubmit: 'Simpan kategori',
-            warning: 'Kategori terpakai tidak bisa dihapus',
-            warningDesc: 'Tombol hapus dimatikan bila masih ada aset di dalamnya. Pindahkan aset lebih dulu, atau gabungkan kategori.'
-        },
-        merek: {
-            title: 'Merek aset',
-            desc: 'Daftar merek/brand perangkat dan peralatan aset inventaris.',
-            labelNama: 'Nama Merek',
-            placeholderNama: 'mis. Asus, Samsung, Logitech',
-            formTitle: 'Tambah merek',
-            btnSubmit: 'Simpan merek',
-            warning: 'Merek terpakai tidak bisa dihapus',
-            warningDesc: 'Merek yang masih terhubung dengan unit aset tidak dapat dihapus.'
-        },
-        lokasi: {
-            title: 'Lokasi aset',
-            desc: 'Daftar ruangan, lantai, atau area penempatan aset.',
-            labelNama: 'Nama Lokasi',
-            placeholderNama: 'mis. Lantai 2 - Ruang Rapat',
-            formTitle: 'Tambah lokasi',
-            btnSubmit: 'Simpan lokasi',
-            warning: 'Lokasi terisi tidak bisa dihapus',
-            warningDesc: 'Pastikan seluruh aset telah dipindahkan ke lokasi lain sebelum menghapus lokasi ini.'
-        }
+  // State untuk Modal Pop-up Edit
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<{
+    id: string | number
+    nama: string
+    kode: string
+    deskripsi: string
+  } | null>(null)
+
+  const currentData =
+    activeTab === "kategori"
+      ? categories
+      : activeTab === "merek"
+        ? merekList
+        : lokasiList
+
+  const tabConfig = {
+    kategori: {
+      title: "Kategori aset",
+      desc: "Delapan kategori awal diturunkan dari isi kolom ITEM pada file Excel.",
+      labelNama: "Nama Kategori",
+      placeholderNama: "mis. Peralatan Kebersihan",
+      formTitle: "Tambah kategori",
+      btnSubmit: "Simpan kategori",
+      warning: "Kategori terpakai tidak bisa dihapus",
+    },
+    merek: {
+      title: "Merek aset",
+      desc: "Daftar merek/brand perangkat dan peralatan aset inventaris.",
+      labelNama: "Nama Merek",
+      placeholderNama: "mis. Asus, Samsung, Logitech",
+      formTitle: "Tambah merek",
+      btnSubmit: "Simpan merek",
+      warning: "Merek terpakai tidak bisa dihapus",
+    },
+    lokasi: {
+      title: "Lokasi aset",
+      desc: "Daftar ruangan, lantai, atau area penempatan aset.",
+      labelNama: "Nama Lokasi",
+      placeholderNama: "mis. Lantai 2 - Ruang Rapat",
+      formTitle: "Tambah lokasi",
+      btnSubmit: "Simpan lokasi",
+      warning: "Lokasi terisi tidak bisa dihapus",
+    },
+  }
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (onAddItem) onAddItem(activeTab, formData)
+    setFormData({ nama: "", kode: "", deskripsi: "" })
+  }
+
+  // Fungsi Buka Modal Edit
+  const handleOpenEdit = (item: UIMasterDataItem) => {
+    setEditingItem({
+      id: item.id,
+      nama: item.nama,
+      kode: item.kode === "-" ? "" : item.kode,
+      deskripsi: item.deskripsi || "",
+    })
+    setIsEditOpen(true)
+  }
+
+  // Fungsi Submit Simpan Edit
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editingItem && onEditItem) {
+      onEditItem(activeTab, editingItem.id, {
+        nama: editingItem.nama,
+        kode: editingItem.kode,
+        deskripsi: editingItem.deskripsi,
+      })
     }
+    setIsEditOpen(false)
+    setEditingItem(null)
+  }
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
-    }
+  return (
+    <div className="w-full text-[#1C1C1E]">
+      {/* HEADER STICKY */}
+      <header className="sticky top-0 z-10 w-full border-b border-neutral-200/80 bg-white/90 px-4 py-2.5 backdrop-blur-md sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div className="no-scrollbar flex w-full items-center gap-3 overflow-x-auto pl-14 lg:pl-0">
+            <div className="flex w-fit shrink-0 items-center gap-1.5 rounded-2xl bg-neutral-100 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("kategori")
+                  setFormData({ nama: "", kode: "", deskripsi: "" })
+                }}
+                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${activeTab === "kategori" ? "bg-neutral-900 text-neutral-100 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+              >
+                Kategori{" "}
+                <span
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === "kategori" ? "bg-neutral-100 text-neutral-900" : "bg-neutral-200/60 text-neutral-600"}`}
+                >
+                  {categories.length}
+                </span>
+              </button>
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        if (onAddItem) onAddItem(activeTab, formData)
-        setFormData({ nama: '', kode: '', deskripsi: '' })
-    }
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("merek")
+                  setFormData({ nama: "", kode: "", deskripsi: "" })
+                }}
+                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${activeTab === "merek" ? "bg-neutral-900 text-neutral-100 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+              >
+                Merek{" "}
+                <span
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === "merek" ? "bg-neutral-100 text-neutral-900" : "bg-neutral-200/60 text-neutral-600"}`}
+                >
+                  {merekList.length}
+                </span>
+              </button>
 
-    return (
-        <div className="w-full text-[#1C1C1E]">
-            {/* HEADER STICKY */}
-            <header className="sticky top-0 z-10 w-full border-b border-neutral-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    
-                    {/* Area Kiri: pl-14 di mobile mengalokasikan ruang khusus untuk tombol burger fixed */}
-                    <div className="flex items-center gap-3 pl-14 lg:pl-0 w-full overflow-x-auto no-scrollbar">
-                        
-                        {/* Tab Container yang berada persis di sebelah kanan area burger */}
-                        <div className="flex items-center gap-1.5 bg-neutral-100 p-1 rounded-2xl w-fit shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => { setActiveTab('kategori'); setFormData({ nama: '', kode: '', deskripsi: '' }) }}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${activeTab === 'kategori' ? 'bg-neutral-900 text-neutral-100 shadow-2xs' : 'text-neutral-500 hover:text-neutral-900'}`}
-                            >
-                                Kategori <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'kategori' ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-200/60 text-neutral-600'}`}>{categories.length}</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => { setActiveTab('merek'); setFormData({ nama: '', kode: '', deskripsi: '' }) }}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${activeTab === 'merek' ? 'bg-neutral-900 text-neutral-100 shadow-2xs' : 'text-neutral-500 hover:text-neutral-900'}`}
-                            >
-                                Merek <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'merek' ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-200/60 text-neutral-600'}`}>{merekList.length}</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => { setActiveTab('lokasi'); setFormData({ nama: '', kode: '', deskripsi: '' }) }}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${activeTab === 'lokasi' ? 'bg-neutral-900 text-neutral-100 shadow-2xs' : 'text-neutral-500 hover:text-neutral-900'}`}
-                            >
-                                Lokasi <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'lokasi' ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-200/60 text-neutral-600'}`}>{lokasiList.length}</span>
-                            </button>
-                        </div>
-
-                    </div>
-
-                </div>
-            </header>
-
-            <div className="max-w-7xl mx-auto space-y-6 pt-6 pb-12 px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{tabConfig[activeTab].title}</h1>
-                        <p className="text-xs text-neutral-500 mt-0.5">{tabConfig[activeTab].desc}</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                    {/* TABEL DATA */}
-                    <div className="lg:col-span-2 rounded-2xl border border-neutral-200 bg-white shadow-2xs overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse text-xs min-w-137.5">
-                                <thead>
-                                    <tr className="border-b border-neutral-200 bg-neutral-50/70 text-neutral-400 font-semibold uppercase tracking-wider text-[10px]">
-                                        <th className="py-3.5 px-6">{tabConfig[activeTab].labelNama}</th>
-                                        <th className="py-3.5 px-6">Kode</th>
-                                        <th className="py-3.5 px-6">Aset</th>
-                                        <th className="py-3.5 px-6 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-200 text-neutral-800">
-                                    {currentData.map((item) => (
-                                        <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                                            <td className="py-4 px-6 font-semibold text-neutral-900">{item.nama}</td>
-                                            <td className="py-4 px-6 font-mono text-neutral-600">{item.kode}</td>
-                                            <td className="py-4 px-6 font-medium text-neutral-700">{item.asetCount}</td>
-                                            <td className="py-4 px-6 text-right space-x-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onEdit?.(activeTab, item.id)}
-                                                    className="font-medium text-blue-600 hover:underline cursor-pointer"
-                                                >
-                                                    Ubah
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onDelete?.(activeTab, item.id)}
-                                                    className="font-medium text-rose-600 hover:underline cursor-pointer"
-                                                >
-                                                    Hapus
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* SIDEBAR FORM & WARNING */}
-                    <div className="space-y-6">
-                        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
-                            <h3 className="text-sm font-bold text-neutral-900">{tabConfig[activeTab].formTitle}</h3>
-
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-neutral-700">Nama *</label>
-                                    <input
-                                        type="text"
-                                        name="nama"
-                                        value={formData.nama}
-                                        onChange={handleChange}
-                                        placeholder={tabConfig[activeTab].placeholderNama}
-                                        className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-neutral-700">Kode</label>
-                                    <input
-                                        type="text"
-                                        name="kode"
-                                        value={formData.kode}
-                                        onChange={handleChange}
-                                        placeholder="KODE"
-                                        className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs font-mono text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                                    />
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-medium text-neutral-700">Deskripsi</label>
-                                    <textarea
-                                        name="deskripsi"
-                                        value={formData.deskripsi}
-                                        onChange={handleChange}
-                                        rows={3}
-                                        placeholder="Opsional"
-                                        className="w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-xs text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-900 resize-none"
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    className="w-full rounded-xl bg-neutral-900 py-3 text-xs font-medium text-white hover:bg-neutral-800 shadow-2xs transition-all cursor-pointer"
-                                >
-                                    {tabConfig[activeTab].btnSubmit}
-                                </button>
-                            </form>
-                        </div>
-
-                        <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-4 text-xs text-[#78350F] shadow-2xs space-y-1">
-                            <span className="font-semibold block">{tabConfig[activeTab].warning}</span>
-                            <p className="text-[#92400E] text-[11px] leading-relaxed">
-                                {tabConfig[activeTab].warningDesc}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("lokasi")
+                  setFormData({ nama: "", kode: "", deskripsi: "" })
+                }}
+                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${activeTab === "lokasi" ? "bg-neutral-900 text-neutral-100 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+              >
+                Lokasi{" "}
+                <span
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === "lokasi" ? "bg-neutral-100 text-neutral-900" : "bg-neutral-200/60 text-neutral-600"}`}
+                >
+                  {lokasiList.length}
+                </span>
+              </button>
             </div>
+          </div>
         </div>
-    )
+      </header>
+
+      <div className="mx-auto max-w-7xl space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+            {tabConfig[activeTab].title}
+          </h1>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            {tabConfig[activeTab].desc}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+          {/* TABEL DATA */}
+          <Card className="overflow-hidden lg:col-span-2">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-hairline bg-muted/50">
+                    <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                      {tabConfig[activeTab].labelNama}
+                    </TableHead>
+                    <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                      Kode
+                    </TableHead>
+                    <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
+                      Aset
+                    </TableHead>
+                    {/* Tampilkan kolom Aksi hanya jika Admin */}
+                    {canManageMasterData && (
+                      <TableHead className="px-6 py-3.5 text-right text-[10px] font-semibold tracking-wider uppercase">
+                        Aksi
+                      </TableHead>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentData.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={canManageMasterData ? 4 : 3}
+                        className="px-6 py-8 text-center text-xs text-muted-foreground"
+                      >
+                        Belum ada data {activeTab}.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    currentData.map((item) => {
+                      const count = item.asetCount ?? item.asset_count ?? 0
+                      const hasAssets = count > 0
+
+                      return (
+                        <TableRow
+                          key={item.id}
+                          className="transition-colors hover:bg-muted/50"
+                        >
+                          <TableCell className="px-6 py-4 font-semibold text-foreground">
+                            {item.nama}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 font-mono text-muted-foreground">
+                            {item.kode}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 font-mono font-medium">
+                            <Badge variant="outline">{count}</Badge>
+                          </TableCell>
+
+                          {/* Tombol Ubah & Hapus hanya tampil jika Admin */}
+                          {canManageMasterData && (
+                            <TableCell className="space-x-3 px-6 py-4 text-right">
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                onClick={() => handleOpenEdit(item)}
+                                className="h-auto p-0 font-medium text-blue-600 hover:underline"
+                              >
+                                Ubah
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                disabled={hasAssets}
+                                onClick={() => onDelete?.(activeTab, item.id)}
+                                className={`h-auto p-0 font-medium transition-colors ${
+                                  hasAssets
+                                    ? "cursor-not-allowed text-muted-foreground/40 opacity-50"
+                                    : "text-destructive hover:underline"
+                                }`}
+                                title={
+                                  hasAssets
+                                    ? tabConfig[activeTab].warning
+                                    : "Hapus data"
+                                }
+                              >
+                                Hapus
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+
+          {/* FORM SIDEBAR / READ-ONLY NOTICE */}
+          <div className="space-y-6">
+            {canManageMasterData ? (
+              <Card className="p-6">
+                <h3 className="mb-4 text-sm font-bold text-foreground">
+                  {tabConfig[activeTab].formTitle}
+                </h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="master-nama">Nama *</Label>
+                    <Input
+                      id="master-nama"
+                      name="nama"
+                      value={formData.nama}
+                      onChange={handleChange}
+                      placeholder={tabConfig[activeTab].placeholderNama}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="master-kode">Kode</Label>
+                    <Input
+                      id="master-kode"
+                      name="kode"
+                      value={formData.kode}
+                      onChange={handleChange}
+                      placeholder="KODE"
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="master-deskripsi">Deskripsi</Label>
+                    <Textarea
+                      id="master-deskripsi"
+                      name="deskripsi"
+                      value={formData.deskripsi}
+                      onChange={handleChange}
+                      rows={3}
+                      placeholder="Opsional"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                  >
+                    {tabConfig[activeTab].btnSubmit}
+                  </Button>
+                </form>
+              </Card>
+            ) : (
+              <Alert variant="warning">
+                <AlertTitle className="text-xs font-bold">
+                  Mode Pratinjau (Read-Only)
+                </AlertTitle>
+                <AlertDescription className="text-xs leading-relaxed">
+                  Pengelolaan master data (tambah, ubah, dan hapus) hanya dapat
+                  dilakukan oleh pengguna dengan hak akses{" "}
+                  <strong>Admin</strong>.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* MODAL POPUP EDIT (Khusus Admin) */}
+      <Dialog
+        open={Boolean(canManageMasterData && isEditOpen && editingItem)}
+        onOpenChange={(open) => {
+          if (!open) setIsEditOpen(false)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ubah {activeTab}</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-nama">Nama *</Label>
+                <Input
+                  id="edit-nama"
+                  value={editingItem.nama}
+                  onChange={(e) =>
+                    setEditingItem({ ...editingItem, nama: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-kode">Kode</Label>
+                <Input
+                  id="edit-kode"
+                  value={editingItem.kode}
+                  onChange={(e) =>
+                    setEditingItem({ ...editingItem, kode: e.target.value })
+                  }
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-deskripsi">Deskripsi</Label>
+                <Textarea
+                  id="edit-deskripsi"
+                  value={editingItem.deskripsi}
+                  onChange={(e) =>
+                    setEditingItem({
+                      ...editingItem,
+                      deskripsi: e.target.value,
+                    })
+                  }
+                  rows={3}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsEditOpen(false)}
+                >
+                  Batal
+                </Button>
+                <Button type="submit" variant="primary" size="sm">
+                  Simpan Perubahan
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }

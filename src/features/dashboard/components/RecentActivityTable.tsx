@@ -1,110 +1,121 @@
-import React from 'react'
+import { useNavigate } from "@tanstack/react-router"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 export interface ActivityItem {
-  id: string
-  action: 'Tambah' | 'Ubah' | 'Hapus' | 'Mutasi'
-  assetCode: string
-  description: React.ReactNode
-  actor: string
-  time: string
+  id: number
+  entity_type: string
+  entity_id: string
+  action: string
+  changed_by: string
+  created_at: string
 }
-const DUMMY_ACTIVITIES: ActivityItem[] = [
-  {
-    id: '1',
-    action: 'Tambah',
-    assetCode: '896/INC-GA/8/26',
-    description: 'Monitor LG 24MK430H - 2 Unit - Redaksi L3',
-    actor: 'Rizky Saputra • Admin GA',
-    time: '05/08/2026 09.12',
-  },
-  {
-    id: '2',
-    action: 'Ubah',
-    assetCode: '853/INC-GA/1/26',
-    description: (
-      <>
-        Kondisi Bagus → <strong className="text-rose-600">Rusak Berat</strong> • Status → Diperbaiki
-      </>
-    ),
-    actor: 'Dewi Anggraini • Staff GA',
-    time: '05/08/2026 08.47',
-  },
-  {
-    id: '3',
-    action: 'Hapus',
-    assetCode: '847/INC-GA/1/26',
-    description: 'Alasan: duplikat baris 41-51 hasil migrasi',
-    actor: 'Rizky Saputra • Admin GA',
-    time: '05/08/2026 08.20',
-  },
-  {
-    id: '4',
-    action: 'Mutasi',
-    assetCode: '818/INC-GA/1/26',
-    description: 'Studio L2 → Ruang Server L2 - pemegang Budi H.',
-    actor: 'Dewi Anggraini • Staff GA',
-    time: '04/08/2026 16.31',
-  },
-]
-const ACTION_BADGE_STYLES: Record<ActivityItem['action'], string> = {
-  Tambah: 'bg-teal-100 text-teal-800',
-  Ubah: 'bg-amber-100 text-amber-800',
-  Hapus: 'bg-rose-100 text-rose-800',
-  Mutasi: 'bg-purple-100 text-purple-800',
+
+function getActivityBadgeVariant(action: string) {
+  const a = action?.toUpperCase()
+  if (a === "CREATE") return "bagus" as const
+  if (a === "UPDATE") return "rusak-ringan" as const
+  if (a === "DELETE") return "destructive" as const
+  if (a === "RESTORE") return "secondary" as const
+  return "outline" as const
 }
 
 interface RecentActivityTableProps {
   data?: ActivityItem[]
 }
 
-export function RecentActivityTable({ data = DUMMY_ACTIVITIES }: RecentActivityTableProps) {
+export function RecentActivityTable({ data = [] }: RecentActivityTableProps) {
+  const navigate = useNavigate()
+
   return (
-    <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm space-y-4">
+    <Card className="space-y-4 p-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold text-neutral-900">
-          10 aktivitas terakhir <span className="text-neutral-400 font-normal">FR-005</span>
+        <h3 className="text-xs font-bold text-foreground">
+          10 aktivitas terakhir{" "}
+          <span className="font-normal text-muted-foreground">FR-005</span>
         </h3>
-        <button className="text-xs text-blue-600 font-semibold hover:underline cursor-pointer">
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          onClick={() => navigate({ to: "/audit-log" })}
+          className="h-auto p-0 font-semibold text-blue-600 hover:underline"
+        >
           Lihat audit log →
-        </button>
+        </Button>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50/50 text-neutral-400 font-semibold uppercase tracking-wider text-[10px]">
-              <th className="py-3 px-4">Aksi</th>
-              <th className="py-3 px-4">Kode Aset</th>
-              <th className="py-3 px-4">Ringkasan Perubahan</th>
-              <th className="py-3 px-4">Pelaku</th>
-              <th className="py-3 px-4 text-right">Waktu</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100 text-neutral-800">
-            {data.map((item) => (
-              <tr key={item.id} className="hover:bg-neutral-50/50 transition">
-                <td className="py-3 px-4">
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${ACTION_BADGE_STYLES[item.action]}`}>
-                    {item.action}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-mono font-medium text-blue-600">
-                  {item.assetCode}
-                </td>
-                <td className="py-3 px-4 text-neutral-600">
-                  {item.description}
-                </td>
-                <td className="py-3 px-4 font-medium">
-                  {item.actor}
-                </td>
-                <td className="py-3 px-4 text-right text-neutral-400 text-[11px]">
-                  {item.time}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-hairline bg-muted/50">
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                Aksi
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                Entitas
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                ID Entitas
+              </TableHead>
+              <TableHead className="px-4 py-3 text-[10px] font-semibold tracking-wider uppercase">
+                Pelaku (User ID)
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-[10px] font-semibold tracking-wider uppercase">
+                Waktu
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length > 0 ? (
+              data.map((item) => {
+                return (
+                  <TableRow
+                    key={item.id}
+                    className="transition hover:bg-muted/50"
+                  >
+                    <TableCell className="px-4 py-3">
+                      <Badge variant={getActivityBadgeVariant(item.action)}>
+                        {item.action}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-medium capitalize">
+                      {item.entity_type}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-mono font-medium text-blue-600">
+                      {item.entity_id}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-medium">
+                      {item.changed_by}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right text-[11px] text-muted-foreground">
+                      {item.created_at}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="py-6 text-center text-xs text-muted-foreground"
+                >
+                  Belum ada riwayat aktivitas terbaru.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
-    </div>
+    </Card>
   )
 }

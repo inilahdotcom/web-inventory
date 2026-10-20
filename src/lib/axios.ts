@@ -14,6 +14,7 @@ export const api = axios.create({
   },
 })
 
+// 1. SISIPKAN API KEY & BEARER TOKEN DI SETIAP REQUEST
 api.interceptors.request.use((config) => {
   if (apiKey) {
     config.headers["x-api-key"] = apiKey
@@ -27,6 +28,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// 2. TANGANI AUTO-REFRESH TOKEN SAAT ACCESS TOKEN KEDALUWARSA
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -47,6 +49,7 @@ api.interceptors.response.use(
           throw new Error("Refresh token tidak ditemukan")
         }
 
+        // Pastikan request refresh-token juga menyisipkan API Key
         const res = await axios.post<ApiResponse<LoginResponse>>(
           `${apiBaseUrl}/users/refresh-token`,
           { refresh_token: refreshToken },
@@ -61,16 +64,19 @@ api.interceptors.response.use(
         if (!tokens?.access_token || !tokens.refresh_token) {
           throw new Error("Token tidak ditemukan pada respons refresh")
         }
+
         authStorage.update(tokens)
+
         originalRequest.headers = {
           ...originalRequest.headers,
           "x-api-key": apiKey,
           Authorization: `Bearer ${tokens.access_token}`,
         }
+
         return api(originalRequest)
       } catch (refreshError) {
         authStorage.clear()
-        window.location.href = "/login"
+        window.location.href = "/auth/login"
         return Promise.reject(refreshError)
       }
     }
