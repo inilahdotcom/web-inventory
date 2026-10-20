@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { LayoutGrid, MoreVertical, Table2, X, ChevronDown } from "lucide-react"
@@ -12,6 +13,15 @@ import { Pill, FilterChip } from "@/components/ui/Pill"
 import { PagePagination } from "@/components/ui/pagination"
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
 import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
 import type {
   AssetCondition,
   AssetListItem,
@@ -59,6 +69,10 @@ type Asset = {
   priceValue: number
   attention?: boolean
   hasPhoto: boolean
+}
+
+type ArchiveRequest = {
+  assets: Asset[]
 }
 
 type QuickFilter =
@@ -267,6 +281,11 @@ export function AssetListView() {
   const [selectedCodes, setSelectedCodes] = useState(() => new Set<string>())
   const [notice, setNotice] = useState("")
   const [exporting, setExporting] = useState(false)
+  const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(
+    null
+  )
+  const [archiveReason, setArchiveReason] = useState("")
+  const [isArchiving, setIsArchiving] = useState(false)
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -596,37 +615,78 @@ export function AssetListView() {
       : []),
   ]
 
-  const handleBulkDelete = async () => {
-    const idsToDelete = assets
-      .filter((asset) => selectedCodes.has(asset.code))
+  const openArchiveDialog = (assetsToArchive: Asset[]) => {
+    if (assetsToArchive.length === 0) {
+      toast.error("Tidak ada aset valid yang bisa dihapus.")
+      return
+    }
+
+    setArchiveReason(
+      assetsToArchive.length === 1
+        ? "Dihapus dari daftar aset"
+        : "Dihapus massal dari daftar aset"
+    )
+    setArchiveRequest({ assets: assetsToArchive })
+  }
+
+  const closeArchiveDialog = () => {
+    if (isArchiving) return
+    setArchiveRequest(null)
+    setArchiveReason("")
+  }
+
+  const confirmArchive = async () => {
+    if (!archiveRequest) return
+
+    const reason = archiveReason.trim()
+    const idsToDelete = archiveRequest.assets
       .map((asset) => asset.id)
       .filter(Boolean)
+
+    if (reason.length === 0) {
+      toast.error("Masukkan alasan pengarsipan terlebih dahulu.")
+      return
+    }
 
     if (idsToDelete.length === 0) {
       toast.error("Tidak ada aset valid yang bisa dihapus.")
       return
     }
 
-    const reason = window.prompt(
-      `${idsToDelete.length} aset akan dipindahkan ke Arsip. Masukkan alasan:`,
-      "Dihapus massal dari daftar aset"
-    )
-    if (reason === null || reason.trim() === "") return
-
+    setIsArchiving(true)
     try {
-      await assetService.bulkDelete({
-        asset_ids: idsToDelete,
-        reason,
-      })
-      toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
+      if (idsToDelete.length === 1) {
+        await assetService.delete(idsToDelete[0], reason)
+        toast.success("Aset berhasil diarsipkan.")
+      } else {
+        await assetService.bulkDelete({
+          asset_ids: idsToDelete,
+          reason,
+        })
+        toast.success(
+          `${idsToDelete.length} aset berhasil dipindahkan ke arsip.`
+        )
+        setSelectedCodes(new Set())
+      }
 
-      setSelectedCodes(new Set())
       queryClient.invalidateQueries({ queryKey: ["assets"] })
+      setArchiveRequest(null)
+      setArchiveReason("")
     } catch (error: unknown) {
       toast.error(
         `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
       )
+    } finally {
+      setIsArchiving(false)
     }
+  }
+
+  const handleBulkDelete = () => {
+    const assetsToArchive = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .filter((asset) => Boolean(asset.id))
+
+    openArchiveDialog(assetsToArchive)
   }
 
   const resetPagination = () => {
@@ -1132,6 +1192,7 @@ export function AssetListView() {
                   )}
                   onToggle={() => toggleSelection(asset.code)}
                   onOpen={() => openAssetDetail(asset)}
+                  onArchive={() => openArchiveDialog([asset])}
                 />
               ))}
             </div>
@@ -1148,6 +1209,16 @@ export function AssetListView() {
           />
         </section>
       </div>
+      {archiveRequest && (
+        <ArchiveAssetDialog
+          request={archiveRequest}
+          reason={archiveReason}
+          isArchiving={isArchiving}
+          onReasonChange={setArchiveReason}
+          onCancel={closeArchiveDialog}
+          onConfirm={confirmArchive}
+        />
+      )}
     </div>
   )
 }
@@ -1161,6 +1232,7 @@ function AssetRow({
   isNewImport = false,
   onToggle,
   onOpen,
+  onArchive,
 }: {
   asset: Asset
   selected: boolean
@@ -1168,6 +1240,7 @@ function AssetRow({
   isNewImport?: boolean
   onToggle: () => void
   onOpen: () => void
+  onArchive: () => void
 }) {
   const isNeedsAttention =
     isHighlighted && (asset.attention || asset.condition !== "Bagus")
@@ -1247,18 +1320,55 @@ function AssetRow({
       >
         {asset.price ?? "Belum diisi"}
       </span>
-      <ActionMenu asset={asset} />
+      <ActionMenu asset={asset} onArchive={onArchive} />
     </div>
   )
 }
 
-function ActionMenu({ asset }: { asset: Asset }) {
+function ActionMenu({
+  asset,
+  onArchive,
+}: {
+  asset: Asset
+  onArchive: () => void
+}) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+
+    const updatePosition = () => {
+      const triggerRect = triggerRef.current?.getBoundingClientRect()
+      if (!triggerRect) return
+
+      const estimatedMenuHeight = 116
+      const offset = 8
+      const shouldOpenUpward =
+        window.innerHeight - triggerRect.bottom < estimatedMenuHeight + offset
+
+      setMenuPosition({
+        top: shouldOpenUpward
+          ? Math.max(offset, triggerRect.top - estimatedMenuHeight - offset)
+          : triggerRect.bottom + offset,
+        right: Math.max(offset, window.innerWidth - triggerRect.right),
+      })
+    }
+
+    updatePosition()
+    window.addEventListener("resize", updatePosition)
+    window.addEventListener("scroll", updatePosition, true)
+
+    return () => {
+      window.removeEventListener("resize", updatePosition)
+      window.removeEventListener("scroll", updatePosition, true)
+    }
+  }, [open])
 
   const goToEdit = () => {
     setOpen(false)
@@ -1288,31 +1398,15 @@ function ActionMenu({ asset }: { asset: Asset }) {
     })
   }
 
-  const handleSoftDelete = async () => {
+  const handleSoftDelete = () => {
     setOpen(false)
-
-    const reason = window.prompt(
-      `Masukkan alasan penghapusan aset "${asset.name}":`,
-      "Dihapus dari daftar aset"
-    )
-
-    if (reason === null) return
-
-    try {
-      await assetService.delete(asset.id, reason)
-      toast.success("Aset berhasil diarsipkan.")
-      queryClient.invalidateQueries({ queryKey: ["assets"] })
-    } catch (error: unknown) {
-      console.error("Detail Error Delete:", error)
-      toast.error(
-        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
-      )
-    }
+    onArchive()
   }
 
   return (
-    <div ref={menuRef} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Menu aksi"
@@ -1322,44 +1416,137 @@ function ActionMenu({ asset }: { asset: Asset }) {
         <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute top-8 right-0 z-30 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={goToDetail}
-            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={menuPosition}
+            className="fixed z-[100] min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
           >
-            Detail
-          </button>
-
-          {canCreateEditAsset && (
             <button
               type="button"
               role="menuitem"
-              onClick={goToEdit}
+              onClick={goToDetail}
               className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
             >
-              Edit
+              Detail
             </button>
-          )}
 
-          {canDeleteRestoreAsset && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleSoftDelete}
-              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
-            >
-              Hapus (Arsipkan)
-            </button>
-          )}
-        </div>
-      )}
+            {canCreateEditAsset && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={goToEdit}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+              >
+                Edit
+              </button>
+            )}
+
+            {canDeleteRestoreAsset && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleSoftDelete}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
+              >
+                Hapus (Arsipkan)
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
+  )
+}
+
+function ArchiveAssetDialog({
+  request,
+  reason,
+  isArchiving,
+  onReasonChange,
+  onCancel,
+  onConfirm,
+}: {
+  request: ArchiveRequest
+  reason: string
+  isArchiving: boolean
+  onReasonChange: (value: string) => void
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const isBulkArchive = request.assets.length > 1
+  const asset = request.assets[0]
+  const canConfirm = reason.trim().length > 0 && !isArchiving
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel()
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {isBulkArchive
+              ? `Arsipkan ${request.assets.length} aset?`
+              : "Arsipkan aset ini?"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {isBulkArchive ? (
+            <>
+              Aset terpilih akan dipindahkan ke Arsip dan dapat dipulihkan
+              kembali.
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-xs font-semibold text-foreground">
+                {asset.code}
+              </span>{" "}
+              — {asset.name} akan dipindahkan ke Arsip dan dapat dipulihkan
+              kembali.
+            </>
+          )}
+        </p>
+
+        <div className="space-y-1.5 pt-2">
+          <Label htmlFor="archive-reason">Alasan pengarsipan</Label>
+          <Input
+            id="archive-reason"
+            autoFocus
+            value={reason}
+            disabled={isArchiving}
+            onChange={(event) => onReasonChange(event.target.value)}
+            placeholder="Contoh: Tidak lagi digunakan"
+          />
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isArchiving}
+            onClick={onCancel}
+          >
+            Batal
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={!canConfirm}
+            onClick={onConfirm}
+          >
+            {isArchiving ? "Mengarsipkan..." : "Arsipkan"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
