@@ -1,9 +1,27 @@
-import { useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, LayoutGrid, MoreVertical, Table2, X } from "lucide-react"
+import { LayoutGrid, MoreVertical, Table2, X, ChevronDown } from "lucide-react"
 import { assetService } from "@/services/assetServices"
+import { usePermission } from "@/hooks/usePermission"
 import { toast } from "sonner"
+import { downloadBlob } from "@/lib/DownloadBlob"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Pill, FilterChip } from "@/components/ui/Pill"
+import { PagePagination } from "@/components/ui/pagination"
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
 import type {
   AssetCondition,
   AssetListItem,
@@ -30,7 +48,8 @@ type SavedView = {
 }
 
 const formatNumber = new Intl.NumberFormat("id-ID")
-const rupiahInput = (value: string) => (value ? `Rp. ${formatNumber.format(Number(value))}` : "")
+const rupiahInput = (value: string) =>
+  value ? `Rp. ${formatNumber.format(Number(value))}` : ""
 const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
@@ -52,20 +71,23 @@ type Asset = {
   hasPhoto: boolean
 }
 
+type ArchiveRequest = {
+  assets: Asset[]
+}
+
 type QuickFilter =
-  | ""
-  | "needsAttention"
-  | "withoutPrice"
-  | "withoutPhoto"
-  | "duplicateCondition"
+  "" | "needsAttention" | "withoutPrice" | "withoutPhoto" | "duplicateCondition"
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
-const conditionClass: Record<AssetCondition, string> = {
-  Bagus: "bg-[#c3faf5] text-[#187574]",
-  "Rusak Ringan": "bg-[#fff8e0] text-[#746019]",
-  "Rusak Berat": "bg-[#ffc6c6] text-[#600000]",
-  Hilang: "bg-[#e0e2e8] text-[#555a6a]",
+const conditionVariantMap: Record<
+  AssetCondition,
+  "bagus" | "rusak-ringan" | "rusak-berat" | "hilang"
+> = {
+  Bagus: "bagus",
+  "Rusak Ringan": "rusak-ringan",
+  "Rusak Berat": "rusak-berat",
+  Hilang: "hilang",
 }
 
 const emptyPagination: AssetPagination = {
@@ -80,46 +102,102 @@ const conditionOptions: AssetCondition[] = [
   "Rusak Berat",
   "Hilang",
 ]
-const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
+const statusOptions = [
+  "Digunakan",
+  "Tersedia",
+  "Diperbaiki",
+  "Dihapuskan",
+  "Tidak Tersedia",
+]
+
+type AssetListApiAttributes = Partial<AssetListItem["attributes"]> & {
+  id?: string
+  assetCode?: string
+  asset_code?: string
+  assetName?: string
+  asset_name?: string
+  categoryName?: string
+  category_name?: string
+  brandName?: string
+  brand_name?: string
+  locationName?: string
+  location_name?: string
+  holderName?: string
+  holder_name?: string
+  purchasePrice?: number
+  price?: number
+  qty?: number
+}
+
+function apiErrorMessage(error: unknown) {
+  const value = error as {
+    message?: string
+    response?: { data?: { message?: string; error?: string } }
+  }
+  return (
+    value.response?.data?.message ||
+    value.response?.data?.error ||
+    value.message
+  )
+}
 
 function toAsset(item: AssetListItem): Asset {
-  const attr = (item.attributes || item) as any
+  const attr = (item.attributes || item) as AssetListApiAttributes
 
-  const priceValue = Number(attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0)
+  const priceValue = Number(
+    attr.acquisitionPrice ?? attr.purchasePrice ?? attr.price ?? 0
+  )
   const hasPhoto = Array.isArray(attr.photos) && attr.photos.length > 0
-  const holderName = attr.holder || attr.holderName || attr.holder_name || ""
+  const holderName = String(
+    attr.holder || attr.holderName || attr.holder_name || ""
+  )
 
   return {
-    id: item.id || attr.id || "",
-    slug: attr.slug || attr.code || attr.assetCode || "",
-    code: attr.assetCode || attr.code || attr.asset_code || "—",
-    name: attr.name || attr.assetName || attr.asset_name || "Tanpa Nama",
+    id: String(item.id || attr.id || ""),
+    slug: String(attr.slug || attr.code || attr.assetCode || ""),
+    code: String(attr.assetCode || attr.code || attr.asset_code || "—"),
+    name: String(
+      attr.name || attr.assetName || attr.asset_name || "Tanpa Nama"
+    ),
     detail: holderName,
-    category: attr.categoryName || attr.category || attr.category_name || "—",
-    brand: attr.brandName || attr.brand || attr.brand_name || "—",
-    location: attr.locationName || attr.location || attr.location_name || "—",
-    quantity: attr.quantity ?? attr.qty ?? 1,
-    unit: attr.unit || "Unit",
-    condition: attr.condition || "Bagus",
-    status: attr.status || "Tersedia",
+    category: String(
+      attr.categoryName || attr.category || attr.category_name || "—"
+    ),
+    brand: String(attr.brandName || attr.brand || attr.brand_name || "—"),
+    location: String(
+      attr.locationName || attr.location || attr.location_name || "—"
+    ),
+    quantity: Number(attr.quantity ?? attr.qty ?? 1),
+    unit: String(attr.unit || "Unit"),
+    condition: (attr.condition as AssetCondition) || "Bagus",
+    status: String(attr.status || "Tersedia"),
     price:
-      priceValue > 0
-        ? `Rp. ${formatNumber.format(priceValue)}`
-        : undefined,
+      priceValue > 0 ? `Rp. ${formatNumber.format(priceValue)}` : undefined,
     priceValue,
-    attention: (attr.condition || "Bagus") !== "Bagus",
+    attention: ((attr.condition as AssetCondition) || "Bagus") !== "Bagus",
     hasPhoto,
   }
 }
 
 const tableColumns =
-  "grid-cols-[30px_130px_minmax(200px,1fr)_116px_80px_38px_44px_100px_96px_104px_32px]"
+  "grid-cols-[30px_112px_minmax(150px,1.4fr)_minmax(84px,0.8fr)_minmax(64px,0.65fr)_38px_44px_92px_minmax(76px,0.75fr)_112px_32px]"
 
 export function AssetListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const searchParam = useSearch({ strict: false }) as { highlight?: string; newCount?: string | number }
+  // Ambil data permission untuk kontrol hak akses UI
+  const { canCreateEditAsset, canDeleteRestoreAsset, canExportLaporan } =
+    usePermission()
+
+  const searchParam = useSearch({ strict: false }) as {
+    search?: string
+    filter?: string
+    highlight?: string
+    latest?: string | number
+    newCount?: string | number
+  }
+
   const [highlightedCodes, setHighlightedCodes] = useState<string[]>([])
   const [highlightedCount, setHighlightedCount] = useState<number>(0)
 
@@ -146,23 +224,52 @@ export function AssetListView() {
   }
 
   const initialSavedView = getInitialSavedView()
+  const showLatestSplit = String(searchParam?.latest ?? "") === "1"
 
-  const [query, setQuery] = useState(initialSavedView?.query ?? "")
-  const [debouncedQuery, setDebouncedQuery] = useState(initialSavedView?.query ?? "")
-  const [condition, setCondition] = useState<AssetCondition | "">(initialSavedView?.condition ?? "")
-  const [status, setStatus] = useState(initialSavedView?.status ?? "")
-  const [brandId, setBrandId] = useState<number | undefined>(initialSavedView?.brandId)
-  const [categoryId, setCategoryId] = useState<number | undefined>(initialSavedView?.categoryId)
-  const [locationId, setLocationId] = useState<number | undefined>(initialSavedView?.locationId)
-  const [purchaseDateFrom, setPurchaseDateFrom] = useState(initialSavedView?.purchaseDateFrom ?? "")
-  const [purchaseDateTo, setPurchaseDateTo] = useState(initialSavedView?.purchaseDateTo ?? "")
-  const [priceMin, setPriceMin] = useState(initialSavedView?.priceMin ?? "")
-  const [priceMax, setPriceMax] = useState(initialSavedView?.priceMax ?? "")
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialSavedView?.quickFilter ?? "")
-  const [sort, setSort] = useState<SortOption>(initialSavedView?.sort ?? "code:asc")
+  const [query, setQuery] = useState(
+    showLatestSplit ? "" : initialSavedView?.query || ""
+  )
+  const [debouncedQuery, setDebouncedQuery] = useState(
+    showLatestSplit ? "" : initialSavedView?.query || ""
+  )
+  const [condition, setCondition] = useState<AssetCondition | "">(
+    showLatestSplit ? "" : initialSavedView?.condition || ""
+  )
+  const [status, setStatus] = useState(
+    showLatestSplit ? "" : initialSavedView?.status || ""
+  )
+  const [brandId, setBrandId] = useState<number | undefined>(
+    showLatestSplit ? undefined : initialSavedView?.brandId
+  )
+  const [categoryId, setCategoryId] = useState<number | undefined>(
+    showLatestSplit ? undefined : initialSavedView?.categoryId
+  )
+  const [locationId, setLocationId] = useState<number | undefined>(
+    showLatestSplit ? undefined : initialSavedView?.locationId
+  )
+  const [purchaseDateFrom, setPurchaseDateFrom] = useState(
+    showLatestSplit ? "" : initialSavedView?.purchaseDateFrom || ""
+  )
+  const [purchaseDateTo, setPurchaseDateTo] = useState(
+    showLatestSplit ? "" : initialSavedView?.purchaseDateTo || ""
+  )
+  const [priceMin, setPriceMin] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMin || ""
+  )
+  const [priceMax, setPriceMax] = useState(
+    showLatestSplit ? "" : initialSavedView?.priceMax || ""
+  )
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(
+    showLatestSplit ? "" : initialSavedView?.quickFilter || ""
+  )
+  const [sort, setSort] = useState<SortOption>(
+    showLatestSplit ? "code:desc" : initialSavedView?.sort || "code:asc"
+  )
 
   const [pageSize, setPageSize] = useState<number>(getInitialPageSize)
-  const [hasSavedPreset, setHasSavedPreset] = useState<boolean>(Boolean(initialSavedView))
+  const [hasSavedPreset, setHasSavedPreset] = useState<boolean>(
+    Boolean(initialSavedView)
+  )
 
   const [openFilter, setOpenFilter] = useState<string | null>(null)
   const [cursor, setCursor] = useState("")
@@ -173,6 +280,42 @@ export function AssetListView() {
   )
   const [selectedCodes, setSelectedCodes] = useState(() => new Set<string>())
   const [notice, setNotice] = useState("")
+  const [exporting, setExporting] = useState(false)
+  const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(
+    null
+  )
+  const [archiveReason, setArchiveReason] = useState("")
+  const [isArchiving, setIsArchiving] = useState(false)
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const queryFromUrl = searchParam?.search || urlParams.get("search") || ""
+    const filterFromUrl = searchParam?.filter || urlParams.get("filter") || ""
+
+    if (queryFromUrl) {
+      queueMicrotask(() => {
+        setQuery(queryFromUrl)
+        setDebouncedQuery(queryFromUrl)
+      })
+    }
+
+    if (filterFromUrl === "missing_price") {
+      queueMicrotask(() => {
+        setQuickFilter("withoutPrice")
+      })
+    }
+  }, [searchParam?.search, searchParam?.filter])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = query.trim()
+      if (trimmed.length === 0 || trimmed.length >= 2) {
+        setDebouncedQuery(trimmed)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [query])
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
@@ -180,16 +323,14 @@ export function AssetListView() {
     resetPagination()
   }
 
-  // Sinkronisasi ukuran layar secara responsif
-  useState(() => {
+  useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)")
     const syncViewport = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mediaQuery.addEventListener("change", syncViewport)
     return () => mediaQuery.removeEventListener("change", syncViewport)
-  })
+  }, [])
 
-  // Sinkronisasi penanda / highlight baris baru dari URL
-  useState(() => {
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const rawHighlight = searchParam?.highlight || urlParams.get("highlight")
     const rawCount = searchParam?.newCount || urlParams.get("newCount")
@@ -199,43 +340,61 @@ export function AssetListView() {
         .split(",")
         .map((c) => c.trim().toLowerCase())
         .filter(Boolean)
-      setHighlightedCodes(codes)
+
+      queueMicrotask(() => {
+        setHighlightedCodes(codes)
+      })
     }
 
     if (rawCount) {
-      setHighlightedCount(Number(rawCount))
+      queueMicrotask(() => {
+        setHighlightedCount(Number(rawCount))
+      })
     }
 
     if (rawHighlight || rawCount) {
       const timer = setTimeout(() => {
         setHighlightedCodes([])
         setHighlightedCount(0)
+
+        navigate({
+          to: "/asset",
+          search: (prev: Record<string, unknown>) => {
+            const next = { ...prev }
+            delete next.highlight
+            delete next.newCount
+            return next
+          },
+          replace: true,
+        })
       }, 10000)
 
       return () => clearTimeout(timer)
     }
-  })
+  }, [searchParam?.highlight, searchParam?.newCount, navigate])
 
-  // Ambil Master Data Merek, Kategori, Lokasi menggunakan React Query
   const { data: brandData = [] } = useQuery({
-    queryKey: ['masters', 'brands'],
+    queryKey: ["masters", "brands"],
     queryFn: () => assetService.masters("brands"),
   })
 
   const { data: categoryData = [] } = useQuery({
-    queryKey: ['masters', 'categories'],
+    queryKey: ["masters", "categories"],
     queryFn: () => assetService.masters("categories"),
   })
 
   const { data: locationData = [] } = useQuery({
-    queryKey: ['masters', 'locations'],
+    queryKey: ["masters", "locations"],
     queryFn: () => assetService.masters("locations"),
   })
 
-  // Ambil Data Utama Aset menggunakan React Query
-  const { data: assetData, isLoading: loading, error } = useQuery({
+  const {
+    data: assetData,
+    isLoading: loading,
+    error,
+  } = useQuery({
     queryKey: [
-      'assets',
+      "assets",
       {
         pageSize,
         sort,
@@ -275,9 +434,18 @@ export function AssetListView() {
     },
   })
 
-  const assets = useMemo(() => (assetData?.assets ? assetData.assets.map(toAsset) : []), [assetData])
+  const assets = useMemo(
+    () => (assetData?.assets ? assetData.assets.map(toAsset) : []),
+    [assetData]
+  )
   const pagination = assetData?.pagination || emptyPagination
-  const errorMessage = error ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi." : ""
+  const errorMessage = error
+    ? "Daftar aset gagal dimuat. Periksa koneksi lalu coba lagi."
+    : ""
+
+  const isHighlighted = (code: string) => {
+    return Boolean(code && highlightedCodes.includes(code.toLowerCase()))
+  }
 
   const isNewItem = (index: number, code: string, totalVisible: number) => {
     if (code && highlightedCodes.includes(code.toLowerCase())) return true
@@ -286,7 +454,6 @@ export function AssetListView() {
       const startIndex = Math.max(0, totalVisible - highlightedCount)
       return index >= startIndex
     }
-
     return false
   }
 
@@ -369,37 +536,157 @@ export function AssetListView() {
         : new Set(visibleAssets.map((asset) => asset.code))
     )
 
-  const handleBulkDelete = async () => {
-    const idsToDelete = assets
+  const buildExportParams = () => ({
+    sort,
+    search: debouncedQuery || undefined,
+    condition: condition || undefined,
+    status: status || undefined,
+    brandId,
+    categoryId,
+    locationId,
+    purchaseDateFrom: purchaseDateFrom || undefined,
+    purchaseDateTo: purchaseDateTo || undefined,
+    priceMin: priceMin ? Number(priceMin) : undefined,
+    priceMax: priceMax ? Number(priceMax) : undefined,
+    needsAttention: quickFilter === "needsAttention" || undefined,
+    withoutPrice: quickFilter === "withoutPrice" || undefined,
+    withoutPhoto: quickFilter === "withoutPhoto" || undefined,
+    duplicateCondition: quickFilter === "duplicateCondition" || undefined,
+  })
+
+  const runExport = async (name: string, extra: { ids?: string[] } = {}) => {
+    if (exporting) return
+    setExporting(true)
+    const toastId = toast.loading("Menyiapkan file Excel...")
+    try {
+      const response = await assetService.exportExcel({
+        ...buildExportParams(),
+        ...extra,
+      })
+      downloadBlob(
+        response,
+        `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`
+      )
+      toast.success("Export berhasil.", { id: toastId })
+    } catch {
+      toast.error("Gagal mengekspor data.", { id: toastId })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportAll = () => runExport("daftar-aset")
+
+  const handleExportSelected = () => {
+    const ids = assets
       .filter((asset) => selectedCodes.has(asset.code))
       .map((asset) => asset.id)
       .filter(Boolean)
+
+    if (ids.length === 0) {
+      toast.error("Tidak ada aset terpilih.")
+      return
+    }
+    runExport("aset-terpilih", { ids })
+  }
+
+  const bulkActions = [
+    ...(canCreateEditAsset
+      ? [
+          {
+            label: "Ubah kondisi",
+            action: () =>
+              setNotice("Ubah kondisi siap diproses untuk aset terpilih."),
+          },
+          {
+            label: "Mutasi",
+            action: () =>
+              setNotice("Mutasi siap diproses untuk aset terpilih."),
+          },
+        ]
+      : []),
+    ...(canExportLaporan
+      ? [
+          {
+            label: exporting ? "Mengekspor..." : "Export terpilih",
+            action: handleExportSelected,
+          },
+        ]
+      : []),
+  ]
+
+  const openArchiveDialog = (assetsToArchive: Asset[]) => {
+    if (assetsToArchive.length === 0) {
+      toast.error("Tidak ada aset valid yang bisa dihapus.")
+      return
+    }
+
+    setArchiveReason(
+      assetsToArchive.length === 1
+        ? "Dihapus dari daftar aset"
+        : "Dihapus massal dari daftar aset"
+    )
+    setArchiveRequest({ assets: assetsToArchive })
+  }
+
+  const closeArchiveDialog = () => {
+    if (isArchiving) return
+    setArchiveRequest(null)
+    setArchiveReason("")
+  }
+
+  const confirmArchive = async () => {
+    if (!archiveRequest) return
+
+    const reason = archiveReason.trim()
+    const idsToDelete = archiveRequest.assets
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (reason.length === 0) {
+      toast.error("Masukkan alasan pengarsipan terlebih dahulu.")
+      return
+    }
 
     if (idsToDelete.length === 0) {
       toast.error("Tidak ada aset valid yang bisa dihapus.")
       return
     }
 
-    const reason = window.prompt(
-      `${idsToDelete.length} aset akan dipindahkan ke Arsip. Masukkan alasan:`,
-      "Dihapus massal dari daftar aset"
-    )
-    if (reason === null || reason.trim() === "") return
-
+    setIsArchiving(true)
     try {
-      await assetService.bulkDelete({
-        asset_ids: idsToDelete,
-        reason,
-      })
-      toast.success(`${idsToDelete.length} aset berhasil dipindahkan ke arsip.`)
+      if (idsToDelete.length === 1) {
+        await assetService.delete(idsToDelete[0], reason)
+        toast.success("Aset berhasil diarsipkan.")
+      } else {
+        await assetService.bulkDelete({
+          asset_ids: idsToDelete,
+          reason,
+        })
+        toast.success(
+          `${idsToDelete.length} aset berhasil dipindahkan ke arsip.`
+        )
+        setSelectedCodes(new Set())
+      }
 
-      setSelectedCodes(new Set())
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ["assets"] })
+      setArchiveRequest(null)
+      setArchiveReason("")
+    } catch (error: unknown) {
       toast.error(
-        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
+        `Gagal mengarsipkan aset: ${apiErrorMessage(error) || "Kesalahan server"}`
       )
+    } finally {
+      setIsArchiving(false)
     }
+  }
+
+  const handleBulkDelete = () => {
+    const assetsToArchive = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .filter((asset) => Boolean(asset.id))
+
+    openArchiveDialog(assetsToArchive)
   }
 
   const resetPagination = () => {
@@ -426,6 +713,8 @@ export function AssetListView() {
     setSort("code:asc")
     setOpenFilter(null)
     resetPagination()
+
+    navigate({ to: "/asset" })
   }
 
   const handleSaveView = () => {
@@ -454,6 +743,18 @@ export function AssetListView() {
   const handleClearSavedView = () => {
     resetFilters()
     toast.info("Tampilan tersimpan berhasil dihapus.")
+  }
+
+  const openAssetDetail = (asset: Asset) => {
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
+    }
+
+    navigate({
+      to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
   }
 
   const hasActiveFilters = Boolean(
@@ -490,7 +791,19 @@ export function AssetListView() {
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-2.5 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-3.5 sm:pr-6 sm:pl-16 lg:pl-6">
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            navigate({
+              to: "/asset",
+              search: (prev: Record<string, unknown>) => ({
+                ...prev,
+                search: query.trim(),
+              }),
+            })
+          }}
+          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85"
+        >
           <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
           <input
             value={query}
@@ -502,14 +815,10 @@ export function AssetListView() {
           <span className="ml-auto hidden text-xs text-[#8e91a0] sm:block">
             {loading ? "Memuat..." : `${visibleAssets.length} hasil`}
           </span>
-        </label>
+        </form>
+
         <div className="ml-auto flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-[#e0e2e8] text-[13px] text-[#555a6a]">
-            ?
-          </span>
-          <span className="grid size-9 place-items-center rounded-full bg-[#ffc6c6] text-xs font-semibold text-[#600000]">
-            RS
-          </span>
+          <ProfileDropdown />
         </div>
       </header>
 
@@ -520,24 +829,31 @@ export function AssetListView() {
               Daftar Aset
             </h1>
             <span className="text-sm text-[#6b6f7e]">
-              {visibleAssets.length} aset ditampilkan &middot; {pageSummary.units}{" "}
-              unit &middot; nilai tercatat Rp{" "}
+              {visibleAssets.length} aset ditampilkan &middot;{" "}
+              {pageSummary.units} unit &middot; nilai tercatat Rp{" "}
               {formatNumber.format(pageSummary.value)}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2.25">
-            <Pill className="h-10 px-4 text-sm">
-              Kolom{" "}
-              <span className="text-xs font-normal text-[#6b6f7e]">10/12</span>
-            </Pill>
-            <Pill className="h-10 px-4 text-sm">Export Excel</Pill>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/asset/new" })}
-              className="col-span-2 flex h-10 items-center justify-center rounded-full bg-[#1c1c1e] px-5 text-sm font-semibold text-white sm:col-auto cursor-pointer"
-            >
-              + Tambah Aset
-            </button>
+            {canExportLaporan && (
+              <Pill
+                className="h-10 px-4 text-sm"
+                onClick={handleExportAll}
+                disabled={exporting}
+              >
+                {exporting ? "Mengekspor..." : "Export Excel"}
+              </Pill>
+            )}
+
+            {canCreateEditAsset && (
+              <Button
+                variant="primary"
+                onClick={() => navigate({ to: "/asset/new" })}
+                className="col-span-2 h-10 px-5 text-sm sm:col-auto"
+              >
+                + Tambah Aset
+              </Button>
+            )}
           </div>
         </section>
 
@@ -548,7 +864,7 @@ export function AssetListView() {
               <span className="text-[10px] opacity-75">{assets.length}</span>
             </Pill>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "needsAttention"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -558,9 +874,9 @@ export function AssetListView() {
               }}
             >
               Perlu tindakan
-            </ReferenceChip>
+            </FilterChip>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "withoutPrice"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -570,9 +886,9 @@ export function AssetListView() {
               }}
             >
               Tanpa harga
-            </ReferenceChip>
+            </FilterChip>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "withoutPhoto"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -582,9 +898,9 @@ export function AssetListView() {
               }}
             >
               Tanpa foto
-            </ReferenceChip>
+            </FilterChip>
 
-            <ReferenceChip
+            <FilterChip
               active={quickFilter === "duplicateCondition"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -594,13 +910,13 @@ export function AssetListView() {
               }}
             >
               Kondisi duplikat
-            </ReferenceChip>
+            </FilterChip>
 
             {hasActiveFilters && !hasSavedPreset && (
               <button
                 type="button"
                 onClick={handleSaveView}
-                className="h-8.5 rounded-full px-3 text-xs font-semibold text-[#4262ff] hover:bg-[#f0efff] transition cursor-pointer"
+                className="h-8.5 cursor-pointer rounded-full px-3 text-xs font-semibold text-[#4262ff] transition hover:bg-[#f0efff]"
               >
                 + Simpan tampilan ini
               </button>
@@ -613,7 +929,7 @@ export function AssetListView() {
                   type="button"
                   onClick={handleClearSavedView}
                   title="Hapus tampilan tersimpan default"
-                  className="ml-1 text-[11px] text-[#6b6f7e] hover:text-[#600000] cursor-pointer"
+                  className="ml-1 cursor-pointer text-[11px] text-[#6b6f7e] hover:text-[#600000]"
                 >
                   &times;
                 </button>
@@ -711,7 +1027,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={resetFilters}
-              className="ml-1 h-8.5 px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5] cursor-pointer"
+              className="ml-1 h-8.5 cursor-pointer px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5]"
               disabled={!hasActiveFilters}
             >
               Reset Filter
@@ -731,31 +1047,36 @@ export function AssetListView() {
               </span>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
-              {["Ubah kondisi", "Mutasi", "Export terpilih"].map((label) => (
+              {bulkActions.map(({ label, action }) => (
                 <button
-                  onClick={() =>
-                    setNotice(`${label} siap diproses untuk aset terpilih.`)
-                  }
+                  type="button"
+                  onClick={action}
                   key={label}
-                  className="flex h-8 flex-1 items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] sm:flex-none cursor-pointer"
+                  disabled={exporting}
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                 >
                   {label}
                 </button>
               ))}
-              <button
-                onClick={handleBulkDelete}
-                className="flex h-8 flex-1 items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none cursor-pointer"
-              >
-                Hapus
-              </button>
+
+              {canDeleteRestoreAsset && (
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full border border-white/35 px-3.5 text-xs font-semibold whitespace-nowrap sm:flex-none"
+                >
+                  Hapus
+                </button>
+              )}
             </div>
           </section>
         )}
 
         {notice && (
           <button
+            type="button"
             onClick={() => setNotice("")}
-            className="rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574] cursor-pointer"
+            className="cursor-pointer rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
           >
             {notice} &times;
           </button>
@@ -764,20 +1085,22 @@ export function AssetListView() {
         <div className="flex justify-start">
           <div className="inline-flex h-10 rounded-full border border-[#c7cad5] bg-white p-1">
             <button
+              type="button"
               onClick={() => setViewMode("table")}
               aria-label="Tampilan tabel"
               title="Tampilan tabel"
               aria-pressed={tableIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <Table2 size={16} strokeWidth={2} aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => setViewMode("card")}
               aria-label="Tampilan kartu"
               title="Tampilan kartu"
               aria-pressed={cardIsActive}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition cursor-pointer ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
             >
               <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -785,35 +1108,21 @@ export function AssetListView() {
         </div>
 
         {loading && (
-          <div
-            role="status"
-            className="rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center text-sm text-[#6b6f7e]"
-          >
-            Memuat daftar aset dari server...
-          </div>
+          <LoadingState message="Memuat daftar aset dari server..." />
         )}
         {!loading && errorMessage && (
-          <div
-            role="alert"
-            className="flex flex-col items-center gap-3 rounded-2xl border border-[#ffc6c6] bg-white px-5 py-10 text-center"
-          >
-            <p className="text-sm text-[#600000]">{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['assets'] })}
-              className="h-9 rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white cursor-pointer"
-            >
-              Coba lagi
-            </button>
-          </div>
+          <ErrorState
+            message={errorMessage}
+            onRetry={() =>
+              queryClient.invalidateQueries({ queryKey: ["assets"] })
+            }
+          />
         )}
         {!loading && !errorMessage && visibleAssets.length === 0 && (
-          <div className="rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center">
-            <p className="text-sm font-semibold">Aset tidak ditemukan</p>
-            <p className="mt-1 text-xs text-[#6b6f7e]">
-              Ubah kata pencarian atau reset filter untuk melihat data lain.
-            </p>
-          </div>
+          <EmptyState
+            title="Aset tidak ditemukan"
+            description="Ubah kata pencarian atau reset filter untuk melihat data lain."
+          />
         )}
 
         <section
@@ -833,188 +1142,164 @@ export function AssetListView() {
                 key={asset.code}
                 asset={asset}
                 selected={selectedCodes.has(asset.code)}
+                isHighlighted={isHighlighted(asset.code)}
                 isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
                 onToggle={() => toggleSelection(asset.code)}
+                onOpen={() => openAssetDetail(asset)}
               />
             ))}
           </div>
         </section>
 
-        {!loading &&
-          !errorMessage &&
-          visibleAssets.length > 0 &&
-          viewMode === "table" && (
-            <section className="overflow-hidden rounded-2xl border border-[#eef0f3] bg-white md:hidden">
-              <div className="grid h-10 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#e0e2e8] bg-[#f7f8fa] px-3 text-[10px] font-semibold tracking-wide text-[#6b6f7e] uppercase">
-                <span className="pl-6">Nama barang</span>
+        <section
+          className={`${
+            loading || errorMessage || visibleAssets.length === 0
+              ? "hidden"
+              : viewMode === "card"
+                ? "hidden"
+                : viewMode === "table"
+                  ? "block"
+                  : "hidden md:block"
+          } overflow-hidden rounded-2xl border border-[#eef0f3] bg-white`}
+        >
+          <div className="overflow-x-auto">
+            <div className="min-w-240">
+              <div
+                className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
+              >
+                <CheckBox selected={allSelected} onClick={selectAll} />
+                <span className="text-[#1c1c1e]">Kode &uarr;</span>
+                <span>Nama barang</span>
+                <span>Kategori</span>
+                <span>Merek</span>
+                <span className="text-right">Qty</span>
+                <span>Sat.</span>
                 <span>Kondisi</span>
+                <span>Lokasi</span>
                 <span className="text-right">Harga</span>
+                <span />
               </div>
               {visibleAssets.map((asset, index) => (
-                <MobileAssetRow
+                <AssetRow
                   key={asset.code}
                   asset={asset}
                   selected={selectedCodes.has(asset.code)}
-                  isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
+                  isHighlighted={isHighlighted(asset.code)}
+                  isNewImport={isNewItem(
+                    index,
+                    asset.code,
+                    visibleAssets.length
+                  )}
                   onToggle={() => toggleSelection(asset.code)}
+                  onOpen={() => openAssetDetail(asset)}
+                  onArchive={() => openArchiveDialog([asset])}
                 />
               ))}
-            </section>
-          )}
-
-        <section
-          className={`${loading || errorMessage || visibleAssets.length === 0
-            ? "hidden"
-            : viewMode === "card"
-              ? "hidden"
-              : "hidden md:block"
-            } overflow-x-auto rounded-2xl border border-[#eef0f3] bg-white`}
-        >
-          <div className="min-w-250">
-            <div
-              className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
-            >
-              <CheckBox selected={allSelected} onClick={selectAll} />
-              <span className="text-[#1c1c1e]">Kode &uarr;</span>
-              <span>Nama barang</span>
-              <span>Kategori</span>
-              <span>Merek</span>
-              <span className="text-right">Qty</span>
-              <span>Sat.</span>
-              <span>Kondisi</span>
-              <span>Lokasi</span>
-              <span className="text-right">Harga</span>
-              <span />
             </div>
-            {visibleAssets.map((asset, index) => (
-              <AssetRow
-                key={asset.code}
-                asset={asset}
-                selected={selectedCodes.has(asset.code)}
-                isNewImport={isNewItem(index, asset.code, visibleAssets.length)}
-                onToggle={() => toggleSelection(asset.code)}
-              />
-            ))}
           </div>
-          <footer className="flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3">
-            <span className="text-xs text-[#6b6f7e]">
-              Menampilkan {visibleAssets.length} aset &middot; Halaman{" "}
-              {cursorHistory.length + 1}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <PageSizeMenu
-                pageSize={pageSize}
-                onChange={handlePageSizeChange}
-              />
-              <Page
-                bordered
-                disabled={cursorHistory.length === 0}
-                onClick={goToPreviousPage}
-              >
-                &lsaquo;
-              </Page>
-              <Page active>{cursorHistory.length + 1}</Page>
-              <Page
-                bordered
-                disabled={!pagination.hasNextPage}
-                onClick={goToNextPage}
-              >
-                &rsaquo;
-              </Page>
-            </div>
-          </footer>
+          <PagePagination
+            currentPage={cursorHistory.length + 1}
+            hasPreviousPage={cursorHistory.length > 0}
+            hasNextPage={pagination.hasNextPage}
+            onPrevious={goToPreviousPage}
+            onNext={goToNextPage}
+            totalVisible={visibleAssets.length}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </section>
       </div>
-    </div>
-  )
-}
-
-function PageSizeMenu({
-  pageSize,
-  onChange,
-}: {
-  pageSize: number
-  onChange: (size: number) => void
-}) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex h-8 items-center gap-1.5 rounded-full border border-[#e0e2e8] bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5] cursor-pointer"
-      >
-        <span>{pageSize} / halaman</span>
-        <ChevronDown size={13} strokeWidth={2.5} />
-      </button>
-
-      {open && (
-        <div className="absolute bottom-10 right-0 z-20 w-32 rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
-          {[10, 25, 100].map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => {
-                onChange(size)
-                setOpen(false)
-              }}
-              className={`flex w-full rounded-lg px-3 py-1.5 text-left text-xs font-medium hover:bg-[#f5f6f8] cursor-pointer ${
-                pageSize === size ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"
-              }`}
-            >
-              {size} / halaman
-            </button>
-          ))}
-        </div>
+      {archiveRequest && (
+        <ArchiveAssetDialog
+          request={archiveRequest}
+          reason={archiveReason}
+          isArchiving={isArchiving}
+          onReasonChange={setArchiveReason}
+          onCancel={closeArchiveDialog}
+          onConfirm={confirmArchive}
+        />
       )}
     </div>
   )
 }
 
+// Pill, FilterChip, PagePagination sudah dipindahkan ke @/components/ui
+
 function AssetRow({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
+  onOpen,
+  onArchive,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
+  onArchive: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const rowStyle = isNeedsAttention
+    ? "bg-rose-50/60 shadow-[inset_3px_0_0_0_#f43f5e]"
+    : isHighlighted || isNewImport
+      ? "bg-emerald-50/60 shadow-[inset_3px_0_0_0_#10b981]"
+      : selected
+        ? "bg-[#f5f3ff]"
+        : "bg-white"
+
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 last:border-b-0 transition-colors duration-1000 ${
-        isNewImport
-          ? "bg-emerald-50/80 border-l-4 border-l-emerald-500 font-medium"
-          : selected
-            ? "bg-[#f5f3ff]"
-            : "bg-white"
-      }`}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-all duration-700 last:border-b-0 ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className="font-mono text-xs text-[#4262ff] truncate">{asset.code}</span>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
+      >
+        <span className="truncate font-mono text-xs font-semibold text-[#4262ff]">
+          {asset.code}
+        </span>
         {isNewImport && (
-          <span className="rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800 shrink-0 animate-pulse">
+          <span className="shrink-0 animate-pulse rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
             Baru
           </span>
         )}
-      </div>
-      <span className="min-w-0">
+        {!isNewImport &&
+          isHighlighted &&
+          (isNeedsAttention ? (
+            <span className="shrink-0 rounded-full bg-rose-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-rose-800">
+              Perlu Tindakan
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
+              Diperbarui
+            </span>
+          ))}
+      </button>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="min-w-0 cursor-pointer text-left hover:underline"
+      >
         <span className="block truncate text-sm font-semibold">
           {asset.name}
         </span>
-        <span
-          className={`block truncate text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
-        >
+        <span className="block truncate text-xs text-[#8e91a0]">
           {asset.detail}
         </span>
+      </button>
+      <span className="min-w-0 truncate text-xs text-[#555a6a]">
+        {asset.category}
       </span>
-      <span className="text-xs text-[#555a6a]">{asset.category}</span>
       <span
-        className={`text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
+        className={`min-w-0 truncate text-xs ${asset.brand === "—" ? "text-[#a5a8b5]" : "text-[#555a6a]"}`}
       >
         {asset.brand}
       </span>
@@ -1023,28 +1308,67 @@ function AssetRow({
       </span>
       <span className="text-xs text-[#555a6a]">{asset.unit}</span>
       <span>
-        <span
-          className={`rounded-full px-2.25 py-0.75 text-[11px] font-semibold ${conditionClass[asset.condition]}`}
-        >
+        <Badge variant={conditionVariantMap[asset.condition]}>
           {asset.condition}
-        </span>
+        </Badge>
       </span>
-      <span className="text-xs text-[#555a6a]">{asset.location}</span>
+      <span className="min-w-0 truncate text-xs text-[#555a6a]">
+        {asset.location}
+      </span>
       <span
-        className={`text-right font-mono text-xs ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
+        className={`text-right font-mono text-xs whitespace-nowrap ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
       >
         {asset.price ?? "Belum diisi"}
       </span>
-      <ActionMenu asset={asset} />
+      <ActionMenu asset={asset} onArchive={onArchive} />
     </div>
   )
 }
 
-function ActionMenu({ asset }: { asset: Asset }) {
+function ActionMenu({
+  asset,
+  onArchive,
+}: {
+  asset: Asset
+  onArchive: () => void
+}) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+
+    const updatePosition = () => {
+      const triggerRect = triggerRef.current?.getBoundingClientRect()
+      if (!triggerRect) return
+
+      const estimatedMenuHeight = 116
+      const offset = 8
+      const shouldOpenUpward =
+        window.innerHeight - triggerRect.bottom < estimatedMenuHeight + offset
+
+      setMenuPosition({
+        top: shouldOpenUpward
+          ? Math.max(offset, triggerRect.top - estimatedMenuHeight - offset)
+          : triggerRect.bottom + offset,
+        right: Math.max(offset, window.innerWidth - triggerRect.right),
+      })
+    }
+
+    updatePosition()
+    window.addEventListener("resize", updatePosition)
+    window.addEventListener("scroll", updatePosition, true)
+
+    return () => {
+      window.removeEventListener("resize", updatePosition)
+      window.removeEventListener("scroll", updatePosition, true)
+    }
+  }, [open])
 
   const goToEdit = () => {
     setOpen(false)
@@ -1060,180 +1384,246 @@ function ActionMenu({ asset }: { asset: Asset }) {
     })
   }
 
-  const handleSoftDelete = async () => {
+  const goToDetail = () => {
     setOpen(false)
 
-    const reason = window.prompt(
-      `Masukkan alasan penghapusan aset "${asset.name}":`,
-      "Dihapus dari daftar aset"
-    )
-
-    if (reason === null) return
-
-    try {
-      await assetService.delete(asset.id, reason)
-      toast.success("Aset berhasil diarsipkan.")
-      queryClient.invalidateQueries({ queryKey: ['assets'] })
-    } catch (error: any) {
-      console.error("Detail Error Delete:", error?.response || error)
-      toast.error(
-        `Gagal mengarsipkan aset: ${error?.response?.data?.message || error.message}`
-      )
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid atau tidak ditemukan.")
+      return
     }
+
+    navigate({
+      to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
+  }
+
+  const handleSoftDelete = () => {
+    setOpen(false)
+    onArchive()
   }
 
   return (
-    <div ref={menuRef} className="relative">
+    <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Menu aksi"
         aria-expanded={open}
-        className="grid size-7 place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3] cursor-pointer"
+        className="grid size-7 cursor-pointer place-items-center rounded-full text-[#8e91a0] hover:bg-[#f0f1f3]"
       >
         <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-8 z-30 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={goToEdit}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={menuPosition}
+            className="fixed z-[100] min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
           >
-            Detail
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={goToEdit}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleSoftDelete}
-            className="flex w-full items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2] cursor-pointer"
-          >
-            Hapus (Arsipkan)
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={goToDetail}
+              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            >
+              Detail
+            </button>
+
+            {canCreateEditAsset && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={goToEdit}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+              >
+                Edit
+              </button>
+            )}
+
+            {canDeleteRestoreAsset && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleSoftDelete}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#a80000] hover:bg-[#fff2f2]"
+              >
+                Hapus (Arsipkan)
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
 
-function MobileAssetRow({
-  asset,
-  selected,
-  isNewImport = false,
-  onToggle,
+function ArchiveAssetDialog({
+  request,
+  reason,
+  isArchiving,
+  onReasonChange,
+  onCancel,
+  onConfirm,
 }: {
-  asset: Asset
-  selected: boolean
-  isNewImport?: boolean
-  onToggle: () => void
+  request: ArchiveRequest
+  reason: string
+  isArchiving: boolean
+  onReasonChange: (value: string) => void
+  onCancel: () => void
+  onConfirm: () => void
 }) {
+  const isBulkArchive = request.assets.length > 1
+  const asset = request.assets[0]
+  const canConfirm = reason.trim().length > 0 && !isArchiving
+
   return (
-    <div
-      className={`grid min-h-17 grid-cols-[minmax(0,1fr)_88px_72px] items-center gap-2 border-b border-[#eef0f3] px-3 py-2 last:border-b-0 transition-colors duration-1000 ${
-        isNewImport
-          ? "bg-emerald-50/80 border-l-4 border-l-emerald-500 font-medium"
-          : selected
-            ? "bg-[#f5f3ff]"
-            : "bg-white"
-      }`}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel()
+      }}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <CheckBox selected={selected} onClick={onToggle} />
-        <span className="min-w-0">
-          <span className="block truncate text-xs font-semibold">
-            {asset.name}
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="block truncate font-mono text-[10px] text-[#4262ff]">
-              {asset.code}
-            </span>
-            {isNewImport && (
-              <span className="rounded bg-emerald-100 px-1 text-[8px] font-bold text-emerald-800 animate-pulse">
-                Baru
-              </span>
-            )}
-          </span>
-        </span>
-      </div>
-      <span className="min-w-0">
-        <span
-          className={`inline-block max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${conditionClass[asset.condition]}`}
-        >
-          {asset.condition}
-        </span>
-        <span className="mt-1 block truncate text-[11px] text-[#6b6f7e]">
-          {asset.location}
-        </span>
-      </span>
-      <span
-        className={`truncate text-right font-mono text-[11px] ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
-      >
-        {asset.price ?? "Belum diisi"}
-      </span>
-    </div>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {isBulkArchive
+              ? `Arsipkan ${request.assets.length} aset?`
+              : "Arsipkan aset ini?"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {isBulkArchive ? (
+            <>
+              Aset terpilih akan dipindahkan ke Arsip dan dapat dipulihkan
+              kembali.
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-xs font-semibold text-foreground">
+                {asset.code}
+              </span>{" "}
+              — {asset.name} akan dipindahkan ke Arsip dan dapat dipulihkan
+              kembali.
+            </>
+          )}
+        </p>
+
+        <div className="space-y-1.5 pt-2">
+          <Label htmlFor="archive-reason">Alasan pengarsipan</Label>
+          <Input
+            id="archive-reason"
+            autoFocus
+            value={reason}
+            disabled={isArchiving}
+            onChange={(event) => onReasonChange(event.target.value)}
+            placeholder="Contoh: Tidak lagi digunakan"
+          />
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isArchiving}
+            onClick={onCancel}
+          >
+            Batal
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={!canConfirm}
+            onClick={onConfirm}
+          >
+            {isArchiving ? "Mengarsipkan..." : "Arsipkan"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 function AssetCard({
   asset,
   selected,
+  isHighlighted = false,
   isNewImport = false,
   onToggle,
+  onOpen,
 }: {
   asset: Asset
   selected: boolean
+  isHighlighted?: boolean
   isNewImport?: boolean
   onToggle: () => void
+  onOpen: () => void
 }) {
+  const isNeedsAttention =
+    isHighlighted && (asset.attention || asset.condition !== "Bagus")
+
+  const cardStyle = isNeedsAttention
+    ? "border-rose-200 bg-rose-50/50 shadow-sm ring-1 ring-rose-400/40"
+    : isHighlighted || isNewImport
+      ? "border-emerald-200 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-400/40"
+      : selected
+        ? "border-[#d8d2ff] bg-[#f5f3ff]"
+        : "border-[#eef0f3] bg-white"
+
   return (
     <article
-      className={`rounded-2xl border p-4 transition-colors duration-1000 ${
-        isNewImport
-          ? "border-emerald-300 bg-emerald-50/80 ring-1 ring-emerald-300"
-          : selected
-            ? "border-[#d8d2ff] bg-[#f5f3ff]"
-            : "border-[#eef0f3] bg-white"
-      }`}
+      className={`rounded-2xl border p-4 transition-all duration-700 ${cardStyle}`}
     >
       <div className="flex items-start gap-3">
         <CheckBox selected={selected} onClick={onToggle} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-xs text-[#4262ff]">
+            <button
+              type="button"
+              onClick={onOpen}
+              className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
+            >
+              <span className="font-mono text-xs font-semibold text-[#4262ff]">
                 {asset.code}
               </span>
               {isNewImport && (
-                <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 animate-pulse">
+                <span className="animate-pulse rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
                   Baru
                 </span>
               )}
-            </div>
-            <span
-              className={`ml-auto shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${conditionClass[asset.condition]}`}
+              {!isNewImport &&
+                isHighlighted &&
+                (isNeedsAttention ? (
+                  <span className="rounded-full bg-rose-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-rose-800">
+                    Perlu Tindakan
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-emerald-100/90 px-2 py-0.5 text-[9px] font-bold tracking-tight text-emerald-800">
+                    Diperbarui
+                  </span>
+                ))}
+            </button>
+            <Badge
+              variant={conditionVariantMap[asset.condition]}
+              className="ml-auto shrink-0"
             >
               {asset.condition}
-            </span>
+            </Badge>
           </div>
-          <h2 className="mt-2 truncate text-sm font-semibold">{asset.name}</h2>
-          <p
-            className={`mt-0.5 text-xs ${asset.attention ? "text-[#600000]" : "text-[#8e91a0]"}`}
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-2 block max-w-full cursor-pointer truncate text-left text-sm font-semibold hover:underline"
           >
-            {asset.detail}
-          </p>
+            {asset.name}
+          </button>
+          <p className="mt-0.5 text-xs text-[#8e91a0]">{asset.detail}</p>
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-xs text-[#6b6f7e]">
             <span>
               <b className="block text-[#1c1c1e]">Kategori</b>
@@ -1267,52 +1657,11 @@ function CheckBox({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`grid size-4 place-items-center rounded border text-[10px] cursor-pointer ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
+      className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
     >
       {selected && "✓"}
-    </button>
-  )
-}
-
-function Pill({
-  children,
-  active = false,
-  className = "",
-  onClick,
-}: {
-  children: ReactNode
-  active?: boolean
-  className?: string
-  onClick?: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex h-8.5 items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold cursor-pointer ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"} ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function ReferenceChip({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean
-  children: ReactNode
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`flex h-8.5 items-center rounded-full border px-3.75 text-xs font-semibold transition cursor-pointer ${active ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"}`}
-    >
-      {children}
     </button>
   )
 }
@@ -1353,7 +1702,7 @@ function FilterMenu<T extends string | number>({
           onClick={() => onOpenChange(isOpen ? null : id)}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
-          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{isActive ? `${label}: ${selected.name}` : label}</span>
           {!isActive && (
@@ -1368,7 +1717,7 @@ function FilterMenu<T extends string | number>({
               onOpenChange(null)
             }}
             aria-label={`Hapus filter ${label}`}
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} aria-hidden="true" />
           </button>
@@ -1388,7 +1737,7 @@ function FilterMenu<T extends string | number>({
               onChange(undefined)
               onOpenChange(null)
             }}
-            className="flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8] cursor-pointer"
+            className="flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
           >
             Semua
           </button>
@@ -1402,7 +1751,7 @@ function FilterMenu<T extends string | number>({
                 onChange(option.id)
                 onOpenChange(null)
               }}
-              className={`flex w-full rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] cursor-pointer ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
+              className={`flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
             >
               {option.name}
             </button>
@@ -1432,15 +1781,15 @@ function DateRangeFilter({
     from && to ? `${from} – ${to}` : from || to || "Tanggal perolehan"
 
   return (
-    <div className="relative">
+    <div className="relative w-full lg:w-auto">
       <div
-        className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
+        className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
         <button
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1453,14 +1802,14 @@ function DateRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter tanggal perolehan"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
         )}
       </div>
       {open && (
-        <div className="absolute top-10 left-0 z-20 grid w-64 gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+        <div className="mt-2 grid w-64 max-w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
             Dari tanggal
             <input
@@ -1506,15 +1855,15 @@ function PriceRangeFilter({
     : "Rentang harga"
 
   return (
-    <div className="relative">
+    <div className={open ? "relative w-full lg:w-auto" : "relative"}>
       <div
-        className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
+        className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
         <button
           type="button"
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
-          className="flex h-full items-center gap-1.5 px-3.25 cursor-pointer"
+          className="flex h-full cursor-pointer items-center gap-1.5 px-3.25"
         >
           <span>{label}</span>
           {!value && <ChevronDown size={13} strokeWidth={2.5} />}
@@ -1527,14 +1876,14 @@ function PriceRangeFilter({
               onOpenChange(false)
             }}
             aria-label="Hapus filter rentang harga"
-            className="mr-1 grid size-6 place-items-center rounded-full hover:bg-white/15 cursor-pointer"
+            className="mr-1 grid size-6 cursor-pointer place-items-center rounded-full hover:bg-white/15"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
         )}
       </div>
       {open && (
-        <div className="absolute top-10 right-0 z-20 grid w-60 gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+        <div className="mt-2 grid w-60 max-w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:right-0 lg:z-20 lg:mt-0">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
             Harga minimum
             <input
@@ -1564,30 +1913,5 @@ function PriceRangeFilter({
         </div>
       )}
     </div>
-  )
-}
-
-function Page({
-  children,
-  active = false,
-  bordered = false,
-  disabled = false,
-  onClick,
-}: {
-  children: ReactNode
-  active?: boolean
-  bordered?: boolean
-  disabled?: boolean
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`grid size-8 place-items-center rounded-full text-xs cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${active ? "bg-[#1c1c1e] font-semibold text-white" : bordered ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]" : "text-[#555a6a]"}`}
-    >
-      {children}
-    </button>
   )
 }

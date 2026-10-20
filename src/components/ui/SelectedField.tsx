@@ -1,4 +1,6 @@
-import React from 'react'
+import * as React from "react"
+import { Select, SelectItem } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 interface SelectedFieldProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
@@ -13,49 +15,69 @@ export function SelectedField({
   options,
   errorText,
   helperText,
-  className = '',
+  className,
   disabled,
   isLoading,
+  id,
   ...props
 }: SelectedFieldProps) {
+  const generatedId = React.useId()
+  const selectId = id ?? generatedId
   const errorMessage = Array.isArray(errorText) ? errorText[0] : errorText
+  const hasError = Boolean(errorMessage)
 
   return (
-    <div className="space-y-1 w-full">
+    <div className="w-full space-y-1.5">
       {label && (
-        <label className="text-xs font-medium text-neutral-700 flex justify-between items-center">
-          <span>{label}</span>
-          {isLoading && <span className="text-[10px] text-neutral-400 animate-pulse">Memuat pilihan...</span>}
-        </label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={selectId}>{label}</Label>
+          {isLoading && (
+            <span className="animate-pulse text-[10px] text-muted-foreground">
+              Memuat pilihan...
+            </span>
+          )}
+        </div>
       )}
 
-      <select
+      <Select
+        id={selectId}
         disabled={disabled || isLoading}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition disabled:bg-neutral-100 disabled:cursor-not-allowed ${
+        aria-invalid={hasError || undefined}
+        aria-describedby={
           errorMessage
-            ? 'border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/10 text-rose-900'
-            : 'border-neutral-300 focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900'
-        } ${className}`}
+            ? `${selectId}-error`
+            : helperText
+              ? `${selectId}-helper`
+              : undefined
+        }
+        placeholder="Pilih salah satu..."
+        className={className}
         {...props}
       >
-        <option value="" disabled>
-          Pilih salah satu...
-        </option>
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <SelectItem key={opt.value} value={opt.value}>
             {opt.label}
-          </option>
+          </SelectItem>
         ))}
-      </select>
+      </Select>
 
       {errorMessage && (
-        <p className="text-[11px] text-rose-600 bg-rose-50 p-2 rounded border border-rose-100">
+        <p
+          id={`${selectId}-error`}
+          role="alert"
+          className="rounded-md border border-destructive/15 bg-destructive/5 px-2 py-1.5 text-[11px] text-destructive"
+        >
           {errorMessage}
         </p>
       )}
 
       {helperText && !errorMessage && (
-        <p className="text-[10px] text-neutral-400">{helperText}</p>
+        <p
+          id={`${selectId}-helper`}
+          className="text-[10px] text-muted-foreground"
+        >
+          {helperText}
+        </p>
       )}
     </div>
   )

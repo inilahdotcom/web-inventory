@@ -1,177 +1,371 @@
-
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { ShieldAlert, RefreshCw } from "lucide-react"
+import { usePermission } from "@/hooks/usePermission"
+import { auditLogService } from "@/services/auditLogServices"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 export interface AuditLogItem {
-    id: string | number
-    type: 'UPDATE' | 'DELETE' | 'CREATE' | 'IMPORT'
-    user: {
-        name: string
-        role: string
-        ip: string
-    }
-    timestamp: string
-    target: string
-    oldValues?: Record<string, any>
-    newValues?: Record<string, any>
-    description?: string
+  id: string | number
+  type:
+    | "UPDATE"
+    | "DELETE"
+    | "CREATE"
+    | "IMPORT"
+    | "IMPORT_UPDATE"
+    | "RESTORE"
+    | "MOVE"
+    | "SPLIT"
+    | string
+  user: {
+    name: string
+    role: string
+    ip: string
+  }
+  timestamp: string
+  target: string
+  oldValues?: Record<string, unknown>
+  newValues?: Record<string, unknown>
+  description?: string
 }
 
 interface AuditLogViewProps {
-    totalRecord?: number
-    logs?: AuditLogItem[]
-    onExport?: () => void
+  onExport?: () => void
 }
 
-export function AuditLogView({
-    totalRecord = 1284,
-    logs = [
-        {
-            id: 1,
-            type: 'UPDATE',
-            user: { name: 'Dewi Anggraini', role: 'Staff GA', ip: '192.168.1.24' },
-            timestamp: '05/08/2026 08:47:12',
-            target: 'assets · 0853/INC-GA/1/26',
-            oldValues: { condition: 'Bagus', status: 'Digunakan' },
-            newValues: { condition: 'Rusak Berat', status: 'Diperbaiki' }
-        },
-        {
-            id: 2,
-            type: 'DELETE',
-            user: { name: 'Rizky Saputra', role: 'Admin', ip: '192.168.1.10' },
-            timestamp: '05/08/2026 10:47:12',
-            target: 'assets · 0447/INC-GA/1/26',
-            description: 'Soft delete. Alasan: duplikat baris 41-51 hasil migrasi Excel. Record dipindahkan ke arsip, deleted_at = 2026-08-05T08:20:44Z.'
-        },
-        {
-            id: 3,
-            type: 'CREATE',
-            user: { name: 'Rizky Saputra', role: 'Admin', ip: '192.168.1.10' },
-            timestamp: '05/08/2026 11:47:12',
-            target: 'assets · 0447/INC-GA/1/26',
-            description: 'Monitor LG 24MK430H · 2 Unit · Elektronik Kantor · Redaksi L3 · harga Rp 1.750.000'
-        },
-        {
-            id: 4,
-            type: 'IMPORT',
-            user: { name: 'Rizky Saputra', role: 'Admin', ip: '192.168.1.10' },
-            timestamp: '05/08/2026 15:47:12',
-            target: 'assets · migrasi awal',
-            description: '88 baris tersimpan · 4 gagal · 3 baris header diabaikan · 33 harga dinormalkan dari teks ke numerik. File: ASET_PT_INDONESIA_NEWS_CENTER_1_Sheet1.xlsx'
-        },
-    ],
-    onExport
-}: AuditLogViewProps) {
+export function AuditLogView({ onExport }: AuditLogViewProps) {
+  // Panggil permission hook untuk membatasi akses halaman Audit Log (Khusus Admin)
+  const { canViewAuditLog } = usePermission()
 
-    const getBadgeStyle = (type: string) => {
-        switch (type) {
-            case 'UPDATE': return 'bg-amber-100 text-amber-800 border-amber-200'
-            case 'DELETE': return 'bg-rose-100 text-rose-800 border-rose-200'
-            case 'CREATE': return 'bg-emerald-100 text-emerald-800 border-emerald-200'
-            case 'IMPORT': return 'bg-blue-100 text-blue-800 border-blue-200'
-            default: return 'bg-neutral-100 text-neutral-800 border-neutral-200'
-        }
+  // State Filter Interaktif
+  const [selectedEntity, setSelectedEntity] = useState<string>("assets")
+  const [selectedAction, setSelectedAction] = useState<string>("")
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
+  const [isExporting, setIsExporting] = useState<boolean>(false)
+
+  // Fetching Data dari Backend Go memakai TanStack Query
+  const {
+    data: logs = [],
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "audit-logs",
+      selectedEntity,
+      selectedAction,
+      startDate,
+      endDate,
+    ],
+    queryFn: () =>
+      auditLogService.getLogs({
+        entity: selectedEntity || undefined,
+        action: selectedAction || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        pageSize: 50,
+      }),
+    enabled: canViewAuditLog, // Mencegah request dikirim jika pengguna bukan Admin
+  })
+
+  // 1. HANDLER REFRESH DENGAN FEEDBACK ANIMATED
+  const handleRefresh = async () => {
+    await refetch()
+  }
+
+  // 2. HANDLER EXPORT AUDIT LOG MEMANGGIL BACKEND (.XLSX)
+  const handleExportExcel = async () => {
+    if (onExport) {
+      onExport()
+      return
     }
 
+    if (isExporting) return
+    setIsExporting(true)
+    const toastId = toast.loading("Menyiapkan file Excel audit log...")
+
+    try {
+      await auditLogService.exportLog({
+        entity: selectedEntity || undefined,
+        action: selectedAction || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      })
+      toast.success("Audit log berhasil diekspor (.xlsx)", { id: toastId })
+    } catch (err) {
+      console.error("Gagal mengunduh audit log:", err)
+      toast.error("Gagal mengekspor data dari server.", { id: toastId })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Style badge variant
+  const getBadgeVariant = (type: string) => {
+    switch (type.toUpperCase()) {
+      case "UPDATE":
+      case "IMPORT_UPDATE":
+        return "rusak-ringan" as const
+      case "DELETE":
+      case "PERMANENT_DELETE":
+        return "destructive" as const
+      case "CREATE":
+        return "bagus" as const
+      case "IMPORT":
+      case "RESTORE":
+      case "MOVE":
+      case "SPLIT":
+        return "secondary" as const
+      default:
+        return "outline" as const
+    }
+  }
+
+  // Tampilan jika pengguna BUKAN Admin (Staff GA / Viewer)
+  if (!canViewAuditLog) {
     return (
-        <div className="min-h-screen w-full text-[#1C1C1E] bg-neutral-50/50">
-            {/* STICKY HEADER FILTER (z-10 & pl-14 lg:pl-0 untuk ruang tombol burger fixed) */}
-            <div className="sticky top-0 z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-neutral-200/80 bg-white/90 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-3 mb-6 w-full shadow-2xs">
-                
-                {/* Pl-14 khusus mobile/tablet agar filter bergeser memberi ruang untuk burger */}
-                <div className="w-full overflow-x-auto pb-1 xl:pb-0 no-scrollbar pl-14 lg:pl-0">
-                    <div className="flex items-center gap-2 text-xs min-w-max">
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-500">Pengguna:</span>
-                            <span className="text-neutral-900 font-semibold">Semua</span>
-                            <span className="text-neutral-400">▾</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-500">Entitas:</span>
-                            <span className="text-neutral-900 font-semibold">assets</span>
-                            <span className="text-neutral-400 cursor-pointer">×</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-500">Aksi:</span>
-                            <span className="text-neutral-900 font-semibold">Semua</span>
-                            <span className="text-neutral-400">▾</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-neutral-200 shadow-2xs font-medium shrink-0">
-                            <span className="text-neutral-900 font-semibold">01/08/2026 - 05/08/2026</span>
-                            <span className="text-neutral-400">▾</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-[#FFFBEB] border border-[#FDE68A] text-[#78350F] px-4 py-2 rounded-xl text-xs font-medium shadow-2xs flex items-center gap-2 shrink-0 w-fit">
-                    Hanya baca — log tidak dapat diubah atau dihapus
-                </div>
-            </div>
-
-            <div className="w-full space-y-6 max-w-7xl mx-auto pb-12 px-4 sm:px-6 lg:px-8 pt-2">
-                <div className="flex items-center justify-between pt-2">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Audit log</h1>
-                        <p className="text-xs text-neutral-400 mt-0.5">
-                            {totalRecord.toLocaleString()} catatan · menampilkan 5 terbaru pada filter aktif
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={onExport}
-                        className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs cursor-pointer"
-                    >
-                        Export log
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    {logs.map((log) => (
-                        <div
-                            key={log.id}
-                            className="rounded-2xl bg-white p-5 shadow-2xs space-y-3 border border-neutral-200/60"
-                        >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
-                                <div className="flex items-center gap-3">
-                                    <span
-                                        className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider border ${getBadgeStyle(log.type)}`}
-                                    >{log.type}</span>
-                                    <div className="text-xs">
-                                        <span className="font-semibold text-neutral-900">{log.user.name}</span>
-                                        <span className="text-neutral-400 mx-1.5">·</span>
-                                        <span className="text-neutral-500">{log.user.role} ({log.user.ip})</span>
-                                        <span className="text-neutral-400 ml-1.5">{log.timestamp}</span>
-                                    </div>
-                                </div>
-                                <div className="text-xs font-mono text-neutral-600">
-                                    {log.target}
-                                </div>
-                            </div>
-                            {log.oldValues && log.newValues ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                                    <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 font-mono text-[11px] text-neutral-700 space-y-1">
-                                        <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">OLD_VALUES</div>
-                                        <pre className="whitespace-pre-wrap text-neutral-600">
-                                            {JSON.stringify(log.oldValues, null, 2)}
-                                        </pre>
-                                    </div>
-                                    <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 font-mono text-[11px] text-neutral-700 space-y-1">
-                                        <div className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">NEW_VALUES</div>
-                                        <pre
-                                            className="whitespace-pre-wrap text-neutral-600"
-                                        >
-                                            {JSON.stringify(log.newValues, null, 2)}
-                                        </pre>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-xs text-neutral-600 pt-1 leading-relaxed">{log.description}</div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4 text-neutral-900">
+        <Card className="flex max-w-md flex-col items-center border-neutral-200/80 bg-white p-8 text-center shadow-xs">
+          <div className="grid size-12 place-items-center rounded-full bg-rose-100 text-rose-600">
+            <ShieldAlert size={24} />
+          </div>
+          <h1 className="mt-4 text-lg font-semibold text-neutral-900">
+            Akses Terbatas
+          </h1>
+          <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+            Halaman Audit Log hanya dapat diakses oleh Admin sistem. Anda tidak
+            memiliki izin yang cukup untuk melihat catatan aktivitas ini.
+          </p>
+        </Card>
+      </div>
     )
+  }
+
+  return (
+    <div className="min-h-screen w-full bg-neutral-50/50 text-neutral-900">
+      {/* STICKY HEADER FILTER */}
+      <div className="sticky top-0 z-10 mb-6 flex w-full flex-col justify-between gap-4 border-b border-neutral-200/80 bg-white/90 px-4 py-3 shadow-2xs backdrop-blur-md sm:px-6 lg:px-8 xl:flex-row xl:items-center">
+        <div className="no-scrollbar w-full overflow-x-auto pb-1 pl-14 lg:pl-0 xl:pb-0">
+          <div className="flex min-w-max items-center gap-2 text-xs">
+            {/* Filter Entitas */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
+              <span className="text-neutral-500">Entitas:</span>
+              <select
+                value={selectedEntity}
+                onChange={(e) => setSelectedEntity(e.target.value)}
+                className="cursor-pointer bg-transparent font-semibold text-neutral-900 outline-none"
+              >
+                <option value="">Semua</option>
+                <option value="assets">assets</option>
+                <option value="categories">categories</option>
+                <option value="brands">brands</option>
+                <option value="locations">locations</option>
+              </select>
+            </div>
+
+            {/* Filter Aksi */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
+              <span className="text-neutral-500">Aksi:</span>
+              <select
+                value={selectedAction}
+                onChange={(e) => setSelectedAction(e.target.value)}
+                className="cursor-pointer bg-transparent font-semibold text-neutral-900 outline-none"
+              >
+                <option value="">Semua</option>
+                <option value="CREATE">CREATE</option>
+                <option value="UPDATE">UPDATE</option>
+                <option value="DELETE">DELETE</option>
+                <option value="RESTORE">RESTORE</option>
+                <option value="IMPORT_CREATE">IMPORT_CREATE</option>
+                <option value="IMPORT_UPDATE">IMPORT_UPDATE</option>
+                <option value="move">MOVE</option>
+                <option value="SPLIT">SPLIT</option>
+                <option value="CREATE_SPLIT">CREATE_SPLIT</option>
+              </select>
+            </div>
+
+            {/* Filter Tanggal */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent font-semibold text-neutral-900 outline-none"
+              />
+              <span className="text-neutral-400">-</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent font-semibold text-neutral-900 outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex w-fit shrink-0 items-center gap-2 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-2 text-xs font-medium text-[#78350F] shadow-2xs">
+          Hanya baca — log tidak dapat diubah atau dihapus
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pt-2 pb-12 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between pt-2">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+              Audit log
+            </h1>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              {logs.length} catatan ditampilkan dari database
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Tombol Refresh */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isFetching}
+              onClick={handleRefresh}
+              className="gap-1.5 border-neutral-200 bg-white font-medium text-neutral-700 hover:bg-neutral-50"
+            >
+              <RefreshCw
+                size={14}
+                className={isFetching ? "animate-spin" : ""}
+              />
+              <span>{isFetching ? "Memuat..." : "Refresh"}</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isExporting}
+              onClick={handleExportExcel}
+              className="gap-1.5 border-neutral-200 bg-white font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+            >
+              <span>{isExporting ? "Mengekspor..." : "Export Excel"}</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* State Handler */}
+        {isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card
+                key={i}
+                className="flex flex-col justify-between gap-4 border-neutral-200/80 bg-white p-5 md:flex-row"
+              >
+                <div className="w-full shrink-0 space-y-2 md:w-56">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-4 w-32 rounded-md" />
+                  <Skeleton className="h-3 w-24 rounded-md" />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40 rounded-md" />
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>
+              Gagal mengambil audit log. Pastikan server backend berjalan.
+            </AlertDescription>
+          </Alert>
+        ) : logs.length === 0 ? (
+          <Card className="border-neutral-200/80 bg-white p-12 text-center text-xs text-neutral-500">
+            Belum ada rekam jejak aktivitas pada filter ini.
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {logs.map((log) => {
+              const targetParts = log.target
+                ? log.target.split("·")
+                : ["assets", ""]
+              const entityName = targetParts[0]?.trim() || "assets"
+              const targetCode = targetParts[1]?.trim() || ""
+
+              return (
+                <Card
+                  key={log.id}
+                  className="flex flex-col justify-between gap-4 border-neutral-200/80 bg-white p-5 shadow-2xs md:flex-row"
+                >
+                  {/* KOLOM KIRI: User Info, Action Badge & Timestamp */}
+                  <div className="w-full shrink-0 space-y-1.5 md:w-56">
+                    <Badge variant={getBadgeVariant(log.type)}>
+                      {log.type.replace("_", " ")}
+                    </Badge>
+                    <div>
+                      <h4 className="text-xs font-bold text-neutral-900">
+                        {log.user.name}
+                      </h4>
+                      <p className="text-[11px] text-neutral-500">
+                        {log.user.role} · {log.user.ip}
+                      </p>
+                      <p className="mt-1 font-mono text-[11px] text-neutral-400">
+                        {log.timestamp}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* KOLOM KANAN: Target & Diff / Description */}
+                  <div className="flex-1 space-y-3">
+                    {/* Target Label */}
+                    <div className="flex justify-start font-mono text-xs font-semibold text-neutral-900 md:justify-start">
+                      <span className="font-normal text-neutral-500">
+                        {entityName} ·{" "}
+                      </span>
+                      <span className="ml-1 text-blue-600">{targetCode}</span>
+                    </div>
+
+                    {/* Body Content: JSON Diff vs Text Description */}
+                    {log.oldValues || log.newValues ? (
+                      <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                        {/* OLD VALUES BOX */}
+                        <div className="space-y-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 font-mono text-[11px]">
+                          <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                            OLD_VALUES
+                          </div>
+                          <pre className="leading-relaxed whitespace-pre-wrap text-rose-600">
+                            {log.oldValues
+                              ? JSON.stringify(log.oldValues, null, 2)
+                              : "(Kosong)"}
+                          </pre>
+                        </div>
+
+                        {/* NEW VALUES BOX */}
+                        <div className="space-y-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 font-mono text-[11px]">
+                          <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
+                            NEW_VALUES
+                          </div>
+                          <pre className="leading-relaxed whitespace-pre-wrap text-emerald-600">
+                            {log.newValues
+                              ? JSON.stringify(log.newValues, null, 2)
+                              : "(Kosong)"}
+                          </pre>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-3 text-xs leading-relaxed text-neutral-700">
+                        {log.description}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
