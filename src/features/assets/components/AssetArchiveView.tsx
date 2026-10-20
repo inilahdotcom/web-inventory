@@ -25,9 +25,8 @@ export function AssetArchiveView() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
-  const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
-  const [isMobile, setIsMobile] = useState(
-    () => window.matchMedia("(max-width: 767px)").matches
+  const [viewMode, setViewMode] = useState<"table" | "card">(() =>
+    window.matchMedia("(max-width: 767px)").matches ? "card" : "table"
   )
 
   // Fetch data arsip dari backend Go
@@ -49,9 +48,12 @@ export function AssetArchiveView() {
             attr.delete_reason ||
             attr.reason ||
             "Dihapus dari inventaris",
-          deletedAt: attr.deletedAt || attr.deleted_at
-            ? new Date(attr.deletedAt || attr.deleted_at).toLocaleDateString("id-ID")
-            : "-",
+          deletedAt:
+            attr.deletedAt || attr.deleted_at
+              ? new Date(attr.deletedAt || attr.deleted_at).toLocaleDateString(
+                  "id-ID"
+                )
+              : "-",
           deletedBy: attr.deletedBy || attr.deleted_by || "Admin",
           hasMovementHistory: attr.has_movement_history || false,
         }
@@ -60,7 +62,8 @@ export function AssetArchiveView() {
       setAssets(formattedAssets)
     } catch (error: any) {
       console.error("Gagal mengambil arsip aset:", error)
-      const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
+      const rawMsg =
+        error?.response?.data?.error || error?.response?.data?.message || ""
       setErrorMessage(rawMsg || "Gagal memuat data arsip dari server.")
     } finally {
       setLoading(false)
@@ -91,9 +94,7 @@ export function AssetArchiveView() {
       setAssets((current) => current.filter((item) => item.id !== asset.id))
 
       // 2. Beri notifikasi toast sukses
-      toast.success(
-        `Aset ${asset.code} (${asset.name}) berhasil dipulihkan!`
-      )
+      toast.success(`Aset ${asset.code} (${asset.name}) berhasil dipulihkan!`)
 
       // 3. Pindah ke halaman list aset & bawa kode aset untuk di-highlight hijau
       navigate({
@@ -104,7 +105,8 @@ export function AssetArchiveView() {
       })
     } catch (error: any) {
       console.error("Gagal memulihkan aset:", error)
-      const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
+      const rawMsg =
+        error?.response?.data?.error || error?.response?.data?.message || ""
       toast.error(rawMsg || "Gagal memulihkan aset dari arsip.")
     } finally {
       setRestoringId(null)
@@ -142,7 +144,8 @@ export function AssetArchiveView() {
       closeDeleteDialog()
     } catch (error: any) {
       console.error("Gagal hapus permanen:", error)
-      const rawMsg = error?.response?.data?.error || error?.response?.data?.message || ""
+      const rawMsg =
+        error?.response?.data?.error || error?.response?.data?.message || ""
 
       let userMsg = "Gagal menghapus aset secara permanen."
       if (rawMsg.includes("mismatch") || rawMsg.includes("asset_code")) {
@@ -157,16 +160,8 @@ export function AssetArchiveView() {
     }
   }
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)")
-    const syncViewport = () => setIsMobile(mediaQuery.matches)
-    mediaQuery.addEventListener("change", syncViewport)
-    return () => mediaQuery.removeEventListener("change", syncViewport)
-  }, [])
-
-  const tableIsActive =
-    viewMode === "table" || (viewMode === "auto" && !isMobile)
-  const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
+  const tableIsActive = viewMode === "table"
+  const cardIsActive = viewMode === "card"
 
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
@@ -207,7 +202,7 @@ export function AssetArchiveView() {
         </section>
 
         {errorMessage && (
-          <div className="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-[13px] text-rose-700">
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
             {errorMessage}
           </div>
         )}
@@ -347,7 +342,11 @@ function ViewToggle({
         onClick={onSelectTable}
         aria-label="Tampilan tabel"
         aria-pressed={tableIsActive}
-        className={`grid size-8 place-items-center rounded-full ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+        className={`grid size-8 place-items-center rounded-full transition-colors ${
+          tableIsActive
+            ? "bg-[#1c1c1e] text-white shadow-sm"
+            : "text-[#6b6f7e] hover:bg-[#f0f1f3]"
+        }`}
       >
         <Table2 size={16} strokeWidth={2} aria-hidden="true" />
       </button>
@@ -356,7 +355,11 @@ function ViewToggle({
         onClick={onSelectCard}
         aria-label="Tampilan kartu"
         aria-pressed={cardIsActive}
-        className={`grid size-8 place-items-center rounded-full ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+        className={`grid size-8 place-items-center rounded-full transition-colors ${
+          cardIsActive
+            ? "bg-[#1c1c1e] text-white shadow-sm"
+            : "text-[#6b6f7e] hover:bg-[#f0f1f3]"
+        }`}
       >
         <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
       </button>
@@ -483,7 +486,7 @@ function ArchiveActions({
         type="button"
         disabled={isRestoring}
         onClick={() => onRestore(asset)}
-        className="h-8 shrink-0 rounded-full border border-[#c7cad5] bg-white px-2.75 text-[11.5px] font-semibold whitespace-nowrap sm:px-3.25 sm:text-[12.5px] cursor-pointer hover:bg-neutral-100 disabled:opacity-50"
+        className="h-8 shrink-0 cursor-pointer rounded-full border border-[#c7cad5] bg-white px-2.75 text-[11.5px] font-semibold whitespace-nowrap hover:bg-neutral-100 disabled:opacity-50 sm:px-3.25 sm:text-[12.5px]"
       >
         {isRestoring ? "Memulihkan..." : "Pulihkan"}
       </button>
@@ -495,7 +498,7 @@ function ArchiveActions({
           type="button"
           disabled={isRestoring}
           onClick={() => onDelete(asset)}
-          className="h-8 shrink-0 rounded-full bg-[#ffc6c6] px-2.75 text-[11.5px] font-semibold whitespace-nowrap text-[#600000] sm:px-3.25 sm:text-[12.5px] cursor-pointer hover:bg-[#ffb0b0] disabled:opacity-50"
+          className="h-8 shrink-0 cursor-pointer rounded-full bg-[#ffc6c6] px-2.75 text-[11.5px] font-semibold whitespace-nowrap text-[#600000] hover:bg-[#ffb0b0] disabled:opacity-50 sm:px-3.25 sm:text-[12.5px]"
         >
           Hapus permanen
         </button>
@@ -561,7 +564,7 @@ function PermanentDeleteDialog({
             type="button"
             disabled={isDeleting}
             onClick={onCancel}
-            className="h-11 rounded-full border border-[#c7cad5] px-5 text-[14px] font-semibold hover:bg-neutral-100 disabled:opacity-50 cursor-pointer"
+            className="h-11 cursor-pointer rounded-full border border-[#c7cad5] px-5 text-[14px] font-semibold hover:bg-neutral-100 disabled:opacity-50"
           >
             Batal
           </button>
@@ -569,7 +572,7 @@ function PermanentDeleteDialog({
             type="button"
             disabled={!canDelete}
             onClick={onConfirm}
-            className="h-11 rounded-full bg-[#1c1c1e] px-5.5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer hover:bg-black"
+            className="h-11 cursor-pointer rounded-full bg-[#1c1c1e] px-5.5 text-[14px] font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-45"
           >
             {isDeleting ? "Menghapus..." : "Hapus permanen"}
           </button>
@@ -592,7 +595,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`h-10 rounded-full border border-[#c7cad5] bg-white px-4 text-[13.5px] font-semibold ${className} hover:bg-neutral-50 cursor-pointer`}
+      className={`h-10 rounded-full border border-[#c7cad5] bg-white px-4 text-[13.5px] font-semibold ${className} cursor-pointer hover:bg-neutral-50`}
     >
       {children}
     </button>
