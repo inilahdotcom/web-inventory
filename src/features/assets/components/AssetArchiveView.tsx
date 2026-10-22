@@ -1,5 +1,5 @@
 import { LayoutGrid, Table2 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { assetService } from "@/services/assetServices"
@@ -37,9 +37,8 @@ export function AssetArchiveView() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
-  const [viewMode, setViewMode] = useState<"auto" | "table" | "card">("auto")
-  const [isMobile, setIsMobile] = useState(
-    () => window.matchMedia("(max-width: 767px)").matches
+  const [viewMode, setViewMode] = useState<"table" | "card">(() =>
+    window.matchMedia("(max-width: 767px)").matches ? "card" : "table"
   )
 
   // Fetch data arsip dari backend Go menggunakan useQuery
@@ -190,16 +189,8 @@ export function AssetArchiveView() {
     }
   }
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 767px)")
-    const syncViewport = () => setIsMobile(mediaQuery.matches)
-    mediaQuery.addEventListener("change", syncViewport)
-    return () => mediaQuery.removeEventListener("change", syncViewport)
-  }, [])
-
-  const tableIsActive =
-    viewMode === "table" || (viewMode === "auto" && !isMobile)
-  const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
+  const tableIsActive = viewMode === "table"
+  const cardIsActive = viewMode === "card"
 
   return (
     <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
@@ -384,7 +375,11 @@ function ViewToggle({
         onClick={onSelectTable}
         aria-label="Tampilan tabel"
         aria-pressed={tableIsActive}
-        className="size-8 rounded-full"
+        className={`size-8 rounded-full transition-colors ${
+          tableIsActive
+            ? "bg-[#1c1c1e] text-white shadow-sm hover:bg-black"
+            : "text-[#6b6f7e] hover:bg-[#f0f1f3]"
+        }`}
       >
         <Table2 size={16} strokeWidth={2} aria-hidden="true" />
       </Button>
@@ -395,7 +390,11 @@ function ViewToggle({
         onClick={onSelectCard}
         aria-label="Tampilan kartu"
         aria-pressed={cardIsActive}
-        className="size-8 rounded-full"
+        className={`size-8 rounded-full transition-colors ${
+          cardIsActive
+            ? "bg-[#1c1c1e] text-white shadow-sm hover:bg-black"
+            : "text-[#6b6f7e] hover:bg-[#f0f1f3]"
+        }`}
       >
         <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
       </Button>
