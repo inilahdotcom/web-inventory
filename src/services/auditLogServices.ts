@@ -19,6 +19,13 @@ export interface AuditLogQueryParams {
   startDate?: string
   endDate?: string
   pageSize?: number
+  cursor?: number | null // ✅ Parameter cursor ditambahkan
+}
+
+export interface AuditLogPaginationMeta {
+  nextCursor: number | null
+  pageSize: number
+  hasMore: boolean
 }
 
 export interface AuditLogMappedUI {
@@ -43,6 +50,12 @@ export interface AuditLogMappedUI {
   oldValues?: Record<string, unknown>
   newValues?: Record<string, unknown>
   description?: string
+}
+
+// Response Wrapper untuk komponen UI (Data Mapped + Pagination Meta)
+export interface GetAuditLogsResponse {
+  data: AuditLogMappedUI[]
+  pagination: AuditLogPaginationMeta
 }
 
 // 1. Helper Parse JSON aman (Mendukung wrapper `attributes` maupun objek langsung)
@@ -200,25 +213,19 @@ const formatDescription = (
 export const auditLogService = {
   getLogs: async (
     params?: AuditLogQueryParams
-  ): Promise<AuditLogMappedUI[]> => {
+  ): Promise<GetAuditLogsResponse> => {
     const response = await api.get("/audit-logs", { params })
-    const rawList: RawAuditLogFromGo[] =
-      response.data?.data || response.data || []
 
-    const seenMap = new Set<string>()
-    const uniqueRawList: RawAuditLogFromGo[] = []
-
-    for (const item of rawList) {
-      const timeKey = item.createdAt ? item.createdAt.substring(0, 19) : ""
-      const uniqueKey = `${item.action.toUpperCase()}_${item.entityId}_${timeKey}`
-
-      if (!seenMap.has(uniqueKey)) {
-        seenMap.add(uniqueKey)
-        uniqueRawList.push(item)
-      }
+    // Ambil raw array dan metadata pagination dari response backend
+    const rawList: RawAuditLogFromGo[] = response.data?.data || []
+    const paginationMeta: AuditLogPaginationMeta = response.data?.meta || {
+      nextCursor: null,
+      pageSize: params?.pageSize || 20,
+      hasMore: false,
     }
 
-    return uniqueRawList.map((item) => {
+    // ❌ SEENMAP DIHAPUS: Langsung lakukan mapping dari data murni backend Go
+    const mappedLogs: AuditLogMappedUI[] = rawList.map((item) => {
       const actionUpper = item.action.toUpperCase()
       const oldParsed = safeParseJSON(item.oldData)
       const newParsed = safeParseJSON(item.newData)
@@ -294,9 +301,14 @@ export const auditLogService = {
         description,
       }
     })
+
+    return {
+      data: mappedLogs,
+      pagination: paginationMeta,
+    }
   },
 
-  // FUNGSI BARU: Memanggil endpoint Backend Go untuk ekspor .xlsx
+  // Memanggil endpoint Backend Go untuk ekspor .xlsx
   exportLog: async (params?: AuditLogQueryParams) => {
     const response = await api.get("/audit-logs/export", {
       params,
