@@ -43,7 +43,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
   const { canViewAuditLog } = usePermission()
 
   // State Filter Interaktif
-  const [selectedEntity, setSelectedEntity] = useState<string>("assets")
+  const [selectedEntity, setSelectedEntity] = useState<string>("")
   const [selectedAction, setSelectedAction] = useState<string>("")
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
@@ -162,7 +162,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 onChange={(e) => setSelectedEntity(e.target.value)}
                 className="cursor-pointer bg-transparent font-semibold text-neutral-900 outline-none"
               >
-                <option value="">Semua</option>
+                <option value="">Semua entitas</option>
                 <option value="assets">assets</option>
                 <option value="categories">categories</option>
                 <option value="brands">brands</option>
