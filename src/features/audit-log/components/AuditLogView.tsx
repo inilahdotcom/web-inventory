@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
+import { TimelineItem } from "@/components/ui/timeline"
+import { buildAuditTimelineEntries } from "@/features/audit-log/audit-timeline"
 import { toast } from "sonner"
 
 export interface AuditLogItem {
@@ -293,6 +295,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 : ["assets", ""]
               const entityName = targetParts[0]?.trim() || "assets"
               const targetCode = targetParts[1]?.trim() || ""
+              const timelineEntries = buildAuditTimelineEntries(log)
 
               return (
                 <Card
@@ -300,11 +303,14 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                   className="flex flex-col justify-between gap-4 border-neutral-200/80 bg-white p-5 shadow-2xs md:flex-row"
                 >
                   {/* KOLOM KIRI: User Info, Action Badge & Timestamp */}
-                  <div className="w-full shrink-0 space-y-1.5 md:w-56">
-                    <Badge variant={getBadgeVariant(log.type)}>
+                  <div className="flex w-full shrink-0 flex-col md:w-56 md:self-stretch">
+                    <Badge
+                      variant={getBadgeVariant(log.type)}
+                      className="self-start"
+                    >
                       {log.type.replace("_", " ")}
                     </Badge>
-                    <div>
+                    <div className="mt-1.5">
                       <h4 className="text-xs font-bold text-neutral-900">
                         {log.user.name}
                       </h4>
@@ -314,6 +320,18 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                       <p className="mt-1 font-mono text-[11px] text-neutral-400">
                         {log.timestamp}
                       </p>
+                    </div>
+                    <div className="mt-4 hidden min-h-24 flex-1 md:block">
+                      {timelineEntries.map((entry, index) => (
+                        <TimelineItem
+                          key={entry.id}
+                          title={entry.title}
+                          subtitle={entry.subtitle}
+                          meta={entry.meta}
+                          active={index === 0}
+                          last={index === timelineEntries.length - 1}
+                        />
+                      ))}
                     </div>
                   </div>
 
