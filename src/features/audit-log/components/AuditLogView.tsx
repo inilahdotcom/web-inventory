@@ -1,8 +1,12 @@
 import { useState } from "react"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query"
 import { ShieldAlert, RefreshCw, Loader2 } from "lucide-react"
 import { usePermission } from "@/hooks/usePermission"
 import { auditLogService } from "@/services/auditLogServices"
+import {
+  masterDataService,
+  type MasterDataItem,
+} from "@/services/masterDataService"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -51,6 +55,78 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
   const [endDate, setEndDate] = useState<string>("")
   const [isExporting, setIsExporting] = useState<boolean>(false)
 
+  // 1. Fetch Master Data (Categories, Brands, Locations) dari masterDataService
+  const { data: categories = [] } = useQuery<MasterDataItem[]>({
+    queryKey: ["master-categories"],
+    queryFn: () => masterDataService.getCategories(),
+    staleTime: 1000 * 60 * 5,
+    enabled: canViewAuditLog,
+  })
+
+  const { data: brands = [] } = useQuery<MasterDataItem[]>({
+    queryKey: ["master-brands"],
+    queryFn: () => masterDataService.getBrands(),
+    staleTime: 1000 * 60 * 5,
+    enabled: canViewAuditLog,
+  })
+
+  const { data: locations = [] } = useQuery<MasterDataItem[]>({
+    queryKey: ["master-locations"],
+    queryFn: () => masterDataService.getLocations(),
+    staleTime: 1000 * 60 * 5,
+    enabled: canViewAuditLog,
+  })
+
+  // Lookup Maps O(1) untuk pemetaan ID ke Nama Master
+  const categoryMap = new Map<number, string>(
+    categories.map((c) => [c.id, c.name])
+  )
+  const brandMap = new Map<number, string>(brands.map((b) => [b.id, b.name]))
+  const locationMap = new Map<number, string>(
+    locations.map((l) => [l.id, l.name])
+  )
+
+  // Helper untuk mengubah ID master menjadi Nama Terbaca
+  const formatValueWithMasterName = (key: string, value: unknown): unknown => {
+    if (value === null || value === undefined || value === "-") return "-"
+
+    const numVal = Number(value)
+    if (!isNaN(numVal)) {
+      if (key === "categoryId" && categoryMap.has(numVal)) {
+        return `${categoryMap.get(numVal)} (ID: ${numVal})`
+      }
+      if (key === "brandId" && brandMap.has(numVal)) {
+        return `${brandMap.get(numVal)} (ID: ${numVal})`
+      }
+      if (key === "locationId" && locationMap.has(numVal)) {
+        return `${locationMap.get(numVal)} (ID: ${numVal})`
+      }
+    }
+
+    return value
+  }
+
+  // Format Objek Diff dengan Pemetaan Nama Master
+  const formatDiffValues = (obj?: Record<string, unknown>) => {
+    if (!obj || Object.keys(obj).length === 0) return null
+
+    const formattedObj: Record<string, unknown> = {}
+    Object.entries(obj).forEach(([key, val]) => {
+      const displayKey =
+        key === "categoryId"
+          ? "category"
+          : key === "brandId"
+            ? "brand"
+            : key === "locationId"
+              ? "location"
+              : key
+
+      formattedObj[displayKey] = formatValueWithMasterName(key, val)
+    })
+
+    return formattedObj
+  }
+
   // Fetching Data menggunakan useInfiniteQuery untuk Cursor-Based Pagination
   const {
     data,
@@ -76,11 +152,11 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         pageSize: 20,
-        cursor: pageParam ?? null, // Parameter cursor dikirim dari pageParam
+        cursor: pageParam ?? null,
       }),
     initialPageParam: undefined as number | undefined,
     getNextPageParam: (lastPage) => lastPage.pagination.nextCursor ?? undefined,
-    enabled: canViewAuditLog, // Mencegah request dikirim jika pengguna bukan Admin
+    enabled: canViewAuditLog,
   })
 
   // Flattens data dari semua halaman yang sudah di-fetch
@@ -237,7 +313,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Tombol Refresh */}
             <Button
               type="button"
               variant="outline"
@@ -310,6 +385,10 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               const targetCode = targetParts[1]?.trim() || ""
               const timelineEntries = buildAuditTimelineEntries(log)
 
+              // Format Diff values dengan nama master yang mudah dibaca
+              const formattedOld = formatDiffValues(log.oldValues)
+              const formattedNew = formatDiffValues(log.newValues)
+
               return (
                 <Card
                   key={log.id}
@@ -359,7 +438,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                     </div>
 
                     {/* Body Content: JSON Diff vs Text Description */}
-                    {log.oldValues || log.newValues ? (
+                    {formattedOld || formattedNew ? (
                       <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
                         {/* OLD VALUES BOX */}
                         <div className="space-y-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 font-mono text-[11px]">
@@ -367,8 +446,8 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                             OLD_VALUES
                           </div>
                           <pre className="leading-relaxed whitespace-pre-wrap text-rose-600">
-                            {log.oldValues
-                              ? JSON.stringify(log.oldValues, null, 2)
+                            {formattedOld
+                              ? JSON.stringify(formattedOld, null, 2)
                               : "(Kosong)"}
                           </pre>
                         </div>
@@ -379,8 +458,8 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                             NEW_VALUES
                           </div>
                           <pre className="leading-relaxed whitespace-pre-wrap text-emerald-600">
-                            {log.newValues
-                              ? JSON.stringify(log.newValues, null, 2)
+                            {formattedNew
+                              ? JSON.stringify(formattedNew, null, 2)
                               : "(Kosong)"}
                           </pre>
                         </div>
