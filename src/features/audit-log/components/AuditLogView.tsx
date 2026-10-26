@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { ShieldAlert, RefreshCw } from "lucide-react"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { ShieldAlert, RefreshCw, Loader2 } from "lucide-react"
 import { usePermission } from "@/hooks/usePermission"
 import { auditLogService } from "@/services/auditLogServices"
 import { Card } from "@/components/ui/card"
@@ -49,14 +49,17 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
   const [endDate, setEndDate] = useState<string>("")
   const [isExporting, setIsExporting] = useState<boolean>(false)
 
-  // Fetching Data dari Backend Go memakai TanStack Query
+  // Fetching Data menggunakan useInfiniteQuery untuk Cursor-Based Pagination
   const {
-    data: logs = [],
+    data,
     isLoading,
     isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     isError,
     refetch,
-  } = useQuery({
+  } = useInfiniteQuery({
     queryKey: [
       "audit-logs",
       selectedEntity,
@@ -64,16 +67,22 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
       startDate,
       endDate,
     ],
-    queryFn: () =>
+    queryFn: ({ pageParam }) =>
       auditLogService.getLogs({
         entity: selectedEntity || undefined,
         action: selectedAction || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        pageSize: 50,
+        pageSize: 20,
+        cursor: pageParam ?? null, // Parameter cursor dikirim dari pageParam
       }),
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => lastPage.pagination.nextCursor ?? undefined,
     enabled: canViewAuditLog, // Mencegah request dikirim jika pengguna bukan Admin
   })
+
+  // Flattens data dari semua halaman yang sudah di-fetch
+  const logs = data?.pages.flatMap((page) => page.data) ?? []
 
   // 1. HANDLER REFRESH DENGAN FEEDBACK ANIMATED
   const handleRefresh = async () => {
@@ -222,7 +231,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               Audit log
             </h1>
             <p className="mt-0.5 text-xs text-neutral-500">
-              {logs.length} catatan ditampilkan dari database
+              {logs.length} catatan ditampilkan
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -237,9 +246,13 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
             >
               <RefreshCw
                 size={14}
-                className={isFetching ? "animate-spin" : ""}
+                className={
+                  isFetching && !isFetchingNextPage ? "animate-spin" : ""
+                }
               />
-              <span>{isFetching ? "Memuat..." : "Refresh"}</span>
+              <span>
+                {isFetching && !isFetchingNextPage ? "Memuat..." : "Refresh"}
+              </span>
             </Button>
 
             <Button
@@ -363,6 +376,28 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 </Card>
               )
             })}
+
+            {/* CONTROL LOAD MORE / INFINITE SCROLL */}
+            {hasNextPage && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="gap-2 border-neutral-200 bg-white px-6 font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Memuat data berikutnya...</span>
+                    </>
+                  ) : (
+                    <span>Muat Lebih Banyak</span>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
