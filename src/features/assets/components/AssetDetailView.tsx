@@ -31,8 +31,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TimelineItem, AuditItem } from "@/components/ui/timeline"
-import { SectionHeading } from "@/components/ui/section"
+import { TimelineItem } from "@/components/ui/timeline"
 import { LogOut, User } from "lucide-react"
 import { toast } from "sonner"
 
@@ -141,10 +140,11 @@ export function AssetDetailView() {
   const queryClient = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Memanggil permission hook untuk mengontrol hak akses UI
+  // State untuk filter chip timeline (Task B1)
+  const [timelineFilter, setTimelineFilter] = useState<string>("all")
+
   const { canCreateEditAsset, canDeleteRestoreAsset } = usePermission()
 
-  // Profile data & Dropdown state (Disamakan dengan DashboardView)
   const { data: profile } = useQuery({
     queryKey: ["dashboard", "profile"],
     queryFn: () => profileService.get(),
@@ -476,6 +476,74 @@ export function AssetDetailView() {
 
   const photos = detail.attributes.photos.map((photo) => photo.url)
 
+  // Penggabungan data riwayat menjadi satu unified timeline (Task B1) - Aman dari error tipe TypeScript
+  const attributesObj = detail.attributes as unknown as {
+    mutationHistory?: Array<{
+      id: string | number
+      mutationDate?: string
+      createdAt?: string
+      fromLocation?: string
+      toLocation?: string
+      fromHolder?: string
+      toHolder?: string
+      actorName?: string
+      reason?: string
+    }>
+    auditLogs?: Array<{
+      id: string | number
+      createdAt?: string
+      actorName?: string
+      oldValue?: string | null
+      newValue?: string | null
+      fieldName?: string | null
+      action: string
+    }>
+    checkHistory?: Array<{
+      id: string | number
+      createdAt?: string
+      date?: string
+      condition?: string
+      notes?: string
+      inspectorName?: string
+      actorName?: string
+    }>
+  }
+
+  const unifiedTimeline = [
+    ...(attributesObj.mutationHistory || []).map((m) => ({
+      id: `mutation-${m.id}`,
+      type: "mutation" as const,
+      date: new Date(m.mutationDate || m.createdAt || new Date().toISOString()),
+      title: `${m.fromLocation || "—"} → ${m.toLocation || "—"}`,
+      subtitle: `Pemegang: ${m.fromHolder || "—"} → ${m.toHolder || "—"}`,
+      meta: `${displayDate(m.mutationDate || "")} · ${m.actorName || ""} · alasan: ${m.reason || ""}`,
+      badge: "Mutasi",
+    })),
+    ...(attributesObj.auditLogs || []).map((log) => ({
+      id: `audit-${log.id}`,
+      type: "audit" as const,
+      date: new Date(log.createdAt || new Date().toISOString()),
+      title: auditTitle(log as AssetAuditLog),
+      subtitle: auditDetail(log as AssetAuditLog),
+      meta: `${log.actorName || ""} · ${displayTimestamp(log.createdAt || null)}`,
+      badge: "Log Perubahan",
+    })),
+    ...(attributesObj.checkHistory || []).map((c) => ({
+      id: `check-${c.id}`,
+      type: "check" as const,
+      date: new Date(c.createdAt || c.date || new Date().toISOString()),
+      title: `Pemeriksaan Aset (${c.condition || "Pengecekan"})`,
+      subtitle: c.notes || "Pemeriksaan rutin inventaris",
+      meta: `${c.inspectorName || c.actorName || "Admin"} · ${displayTimestamp(c.createdAt || null)}`,
+      badge: "Pemeriksaan",
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime())
+
+  const filteredTimeline = unifiedTimeline.filter((item) => {
+    if (timelineFilter === "all") return true
+    return item.type === timelineFilter
+  })
+
   return (
     <div className="min-h-svh min-w-0 bg-background text-foreground">
       <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-hairline bg-card py-0 pr-4 pl-16 sm:pr-6 sm:pl-16 lg:pl-6">
@@ -493,7 +561,6 @@ export function AssetDetailView() {
           </span>
         </div>
 
-        {/* PROFILE DROPDOWN SAMAA PERSIS DENGAN DASHBOARDVIEW */}
         <div className="ml-auto flex items-center gap-2.5">
           <div className="relative" ref={dropdownRef}>
             <button
@@ -778,55 +845,98 @@ export function AssetDetailView() {
 
           <div className="flex flex-col gap-4.5">
             <CompletenessCard completeness={detail.attributes.completeness} />
+
+            {/* Task B1: Satu Timeline Terpadu dengan Filter Chips */}
             <Card className="flex flex-col gap-4 rounded-[20px] p-5">
-              <SectionHeading
-                title="Riwayat mutasi"
-                detail={`${detail.attributes.mutationHistory.length} catatan`}
-              />
-              <div className="mt-4">
-                {detail.attributes.mutationHistory.length ? (
-                  detail.attributes.mutationHistory.map((mutation, index) => (
-                    <TimelineItem
-                      key={mutation.id}
-                      title={`${mutation.fromLocation || "—"} → ${mutation.toLocation || "—"}`}
-                      subtitle={`Pemegang: ${mutation.fromHolder || "—"} → ${mutation.toHolder || "—"}`}
-                      meta={`${displayDate(mutation.mutationDate)} · ${mutation.actorName} · alasan: ${mutation.reason}`}
-                      active={index === 0}
-                      last={
-                        index === detail.attributes.mutationHistory.length - 1
-                      }
-                    />
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Belum ada riwayat mutasi.
-                  </p>
-                )}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-[16px] font-semibold">
+                    Riwayat & Aktivitas Aset
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    {unifiedTimeline.length} total catatan
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setTimelineFilter("all")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                      timelineFilter === "all"
+                        ? "bg-neutral-900 text-white"
+                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    }`}
+                  >
+                    Semua ({unifiedTimeline.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimelineFilter("mutation")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                      timelineFilter === "mutation"
+                        ? "bg-neutral-900 text-white"
+                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    }`}
+                  >
+                    Mutasi
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimelineFilter("audit")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                      timelineFilter === "audit"
+                        ? "bg-neutral-900 text-white"
+                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    }`}
+                  >
+                    Log Perubahan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimelineFilter("check")}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                      timelineFilter === "check"
+                        ? "bg-neutral-900 text-white"
+                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    }`}
+                  >
+                    Pemeriksaan
+                  </button>
+                </div>
               </div>
-            </Card>
-            <Card className="flex flex-col gap-4 rounded-[20px] p-5">
-              <SectionHeading
-                title="Perubahan terakhir"
-                action="Semua log →"
-                onAction={() =>
-                  setNotice("Halaman semua log audit belum tersedia.")
-                }
-              />
-              <div className="mt-4 flex flex-col gap-2.75">
-                {detail.attributes.auditLogs.length ? (
-                  detail.attributes.auditLogs
-                    .slice(0, 2)
-                    .map((log) => (
-                      <AuditItem
-                        key={log.id}
-                        title={auditTitle(log)}
-                        detail={auditDetail(log)}
-                        meta={`${log.actorName} · ${displayTimestamp(log.createdAt)}`}
-                      />
-                    ))
+
+              <div className="mt-2">
+                {filteredTimeline.length ? (
+                  <div className="flex flex-col">
+                    {filteredTimeline.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="relative flex flex-col gap-1 pb-4"
+                      >
+                        <TimelineItem
+                          title={
+                            <div className="flex items-center gap-2">
+                              <span>{item.title}</span>
+                              <Badge
+                                variant="outline"
+                                className="px-1.5 py-0 text-[10px]"
+                              >
+                                {item.badge}
+                              </Badge>
+                            </div>
+                          }
+                          subtitle={item.subtitle}
+                          meta={item.meta}
+                          active={index === 0}
+                          last={index === filteredTimeline.length - 1}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Belum ada perubahan tercatat.
+                  <p className="py-6 text-center text-xs text-muted-foreground">
+                    Belum ada catatan riwayat untuk filter ini.
                   </p>
                 )}
               </div>
