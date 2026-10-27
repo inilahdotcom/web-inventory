@@ -116,22 +116,4 @@ export const importService = {
     const res = await api.post("/assets/import/execute", payload)
     return res.data?.data
   },
-
-  // 4. Export Excel
-  exportExcel: async (params?: Record<string, unknown>): Promise<Blob> => {
-    const res = await api.get("/assets/export/excel", {
-      params,
-      responseType: "blob",
-    })
-    return res.data
-  },
-
-  // 5. Export PDF
-  exportPDF: async (params?: Record<string, unknown>): Promise<Blob> => {
-    const res = await api.get("/assets/export/pdf", {
-      params,
-      responseType: "blob",
-    })
-    return res.data
-  },
 }
