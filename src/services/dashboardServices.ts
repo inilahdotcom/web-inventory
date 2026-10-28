@@ -7,6 +7,11 @@ export interface DashboardStats {
     total_quantity: number
     total_asset_value: number
     total_damaged: number
+    // Metrik Kualitas Data (Task B2)
+    missing_price_count?: number
+    missing_photo_count?: number
+    missing_holder_count?: number
+    needs_inspection_count?: number
   }
   categories: Array<{ category_name: string; total_assets: number }>
   conditions: Array<{ condition: string; total_assets: number }>

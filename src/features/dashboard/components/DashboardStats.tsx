@@ -1,6 +1,8 @@
+import { useNavigate } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { FileText, CameraOff, UserX, ClipboardCheck } from "lucide-react"
 
 export interface MainAssetStat {
   totalValue: number
@@ -26,13 +28,17 @@ export interface ActionRequiredAlert {
   items: ActionRequiredItem[]
 }
 
-// Interface Backend Go
+// Interface Backend Go yang sudah diperbarui dengan data kelengkapan (Task B2)
 export interface BackendSummary {
   total_asset_types: number
   total_quantity: number
   total_asset_value: number
   total_damaged: number
   filled_price_count?: number
+  missing_price_count?: number
+  missing_photo_count?: number
+  missing_holder_count?: number
+  needs_inspection_count?: number
 }
 
 export interface BackendAlertAsset {
@@ -66,13 +72,14 @@ export function DashboardStats({
   onCompletePricesClick,
   onActionClick,
 }: DashboardStatsProps) {
-  // Hitung data dinamis murni dari API
+  const navigate = useNavigate()
+
+  // Hitung data dinamis dari API
   const totalCount = summary?.total_asset_types ?? mainStat?.totalCount ?? 0
   const filledCount = summary?.filled_price_count ?? mainStat?.filledCount ?? 0
   const totalValue = summary?.total_asset_value ?? mainStat?.totalValue ?? 0
 
   const remainingCount = Math.max(0, totalCount - filledCount)
-
   const progressPercentage =
     totalCount > 0 ? (filledCount / totalCount) * 100 : 0
 
@@ -85,6 +92,47 @@ export function DashboardStats({
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date())
+
+  // Data Metrik Kualitas / Kelengkapan (Task B2)
+  const missingPrice = summary?.missing_price_count ?? remainingCount
+  const missingPhoto = summary?.missing_photo_count ?? 0
+  const missingHolder = summary?.missing_holder_count ?? 0
+  const needsInspection = summary?.needs_inspection_count ?? 0
+
+  const completenessCards = [
+    {
+      title: "Tanpa Harga",
+      count: missingPrice,
+      label: "aset belum ada harga",
+      icon: FileText,
+      filter: "withoutPrice",
+      color: "text-amber-600 bg-amber-50 border-amber-200",
+    },
+    {
+      title: "Tanpa Foto",
+      count: missingPhoto,
+      label: "aset belum ada foto",
+      icon: CameraOff,
+      filter: "withoutPhoto",
+      color: "text-blue-600 bg-blue-50 border-blue-200",
+    },
+    {
+      title: "Tanpa Pemegang",
+      count: missingHolder,
+      label: "aset belum ada PJR",
+      icon: UserX,
+      filter: "withoutHolder",
+      color: "text-purple-600 bg-purple-50 border-purple-200",
+    },
+    {
+      title: "Perlu Inspection",
+      count: needsInspection,
+      label: "aset perlu dicek",
+      icon: ClipboardCheck,
+      filter: "needsAttention",
+      color: "text-rose-600 bg-rose-50 border-rose-200",
+    },
+  ]
 
   const displayMiniStats: MiniStatItem[] = miniStats || [
     {
@@ -127,13 +175,21 @@ export function DashboardStats({
       .replace("IDR", "Rp")
   }
 
+  const handleCompletenessCardClick = (filterType: string) => {
+    navigate({
+      to: "/asset",
+      search: { filter: filterType },
+    })
+  }
+
   return (
-    <div className="flex flex-col space-y-2">
+    <div className="flex flex-col space-y-4">
       {/* 1. Teks Metadata Atas */}
       <p className="text-[11px] text-muted-foreground">
         Data per {formattedLastUpdated} &bull; {sourceInfo}
       </p>
 
+      {/* 2. Grid Utama Dashboard */}
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
         {/* Kartu Total Nilai Aset (Kuning) */}
         <div className="flex flex-col justify-between space-y-6 rounded-3xl bg-[#FFD02C] p-6 shadow-sm lg:col-span-2">
@@ -243,6 +299,38 @@ export function DashboardStats({
               </div>
             )}
           </Card>
+        </div>
+      </div>
+
+      {/* 3. Task B2: Kartu Kualitas & Kelengkapan Data */}
+      <div className="space-y-2 pt-2">
+        <h3 className="text-xs font-bold tracking-wider text-neutral-500 uppercase">
+          Kualitas & Kelengkapan Data Inventaris
+        </h3>
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+          {completenessCards.map((card) => {
+            const Icon = card.icon
+            return (
+              <Card
+                key={card.filter}
+                onClick={() => handleCompletenessCardClick(card.filter)}
+                className={`group flex cursor-pointer flex-col justify-between border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${card.color}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold">{card.title}</span>
+                  <Icon className="size-4 opacity-70 transition-transform group-hover:scale-110" />
+                </div>
+                <div className="mt-3">
+                  <p className="text-2xl font-extrabold tracking-tight">
+                    {card.count}
+                  </p>
+                  <p className="mt-0.5 text-[11px] opacity-80">
+                    {card.label} →
+                  </p>
+                </div>
+              </Card>
+            )
+          })}
         </div>
       </div>
     </div>

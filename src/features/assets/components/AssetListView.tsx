@@ -69,6 +69,7 @@ type Asset = {
   priceValue: number
   attention?: boolean
   hasPhoto: boolean
+  hasHolder: boolean
 }
 
 type ArchiveRequest = {
@@ -76,7 +77,12 @@ type ArchiveRequest = {
 }
 
 type QuickFilter =
-  "" | "needsAttention" | "withoutPrice" | "withoutPhoto" | "duplicateCondition"
+  | ""
+  | "needsAttention"
+  | "withoutPrice"
+  | "withoutPhoto"
+  | "withoutHolder"
+  | "duplicateCondition"
 
 type SortOption = "code:asc" | "code:desc" | "name:asc" | "name:desc"
 
@@ -151,6 +157,7 @@ function toAsset(item: AssetListItem): Asset {
   const holderName = String(
     attr.holder || attr.holderName || attr.holder_name || ""
   )
+  const hasHolder = holderName.trim().length > 0
 
   return {
     id: String(item.id || attr.id || ""),
@@ -176,6 +183,7 @@ function toAsset(item: AssetListItem): Asset {
     priceValue,
     attention: ((attr.condition as AssetCondition) || "Bagus") !== "Bagus",
     hasPhoto,
+    hasHolder,
   }
 }
 
@@ -287,6 +295,7 @@ export function AssetListView() {
   const [archiveReason, setArchiveReason] = useState("")
   const [isArchiving, setIsArchiving] = useState(false)
 
+  // Penanganan Filter Navigasi dari Dashboard (Task B2)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const queryFromUrl = searchParam?.search || urlParams.get("search") || ""
@@ -299,9 +308,20 @@ export function AssetListView() {
       })
     }
 
-    if (filterFromUrl === "missing_price") {
+    if (filterFromUrl) {
       queueMicrotask(() => {
-        setQuickFilter("withoutPrice")
+        if (
+          filterFromUrl === "missing_price" ||
+          filterFromUrl === "withoutPrice"
+        ) {
+          setQuickFilter("withoutPrice")
+        } else if (filterFromUrl === "withoutPhoto") {
+          setQuickFilter("withoutPhoto")
+        } else if (filterFromUrl === "withoutHolder") {
+          setQuickFilter("withoutHolder")
+        } else if (filterFromUrl === "needsAttention") {
+          setQuickFilter("needsAttention")
+        }
       })
     }
   }, [searchParam?.search, searchParam?.filter])
@@ -483,6 +503,10 @@ export function AssetListView() {
         return !asset.hasPhoto
       }
 
+      if (quickFilter === "withoutHolder") {
+        return !asset.hasHolder
+      }
+
       if (quickFilter === "duplicateCondition") {
         return assets.some(
           (other) =>
@@ -551,6 +575,7 @@ export function AssetListView() {
     needsAttention: quickFilter === "needsAttention" || undefined,
     withoutPrice: quickFilter === "withoutPrice" || undefined,
     withoutPhoto: quickFilter === "withoutPhoto" || undefined,
+    withoutHolder: quickFilter === "withoutHolder" || undefined,
     duplicateCondition: quickFilter === "duplicateCondition" || undefined,
   })
 
@@ -901,6 +926,18 @@ export function AssetListView() {
             </FilterChip>
 
             <FilterChip
+              active={quickFilter === "withoutHolder"}
+              onClick={() => {
+                setQuickFilter((current) =>
+                  current === "withoutHolder" ? "" : "withoutHolder"
+                )
+                resetPagination()
+              }}
+            >
+              Tanpa pemegang
+            </FilterChip>
+
+            <FilterChip
               active={quickFilter === "duplicateCondition"}
               onClick={() => {
                 setQuickFilter((current) =>
@@ -1223,8 +1260,6 @@ export function AssetListView() {
   )
 }
 
-// Pill, FilterChip, PagePagination sudah dipindahkan ke @/components/ui
-
 function AssetRow({
   asset,
   selected,
@@ -1422,7 +1457,7 @@ function ActionMenu({
             ref={menuRef}
             role="menu"
             style={menuPosition}
-            className="fixed z-[100] min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
+            className="fixed z-100 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
           >
             <button
               type="button"
