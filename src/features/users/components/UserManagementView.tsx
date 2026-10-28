@@ -106,12 +106,9 @@ function UserRow({
       : role === "staff_ga"
         ? "bg-[#c3faf5] text-[#187574]"
         : "bg-[#fff8e0] text-[#746019]"
-  const roleBadgeVariant =
-    role === "admin"
-      ? ("rusak-berat" as const)
-      : role === "staff_ga"
-        ? ("bagus" as const)
-        : ("outline" as const)
+
+  // Semua role badge dibuat polos (outline) tanpa background warna
+  const roleBadgeVariant = "outline" as const
 
   return (
     <div
@@ -243,7 +240,7 @@ export function UserManagementView() {
         signal
       ),
     retry: false,
-    enabled: canManageAdminData, // Mencegah request dikirim jika pengguna bukan Admin
+    enabled: canManageAdminData,
   })
 
   const resetPage = () => {

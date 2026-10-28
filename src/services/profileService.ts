@@ -21,5 +21,3 @@ export const profileService = {
     await api.put("/profile/password", payload)
   },
 }
-
-

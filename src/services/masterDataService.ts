@@ -1,4 +1,4 @@
-import { api } from '@/lib/axios'
+import { api } from "@/lib/axios"
 
 // Tipe data lengkap untuk Master Data (Category, Brand, Location)
 export interface MasterDataItem {
@@ -8,8 +8,8 @@ export interface MasterDataItem {
   description?: string
   createdAt?: string
   updatedAt?: string
-  asset_count?: number 
-  assetCount?: number  
+  asset_count?: number
+  assetCount?: number
 }
 
 export interface CreateMasterDataPayload {
@@ -26,12 +26,12 @@ export interface UpdateMasterDataPayload {
 
 export const masterDataService = {
   getMutationLocations: async (): Promise<MasterDataItem[]> => {
-    const res = await api.get('/masters/locations')
+    const res = await api.get("/masters/locations")
     return res.data?.data || []
   },
 
   getCategories: async (): Promise<MasterDataItem[]> => {
-    const res = await api.get('/categories')
+    const res = await api.get("/categories")
     return res.data?.data || []
   },
 
@@ -40,12 +40,17 @@ export const masterDataService = {
     return res.data?.data
   },
 
-  createCategory: async (payload: CreateMasterDataPayload): Promise<MasterDataItem> => {
-    const res = await api.post('/categories', payload)
+  createCategory: async (
+    payload: CreateMasterDataPayload
+  ): Promise<MasterDataItem> => {
+    const res = await api.post("/categories", payload)
     return res.data?.data
   },
 
-  updateCategory: async (id: number, payload: UpdateMasterDataPayload): Promise<MasterDataItem> => {
+  updateCategory: async (
+    id: number,
+    payload: UpdateMasterDataPayload
+  ): Promise<MasterDataItem> => {
     const res = await api.put(`/categories/${id}`, payload)
     return res.data?.data
   },
@@ -55,7 +60,7 @@ export const masterDataService = {
   },
 
   getBrands: async (): Promise<MasterDataItem[]> => {
-    const res = await api.get('/brands')
+    const res = await api.get("/brands")
     return res.data?.data || []
   },
 
@@ -64,12 +69,17 @@ export const masterDataService = {
     return res.data?.data
   },
 
-  createBrand: async (payload: CreateMasterDataPayload): Promise<MasterDataItem> => {
-    const res = await api.post('/brands', payload)
+  createBrand: async (
+    payload: CreateMasterDataPayload
+  ): Promise<MasterDataItem> => {
+    const res = await api.post("/brands", payload)
     return res.data?.data
   },
 
-  updateBrand: async (id: number, payload: UpdateMasterDataPayload): Promise<MasterDataItem> => {
+  updateBrand: async (
+    id: number,
+    payload: UpdateMasterDataPayload
+  ): Promise<MasterDataItem> => {
     const res = await api.put(`/brands/${id}`, payload)
     return res.data?.data
   },
@@ -79,7 +89,7 @@ export const masterDataService = {
   },
 
   getLocations: async (): Promise<MasterDataItem[]> => {
-    const res = await api.get('/locations')
+    const res = await api.get("/locations")
     return res.data?.data || []
   },
 
@@ -88,12 +98,17 @@ export const masterDataService = {
     return res.data?.data
   },
 
-  createLocation: async (payload: CreateMasterDataPayload): Promise<MasterDataItem> => {
-    const res = await api.post('/locations', payload)
+  createLocation: async (
+    payload: CreateMasterDataPayload
+  ): Promise<MasterDataItem> => {
+    const res = await api.post("/locations", payload)
     return res.data?.data
   },
 
-  updateLocation: async (id: number, payload: UpdateMasterDataPayload): Promise<MasterDataItem> => {
+  updateLocation: async (
+    id: number,
+    payload: UpdateMasterDataPayload
+  ): Promise<MasterDataItem> => {
     const res = await api.put(`/locations/${id}`, payload)
     return res.data?.data
   },

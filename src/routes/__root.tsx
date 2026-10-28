@@ -10,9 +10,9 @@ function RootLayout() {
   return (
     <>
       <Toaster position="top-right" richColors closeButton />
-      
+
       <Outlet />
-      
+
       {import.meta.env.DEV ? (
         <TanStackRouterDevtools position="bottom-right" />
       ) : null}
