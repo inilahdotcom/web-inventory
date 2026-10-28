@@ -10,8 +10,10 @@
  *   />
  */
 
+import type { ReactNode } from "react"
+
 interface TimelineItemProps {
-  title: string
+  title: ReactNode
   subtitle?: string
   meta: string
   active?: boolean
@@ -51,8 +53,6 @@ export function TimelineItem({
  * Usage:
  *   <AuditItem title="Kondisi diubah" detail={<span>Bagus → Rusak</span>} meta="Admin · 01/01/2025" />
  */
-
-import type { ReactNode } from "react"
 
 interface AuditItemProps {
   title: string

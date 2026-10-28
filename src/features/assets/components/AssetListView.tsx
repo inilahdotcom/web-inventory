@@ -2,7 +2,14 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { LayoutGrid, MoreVertical, Table2, X, ChevronDown } from "lucide-react"
+import {
+  LayoutGrid,
+  MoreVertical,
+  Table2,
+  X,
+  ChevronDown,
+  QrCode,
+} from "lucide-react"
 import { assetService } from "@/services/assetServices"
 import { usePermission } from "@/hooks/usePermission"
 import { toast } from "sonner"
@@ -194,7 +201,6 @@ export function AssetListView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Ambil data permission untuk kontrol hak akses UI
   const { canCreateEditAsset, canDeleteRestoreAsset, canExportLaporan } =
     usePermission()
 
@@ -295,7 +301,6 @@ export function AssetListView() {
   const [archiveReason, setArchiveReason] = useState("")
   const [isArchiving, setIsArchiving] = useState(false)
 
-  // Penanganan Filter Navigasi dari Dashboard (Task B2)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const queryFromUrl = searchParam?.search || urlParams.get("search") || ""
@@ -615,7 +620,28 @@ export function AssetListView() {
     runExport("aset-terpilih", { ids })
   }
 
+  // Handler khusus untuk Cetak Label QR (Per ID) - Bebas dari ESLint 'no-explicit-any'
+  const handlePrintSelectedQR = () => {
+    const selectedAssets = assets.filter((asset) =>
+      selectedCodes.has(asset.code)
+    )
+
+    if (selectedAssets.length === 0) {
+      toast.error("Pilih minimal 1 aset untuk dicetak label QR-nya.")
+      return
+    }
+
+    void navigate({
+      to: "/asset/$id/print_label",
+      params: { id: String(selectedAssets[0].id) },
+    })
+  }
+
   const bulkActions = [
+    {
+      label: "Cetak QR Label",
+      action: handlePrintSelectedQR,
+    },
     ...(canCreateEditAsset
       ? [
           {
@@ -739,7 +765,7 @@ export function AssetListView() {
     setOpenFilter(null)
     resetPagination()
 
-    navigate({ to: "/asset" })
+    void navigate({ to: "/asset" })
   }
 
   const handleSaveView = () => {
@@ -776,7 +802,7 @@ export function AssetListView() {
       return
     }
 
-    navigate({
+    void navigate({
       to: "/asset/$id",
       params: { id: String(asset.id) },
     })
@@ -819,7 +845,7 @@ export function AssetListView() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            navigate({
+            void navigate({
               to: "/asset",
               search: (prev: Record<string, unknown>) => ({
                 ...prev,
@@ -873,7 +899,7 @@ export function AssetListView() {
             {canCreateEditAsset && (
               <Button
                 variant="primary"
-                onClick={() => navigate({ to: "/asset/new" })}
+                onClick={() => void navigate({ to: "/asset/new" })}
                 className="col-span-2 h-10 px-5 text-sm sm:col-auto"
               >
                 + Tambah Aset
@@ -1413,7 +1439,7 @@ function ActionMenu({
       return
     }
 
-    navigate({
+    void navigate({
       to: "/asset/$id/edit",
       params: { id: String(asset.id) },
     })
@@ -1427,8 +1453,21 @@ function ActionMenu({
       return
     }
 
-    navigate({
+    void navigate({
       to: "/asset/$id",
+      params: { id: String(asset.id) },
+    })
+  }
+
+  // Handler khusus untuk Cetak QR di ActionMenu - Bebas dari ESLint 'no-explicit-any'
+  const handlePrintQR = () => {
+    setOpen(false)
+    if (!asset.id) {
+      toast.error("ID Aset tidak valid.")
+      return
+    }
+    void navigate({
+      to: "/asset/$id/print_label",
       params: { id: String(asset.id) },
     })
   }
@@ -1466,6 +1505,16 @@ function ActionMenu({
               className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
             >
               Detail
+            </button>
+
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handlePrintQR}
+              className="flex w-full cursor-pointer items-center gap-1.5 px-3.5 py-2 text-left text-xs font-medium text-[#555a6a] hover:bg-[#f5f6f8]"
+            >
+              <QrCode size={13} className="text-[#8e91a0]" />
+              Cetak QR
             </button>
 
             {canCreateEditAsset && (
