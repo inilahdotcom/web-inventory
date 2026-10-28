@@ -35,6 +35,7 @@ import { TimelineItem, AuditItem } from "@/components/ui/timeline"
 import { SectionHeading } from "@/components/ui/section"
 import { LogOut, User } from "lucide-react"
 import { toast } from "sonner"
+import { getConfirmedMutationHistory } from "../my-assets-rules"
 
 type AssetDraft = Record<
   | "name"
@@ -475,6 +476,13 @@ export function AssetDetailView() {
   }
 
   const photos = detail.attributes.photos.map((photo) => photo.url)
+  const mutationHistory = getConfirmedMutationHistory(
+    detail.attributes.mutationHistory,
+    detail.attributes.holderConfirmedAt
+  )
+  const mutationConfirmationPending =
+    detail.attributes.mutationHistory.length > 0 &&
+    !detail.attributes.holderConfirmedAt
 
   return (
     <div className="min-h-svh min-w-0 bg-background text-foreground">
@@ -746,6 +754,16 @@ export function AssetDetailView() {
                   />
                 )}
                 <InfoField
+                  label="Konfirmasi pemegang"
+                  value={detail.attributes.holderConfirmedAt ?? ""}
+                  displayValue={
+                    detail.attributes.holderConfirmedAt
+                      ? `Sudah dikonfirmasi · ${displayTimestamp(detail.attributes.holderConfirmedAt)}`
+                      : "Belum dikonfirmasi"
+                  }
+                  muted={!detail.attributes.holderConfirmedAt}
+                />
+                <InfoField
                   label="Keterangan barang"
                   value={asset.description}
                   wide
@@ -781,20 +799,30 @@ export function AssetDetailView() {
             <Card className="flex flex-col gap-4 rounded-[20px] p-5">
               <SectionHeading
                 title="Riwayat mutasi"
-                detail={`${detail.attributes.mutationHistory.length} catatan`}
+                detail={
+                  mutationConfirmationPending
+                    ? "Menunggu konfirmasi"
+                    : `${mutationHistory.length} catatan`
+                }
               />
               <div className="mt-4">
-                {detail.attributes.mutationHistory.length ? (
-                  detail.attributes.mutationHistory.map((mutation, index) => (
+                {mutationConfirmationPending ? (
+                  <div className="rounded-xl border border-[#f3df9a] bg-[#fff8e0] p-4">
+                    <Badge variant="warning">Belum dikonfirmasi</Badge>
+                    <p className="mt-2 text-xs leading-5 text-[#746019]">
+                      Riwayat mutasi akan ditampilkan setelah pemegang aset
+                      mengonfirmasi kepemilikan.
+                    </p>
+                  </div>
+                ) : mutationHistory.length ? (
+                  mutationHistory.map((mutation, index) => (
                     <TimelineItem
                       key={mutation.id}
                       title={`${mutation.fromLocation || "—"} → ${mutation.toLocation || "—"}`}
                       subtitle={`Pemegang: ${mutation.fromHolder || "—"} → ${mutation.toHolder || "—"}`}
                       meta={`${displayDate(mutation.mutationDate)} · ${mutation.actorName} · alasan: ${mutation.reason}`}
                       active={index === 0}
-                      last={
-                        index === detail.attributes.mutationHistory.length - 1
-                      }
+                      last={index === mutationHistory.length - 1}
                     />
                   ))
                 ) : (
@@ -1116,6 +1144,7 @@ function auditTitle(log: AssetAuditLog) {
       UPDATE: "Aset diubah",
       DELETE: "Aset dihapus",
       IMPORT_CREATE: "Aset diimpor",
+      HOLDER_CONFIRMED: "Pemegang dikonfirmasi",
     }[log.action] || log.action.replaceAll("_", " ")
   )
 }

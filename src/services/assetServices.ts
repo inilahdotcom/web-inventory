@@ -32,6 +32,7 @@ export interface AssetData {
   condition: string
   status: string
   description: string | null
+  holderConfirmedAt?: string | null
   photos: AssetPhoto[]
   createdAt: string | null
   updatedAt: string | null
@@ -205,6 +206,10 @@ export interface SplitAssetResponse {
   created: SplitAssetRecord
 }
 
+export interface ConfirmAssetHolderPayload {
+  notes: "konfirmasi pemegang"
+}
+
 // ===== ASSET SERVICE =====
 export const assetService = {
   masters: async (type: string): Promise<AssetMasterItem[]> => {
@@ -270,6 +275,13 @@ export const assetService = {
   ): Promise<SplitAssetResponse> => {
     const response = await api.post(`/assets/${id}/split`, payload)
     return response.data?.data || response.data
+  },
+
+  confirmHolder: async (id: string): Promise<void> => {
+    const payload: ConfirmAssetHolderPayload = {
+      notes: "konfirmasi pemegang",
+    }
+    await api.post(`/assets/${id}/checks`, payload)
   },
 
   uploadPhoto: async (files: File[]): Promise<string[]> => {
