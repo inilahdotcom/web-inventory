@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { TimelineItem } from "@/components/ui/timeline"
 import { LogOut, User } from "lucide-react"
 import { toast } from "sonner"
+import { getConfirmedMutationHistory } from "../my-assets-rules"
 
 type AssetDraft = Record<
   | "name"
@@ -475,6 +476,13 @@ export function AssetDetailView() {
   }
 
   const photos = detail.attributes.photos.map((photo) => photo.url)
+  const mutationHistory = getConfirmedMutationHistory(
+    detail.attributes.mutationHistory,
+    detail.attributes.holderConfirmedAt
+  )
+  const mutationConfirmationPending =
+    detail.attributes.mutationHistory.length > 0 &&
+    !detail.attributes.holderConfirmedAt
 
   // Penggabungan data riwayat menjadi satu unified timeline (Task B1) - Aman dari error tipe TypeScript
   const attributesObj = detail.attributes as unknown as {
@@ -510,7 +518,7 @@ export function AssetDetailView() {
   }
 
   const unifiedTimeline = [
-    ...(attributesObj.mutationHistory || []).map((m) => ({
+    ...mutationHistory.map((m) => ({
       id: `mutation-${m.id}`,
       type: "mutation" as const,
       date: new Date(m.mutationDate || m.createdAt || new Date().toISOString()),
@@ -813,6 +821,16 @@ export function AssetDetailView() {
                   />
                 )}
                 <InfoField
+                  label="Konfirmasi pemegang"
+                  value={detail.attributes.holderConfirmedAt ?? ""}
+                  displayValue={
+                    detail.attributes.holderConfirmedAt
+                      ? `Sudah dikonfirmasi · ${displayTimestamp(detail.attributes.holderConfirmedAt)}`
+                      : "Belum dikonfirmasi"
+                  }
+                  muted={!detail.attributes.holderConfirmedAt}
+                />
+                <InfoField
                   label="Keterangan barang"
                   value={asset.description}
                   wide
@@ -907,6 +925,15 @@ export function AssetDetailView() {
               </div>
 
               <div className="mt-2">
+                {mutationConfirmationPending && (
+                  <div className="mb-4 rounded-xl border border-[#f3df9a] bg-[#fff8e0] p-4">
+                    <Badge variant="warning">Menunggu konfirmasi</Badge>
+                    <p className="mt-2 text-xs leading-5 text-[#746019]">
+                      Riwayat mutasi akan ditampilkan setelah pemegang aset
+                      mengonfirmasi kepemilikan.
+                    </p>
+                  </div>
+                )}
                 {filteredTimeline.length ? (
                   <div className="flex flex-col">
                     {filteredTimeline.map((item, index) => (
@@ -1226,6 +1253,7 @@ function auditTitle(log: AssetAuditLog) {
       UPDATE: "Aset diubah",
       DELETE: "Aset dihapus",
       IMPORT_CREATE: "Aset diimpor",
+      HOLDER_CONFIRMED: "Pemegang dikonfirmasi",
     }[log.action] || log.action.replaceAll("_", " ")
   )
 }
