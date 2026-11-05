@@ -108,6 +108,7 @@ function SidebarContent({
     canImportExcel,
     canManageAdminData,
     canDeleteRestoreAsset,
+    canManageStocktake,
   } = usePermission()
 
   const { data: profile } = useQuery({
@@ -131,6 +132,7 @@ function SidebarContent({
     { to: "/", label: "Dashboard" },
     { to: "/asset", label: "Daftar Aset" },
     ...(canCreateEditAsset ? [{ to: "/mutasi", label: "Mutasi Aset" }] : []),
+    ...(canManageStocktake ? [{ to: "/stocktake", label: "Stok Opname" }] : []),
     ...(canImportExcel
       ? [{ to: "/import/preview", label: "Import Data" }]
       : []),
