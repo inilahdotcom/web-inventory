@@ -34,8 +34,6 @@ export interface AuditLogItem {
     | string
   user: {
     name: string
-    role: string
-    ip: string
   }
   timestamp: string
   target: string
