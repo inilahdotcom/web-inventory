@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query"
-import { ShieldAlert, RefreshCw, Loader2 } from "lucide-react"
+import { ShieldAlert, RefreshCw, Loader2, Download } from "lucide-react"
 import { usePermission } from "@/hooks/usePermission"
 import { auditLogService } from "@/services/auditLogServices"
 import {
@@ -27,6 +27,10 @@ export interface AuditLogItem {
     | "RESTORE"
     | "MOVE"
     | "SPLIT"
+    | "EXPORT_EXCEL"
+    | "EXPORT_PDF"
+    | "LOGIN"
+    | "LOGOUT"
     | string
   user: {
     name: string
@@ -45,17 +49,14 @@ interface AuditLogViewProps {
 }
 
 export function AuditLogView({ onExport }: AuditLogViewProps) {
-  // Panggil permission hook untuk membatasi akses halaman Audit Log (Khusus Admin)
   const { canViewAuditLog } = usePermission()
 
-  // State Filter Interaktif
   const [selectedEntity, setSelectedEntity] = useState<string>("")
   const [selectedAction, setSelectedAction] = useState<string>("")
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
   const [isExporting, setIsExporting] = useState<boolean>(false)
 
-  // 1. Fetch Master Data (Categories, Brands, Locations) dari masterDataService
   const { data: categories = [] } = useQuery<MasterDataItem[]>({
     queryKey: ["master-categories"],
     queryFn: () => masterDataService.getCategories(),
@@ -77,7 +78,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     enabled: canViewAuditLog,
   })
 
-  // Lookup Maps O(1) untuk pemetaan ID ke Nama Master
   const categoryMap = new Map<number, string>(
     categories.map((c) => [c.id, c.name])
   )
@@ -86,27 +86,30 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     locations.map((l) => [l.id, l.name])
   )
 
-  // Helper untuk mengubah ID master menjadi Nama Terbaca
   const formatValueWithMasterName = (key: string, value: unknown): unknown => {
     if (value === null || value === undefined || value === "-") return "-"
 
-    const numVal = Number(value)
-    if (!isNaN(numVal)) {
-      if (key === "categoryId" && categoryMap.has(numVal)) {
-        return `${categoryMap.get(numVal)} (ID: ${numVal})`
-      }
-      if (key === "brandId" && brandMap.has(numVal)) {
-        return `${brandMap.get(numVal)} (ID: ${numVal})`
-      }
-      if (key === "locationId" && locationMap.has(numVal)) {
-        return `${locationMap.get(numVal)} (ID: ${numVal})`
+    if (
+      typeof value === "number" ||
+      (typeof value === "string" && value.trim() !== "")
+    ) {
+      const numVal = Number(value)
+      if (!isNaN(numVal)) {
+        if (key === "categoryId" && categoryMap.has(numVal)) {
+          return `${categoryMap.get(numVal)} (ID: ${numVal})`
+        }
+        if (key === "brandId" && brandMap.has(numVal)) {
+          return `${brandMap.get(numVal)} (ID: ${numVal})`
+        }
+        if (key === "locationId" && locationMap.has(numVal)) {
+          return `${locationMap.get(numVal)} (ID: ${numVal})`
+        }
       }
     }
 
     return value
   }
 
-  // Format Objek Diff dengan Pemetaan Nama Master
   const formatDiffValues = (obj?: Record<string, unknown>) => {
     if (!obj || Object.keys(obj).length === 0) return null
 
@@ -127,7 +130,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     return formattedObj
   }
 
-  // Fetching Data menggunakan useInfiniteQuery untuk Cursor-Based Pagination
   const {
     data,
     isLoading,
@@ -159,15 +161,12 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     enabled: canViewAuditLog,
   })
 
-  // Flattens data dari semua halaman yang sudah di-fetch
   const logs = data?.pages.flatMap((page) => page.data) ?? []
 
-  // 1. HANDLER REFRESH DENGAN FEEDBACK ANIMATED
   const handleRefresh = async () => {
     await refetch()
   }
 
-  // 2. HANDLER EXPORT AUDIT LOG MEMANGGIL BACKEND (.XLSX)
   const handleExportExcel = async () => {
     if (onExport) {
       onExport()
@@ -194,17 +193,25 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     }
   }
 
-  // Style badge variant
-  const getBadgeVariant = (type: string) => {
+  // ✅ Perbaikan: Parameter `type` digunakan aktif di dalam switch-case
+  const getBadgeVariant = (type?: string) => {
+    if (!type) return "outline" as const
     switch (type.toUpperCase()) {
       case "UPDATE":
       case "IMPORT_UPDATE":
         return "rusak-ringan" as const
       case "DELETE":
       case "PERMANENT_DELETE":
+      case "BULK_DELETE":
         return "destructive" as const
       case "CREATE":
+      case "IMPORT_CREATE":
+      case "CREATE_SPLIT":
+      case "LOGIN":
         return "bagus" as const
+      case "EXPORT_EXCEL":
+      case "EXPORT_PDF":
+      case "LOGOUT":
       case "IMPORT":
       case "RESTORE":
       case "MOVE":
@@ -215,7 +222,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
     }
   }
 
-  // Tampilan jika pengguna BUKAN Admin (Staff GA / Viewer)
   if (!canViewAuditLog) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4 text-neutral-900">
@@ -237,11 +243,9 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
 
   return (
     <div className="min-h-screen w-full bg-neutral-50/50 text-neutral-900">
-      {/* STICKY HEADER FILTER */}
       <div className="sticky top-0 z-10 mb-6 flex w-full flex-col justify-between gap-4 border-b border-neutral-200/80 bg-white/90 px-4 py-3 shadow-2xs backdrop-blur-md sm:px-6 lg:px-8 xl:flex-row xl:items-center">
         <div className="no-scrollbar w-full overflow-x-auto pb-1 pl-14 lg:pl-0 xl:pb-0">
           <div className="flex min-w-max items-center gap-2 text-xs">
-            {/* Filter Entitas */}
             <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
               <span className="text-neutral-500">Entitas:</span>
               <select
@@ -251,13 +255,15 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               >
                 <option value="">Semua entitas</option>
                 <option value="assets">assets</option>
+                <option value="users">users</option>
+                <option value="auth">auth</option>
+                <option value="audit_logs">audit_logs</option>
                 <option value="categories">categories</option>
                 <option value="brands">brands</option>
                 <option value="locations">locations</option>
               </select>
             </div>
 
-            {/* Filter Aksi */}
             <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
               <span className="text-neutral-500">Aksi:</span>
               <select
@@ -269,16 +275,21 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 <option value="CREATE">CREATE</option>
                 <option value="UPDATE">UPDATE</option>
                 <option value="DELETE">DELETE</option>
+                <option value="PERMANENT_DELETE">PERMANENT_DELETE</option>
+                <option value="BULK_DELETE">BULK_DELETE</option>
+                <option value="LOGIN">LOGIN</option>
+                <option value="LOGOUT">LOGOUT</option>
+                <option value="EXPORT_EXCEL">EXPORT_EXCEL</option>
+                <option value="EXPORT_PDF">EXPORT_PDF</option>
                 <option value="RESTORE">RESTORE</option>
                 <option value="IMPORT_CREATE">IMPORT_CREATE</option>
                 <option value="IMPORT_UPDATE">IMPORT_UPDATE</option>
-                <option value="move">MOVE</option>
+                <option value="MOVE">MOVE</option>
                 <option value="SPLIT">SPLIT</option>
                 <option value="CREATE_SPLIT">CREATE_SPLIT</option>
               </select>
             </div>
 
-            {/* Filter Tanggal */}
             <div className="flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 font-medium shadow-2xs">
               <input
                 type="date"
@@ -340,12 +351,16 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               onClick={handleExportExcel}
               className="gap-1.5 border-neutral-200 bg-white font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
             >
+              {isExporting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
               <span>{isExporting ? "Mengekspor..." : "Export Excel"}</span>
             </Button>
           </div>
         </div>
 
-        {/* State Handler */}
         {isLoading ? (
           <div className="space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -385,7 +400,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               const targetCode = targetParts[1]?.trim() || ""
               const timelineEntries = buildAuditTimelineEntries(log)
 
-              // Format Diff values dengan nama master yang mudah dibaca
               const formattedOld = formatDiffValues(log.oldValues)
               const formattedNew = formatDiffValues(log.newValues)
 
@@ -394,21 +408,17 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                   key={log.id}
                   className="flex flex-col justify-between gap-4 border-neutral-200/80 bg-white p-5 shadow-2xs md:flex-row"
                 >
-                  {/* KOLOM KIRI: User Info, Action Badge & Timestamp */}
                   <div className="flex w-full shrink-0 flex-col md:w-56 md:self-stretch">
                     <Badge
                       variant={getBadgeVariant(log.type)}
                       className="self-start"
                     >
-                      {log.type.replace("_", " ")}
+                      {log.type.replaceAll("_", " ")}
                     </Badge>
                     <div className="mt-1.5">
                       <h4 className="text-xs font-bold text-neutral-900">
                         {log.user.name}
                       </h4>
-                      <p className="text-[11px] text-neutral-500">
-                        {log.user.role} · {log.user.ip}
-                      </p>
                       <p className="mt-1 font-mono text-[11px] text-neutral-400">
                         {log.timestamp}
                       </p>
@@ -427,9 +437,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                     </div>
                   </div>
 
-                  {/* KOLOM KANAN: Target & Diff / Description */}
                   <div className="flex-1 space-y-3">
-                    {/* Target Label */}
                     <div className="flex justify-start font-mono text-xs font-semibold text-neutral-900 md:justify-start">
                       <span className="font-normal text-neutral-500">
                         {entityName} ·{" "}
@@ -437,10 +445,8 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                       <span className="ml-1 text-blue-600">{targetCode}</span>
                     </div>
 
-                    {/* Body Content: JSON Diff vs Text Description */}
                     {formattedOld || formattedNew ? (
                       <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
-                        {/* OLD VALUES BOX */}
                         <div className="space-y-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 font-mono text-[11px]">
                           <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
                             OLD_VALUES
@@ -452,7 +458,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                           </pre>
                         </div>
 
-                        {/* NEW VALUES BOX */}
                         <div className="space-y-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 font-mono text-[11px]">
                           <div className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">
                             NEW_VALUES
@@ -474,7 +479,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
               )
             })}
 
-            {/* CONTROL LOAD MORE / INFINITE SCROLL */}
             {hasNextPage && (
               <div className="flex justify-center pt-4">
                 <Button
