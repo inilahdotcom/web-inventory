@@ -130,6 +130,7 @@ function SidebarContent({
   const primaryItems: SidebarMenuItem[] = [
     { to: "/", label: "Dashboard" },
     { to: "/asset", label: "Daftar Aset" },
+    { to: "/aset-saya", label: "Aset yang Saya Pegang" },
     ...(canCreateEditAsset ? [{ to: "/mutasi", label: "Mutasi Aset" }] : []),
     ...(canImportExcel
       ? [{ to: "/import/preview", label: "Import Data" }]
