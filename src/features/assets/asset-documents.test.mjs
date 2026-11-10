@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import {
   MAX_DOCUMENT_SIZE,
+  documentPreviewKind,
   validateAssetDocument,
   warrantyDueState,
 } from "./asset-documents.ts"
@@ -34,4 +35,10 @@ test("status garansi membedakan aktif, segera berakhir, dan berakhir", () => {
   assert.equal(warrantyDueState("2027-01-01", today), "active")
   assert.equal(warrantyDueState("2026-11-30", today), "due")
   assert.equal(warrantyDueState("2026-11-09", today), "expired")
+})
+
+test("preview membedakan gambar dan PDF", () => {
+  assert.equal(documentPreviewKind("image/png"), "image")
+  assert.equal(documentPreviewKind("image/webp"), "image")
+  assert.equal(documentPreviewKind("application/pdf"), "pdf")
 })

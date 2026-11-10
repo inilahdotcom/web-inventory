@@ -29,6 +29,12 @@ export function validateAssetDocument(
 
 export type WarrantyDueState = "active" | "due" | "expired"
 
+export type DocumentPreviewKind = "image" | "pdf"
+
+export function documentPreviewKind(mimeType: string): DocumentPreviewKind {
+  return mimeType.startsWith("image/") ? "image" : "pdf"
+}
+
 export function warrantyDueState(
   warrantyExpiresAt: string,
   today = new Date()
