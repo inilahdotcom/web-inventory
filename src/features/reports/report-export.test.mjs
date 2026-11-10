@@ -1,7 +1,13 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import ExcelJS from "exceljs"
-import { buildPdf, createExportTable, exportExcel } from "./report-export.ts"
+import {
+  assetHandoverFilename,
+  buildAssetHandoverPdf,
+  buildPdf,
+  createExportTable,
+  exportExcel,
+} from "./report-export.ts"
 
 const categories = [
   {
@@ -155,4 +161,36 @@ test("PDF yang dibuat memiliki header dan tabel", async () => {
   assert.match(output, /Komputer & Laptop/)
   assert.deepEqual(doc.lastAutoTable.foot[0].cells[0].text, ["Total"])
   assert.deepEqual(doc.lastAutoTable.foot[0].cells[3].text, ["1.500.000"])
+})
+
+test("berita acara memakai data mutasi dan nama file aset", async () => {
+  const handover = {
+    movementId: 71,
+    assetId: "asset-1",
+    assetCode: "001/INC-GA/9/26",
+    assetName: "MacMini",
+    category: "Komputer & Laptop",
+    quantity: 1,
+    unit: "Unit",
+    condition: "Bagus",
+    fromLocation: "Redaksi Lantai 3",
+    toLocation: "Gudang",
+    fromHolder: "Budi",
+    toHolder: "Andi",
+    movementDate: "2026-11-09",
+    reason: "Penyesuaian ruang kerja",
+    actorName: "Daffa",
+  }
+  const doc = await buildAssetHandoverPdf(handover)
+  const output = doc.output()
+
+  assert.match(output, /^%PDF-/)
+  assert.match(output, /BERITA ACARA SERAH TERIMA ASET/)
+  assert.match(output, /MacMini/)
+  assert.match(output, /Redaksi Lantai 3/)
+  assert.match(output, /Gudang/)
+  assert.equal(
+    assetHandoverFilename(handover),
+    "berita-acara-serah-terima-001-INC-GA-9-26-2026-11-09.pdf"
+  )
 })

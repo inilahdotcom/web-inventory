@@ -168,10 +168,23 @@ export interface MoveAssetResponse {
   assetId: string
   fromLocationId: number
   toLocationId: number
+  fromLocation?: string
+  toLocation?: string
   fromHolder: string | null
   toHolder: string | null
   movementDate: string
   reason: string
+  actorName?: string
+  createdAt?: string | null
+  asset?: {
+    id?: string
+    code?: string
+    name?: string
+    category?: string
+    quantity?: number
+    unit?: string
+    condition?: string
+  }
 }
 
 export interface SplitAssetPayload {
