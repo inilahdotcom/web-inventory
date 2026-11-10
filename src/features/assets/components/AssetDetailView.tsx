@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { TimelineItem } from "@/components/ui/timeline"
 import { LogOut, User } from "lucide-react"
 import { toast } from "sonner"
+import { AssetDocumentsCard } from "@/features/assets/components/AssetDocumentsCard"
 
 type AssetDraft = Record<
   | "name"
@@ -755,6 +756,14 @@ export function AssetDetailView() {
                 </div>
               </div>
             </Card>
+
+            <AssetDocumentsCard
+              assetId={detail.id}
+              documents={detail.attributes.documents ?? []}
+              canManage={canCreateEditAsset}
+              onChanged={refreshDetail}
+              onNotice={setNotice}
+            />
 
             <Card className="flex flex-col gap-4 rounded-[20px] p-5">
               <h2 className="text-[16px] font-semibold">Informasi aset</h2>
