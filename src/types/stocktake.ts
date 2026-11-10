@@ -103,7 +103,6 @@ export interface CloseSessionResult {
   status: "closed"
 }
 
-// POST /stocktake-sessions/:id/checks (maks 500 aset per request)
 export interface BulkCheckBody {
   assetIds: string[]
   condition: string // harus salah satu kondisi yang valid di backend, mis. "Bagus", "Hilang"

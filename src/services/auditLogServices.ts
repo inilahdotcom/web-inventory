@@ -42,8 +42,6 @@ export interface AuditLogMappedUI {
     | string
   user: {
     name: string
-    role: string
-    ip: string
   }
   timestamp: string
   target: string
@@ -284,8 +282,6 @@ export const auditLogService = {
         type: uiType,
         user: {
           name: item.userName || `User #${item.changedBy}`,
-          role: "Admin / Staff",
-          ip: "192.168.1.10",
         },
         timestamp: new Date(item.createdAt).toLocaleString("id-ID", {
           day: "2-digit",

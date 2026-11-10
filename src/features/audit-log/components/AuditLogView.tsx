@@ -30,8 +30,6 @@ export interface AuditLogItem {
     | string
   user: {
     name: string
-    role: string
-    ip: string
   }
   timestamp: string
   target: string
@@ -406,9 +404,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                       <h4 className="text-xs font-bold text-neutral-900">
                         {log.user.name}
                       </h4>
-                      <p className="text-[11px] text-neutral-500">
-                        {log.user.role} · {log.user.ip}
-                      </p>
                       <p className="mt-1 font-mono text-[11px] text-neutral-400">
                         {log.timestamp}
                       </p>
