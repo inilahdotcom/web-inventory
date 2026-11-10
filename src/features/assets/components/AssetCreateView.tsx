@@ -66,27 +66,11 @@ export function AssetCreateView() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  // Handler Logout Aktif
+  // Handler Logout
+  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsProfileOpen(false)
-    try {
-      // Jika ada API logout dari authService, panggil di sini
-      if (authService?.logout) {
-        await authService.logout()
-      }
-    } catch (err) {
-      console.error("Gagal request logout:", err)
-    } finally {
-      // Clear storage
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      sessionStorage.clear()
-
-      // Reset React Query cache & redirect ke Login
-      queryClient.clear()
-      toast.success("Berhasil keluar dari akun")
-      navigate({ to: "/auth/login" })
-    }
+    await authService.logout()
   }
 
   useEffect(() => {

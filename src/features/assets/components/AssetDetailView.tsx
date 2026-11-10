@@ -33,7 +33,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TimelineItem } from "@/components/ui/timeline"
 import { LogOut, User } from "lucide-react"
-import { toast } from "sonner"
 import { AssetDocumentsCard } from "@/features/assets/components/AssetDocumentsCard"
 import { getConfirmedMutationHistory } from "../my-assets-rules"
 
@@ -164,23 +163,11 @@ export function AssetDetailView() {
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Handler Logout
+  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsProfileOpen(false)
-    try {
-      if (authService?.logout) {
-        await authService.logout()
-      }
-    } catch (err) {
-      console.error("Gagal request logout:", err)
-    } finally {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      sessionStorage.clear()
-
-      queryClient.clear()
-      toast.success("Berhasil keluar dari akun")
-      navigate({ to: "/auth/login" })
-    }
+    await authService.logout()
   }
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label"
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
+  labelClassName?: string
   errorText?: string | string[]
   helperText?: string
   isLoading?: boolean
@@ -11,6 +12,7 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function InputField({
   label,
+  labelClassName,
   errorText,
   helperText,
   className,
@@ -28,7 +30,9 @@ export function InputField({
     <div className="w-full space-y-1.5">
       {label && (
         <div className="flex items-center justify-between">
-          <Label htmlFor={inputId}>{label}</Label>
+          <Label htmlFor={inputId} className={labelClassName}>
+            {label}
+          </Label>
           {isLoading && (
             <span className="animate-pulse text-[10px] text-muted-foreground">
               Memuat...

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 
-type ArchivedAsset = {
+export type ArchivedAsset = {
   id: string
   code: string
   name: string

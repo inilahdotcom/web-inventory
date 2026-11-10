@@ -294,7 +294,7 @@ export function AssetListView() {
   )
   const [selectedCodes, setSelectedCodes] = useState(() => new Set<string>())
   const [notice, setNotice] = useState("")
-  const [exporting, setExporting] = useState(false)
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null)
   const [archiveRequest, setArchiveRequest] = useState<ArchiveRequest | null>(
     null
   )
@@ -584,30 +584,43 @@ export function AssetListView() {
     duplicateCondition: quickFilter === "duplicateCondition" || undefined,
   })
 
-  const runExport = async (name: string, extra: { ids?: string[] } = {}) => {
+  const runExport = async (
+    format: "excel" | "pdf",
+    name: string,
+    extra: { ids?: string[] } = {}
+  ) => {
     if (exporting) return
-    setExporting(true)
-    const toastId = toast.loading("Menyiapkan file Excel...")
+    setExporting(format)
+    const toastId = toast.loading(
+      format === "excel" ? "Menyiapkan file Excel..." : "Menyiapkan file PDF..."
+    )
     try {
-      const response = await assetService.exportExcel({
-        ...buildExportParams(),
-        ...extra,
-      })
+      const response =
+        format === "excel"
+          ? await assetService.exportExcel({
+              ...buildExportParams(),
+              ...extra,
+            })
+          : await assetService.exportPdf({
+              ...buildExportParams(),
+              ...extra,
+            })
       downloadBlob(
         response,
-        `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`
+        `${name}-${new Date().toISOString().slice(0, 10)}.${format === "excel" ? "xlsx" : "pdf"}`
       )
       toast.success("Export berhasil.", { id: toastId })
     } catch {
       toast.error("Gagal mengekspor data.", { id: toastId })
     } finally {
-      setExporting(false)
+      setExporting(null)
     }
   }
 
-  const handleExportAll = () => runExport("daftar-aset")
+  const handleExportAllExcel = () => runExport("excel", "daftar-aset")
+  const handleExportAllPdf = () => runExport("pdf", "daftar-aset")
 
-  const handleExportSelected = () => {
+  const handleExportSelectedExcel = () => {
     const ids = assets
       .filter((asset) => selectedCodes.has(asset.code))
       .map((asset) => asset.id)
@@ -617,7 +630,20 @@ export function AssetListView() {
       toast.error("Tidak ada aset terpilih.")
       return
     }
-    runExport("aset-terpilih", { ids })
+    runExport("excel", "aset-terpilih", { ids })
+  }
+
+  const handleExportSelectedPdf = () => {
+    const ids = assets
+      .filter((asset) => selectedCodes.has(asset.code))
+      .map((asset) => asset.id)
+      .filter(Boolean)
+
+    if (ids.length === 0) {
+      toast.error("Tidak ada aset terpilih.")
+      return
+    }
+    runExport("pdf", "aset-terpilih", { ids })
   }
 
   // Handler khusus untuk Cetak Label QR (Per ID) - Bebas dari ESLint 'no-explicit-any'
@@ -659,8 +685,16 @@ export function AssetListView() {
     ...(canExportLaporan
       ? [
           {
-            label: exporting ? "Mengekspor..." : "Export terpilih",
-            action: handleExportSelected,
+            label:
+              exporting === "excel"
+                ? "Mengekspor..."
+                : "Export terpilih (Excel)",
+            action: handleExportSelectedExcel,
+          },
+          {
+            label:
+              exporting === "pdf" ? "Mengekspor..." : "Export terpilih (PDF)",
+            action: handleExportSelectedPdf,
           },
         ]
       : []),
@@ -868,7 +902,27 @@ export function AssetListView() {
           </span>
         </form>
 
-        <div className="ml-auto flex items-center gap-2.5">
+        <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
+          {canExportLaporan && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportAllExcel}
+                disabled={Boolean(exporting)}
+              >
+                {exporting === "excel" ? "Mengekspor..." : "Export Excel"}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleExportAllPdf}
+                disabled={Boolean(exporting)}
+              >
+                {exporting === "pdf" ? "Mengekspor..." : "Export PDF"}
+              </Button>
+            </div>
+          )}
           <ProfileDropdown />
         </div>
       </header>
@@ -885,22 +939,12 @@ export function AssetListView() {
               {formatNumber.format(pageSummary.value)}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-wrap sm:gap-2.25">
-            {canExportLaporan && (
-              <Pill
-                className="h-10 px-4 text-sm"
-                onClick={handleExportAll}
-                disabled={exporting}
-              >
-                {exporting ? "Mengekspor..." : "Export Excel"}
-              </Pill>
-            )}
-
+          <div className="sm:ml-auto">
             {canCreateEditAsset && (
               <Button
                 variant="primary"
                 onClick={() => void navigate({ to: "/asset/new" })}
-                className="col-span-2 h-10 px-5 text-sm sm:col-auto"
+                className="h-10 px-5 text-sm"
               >
                 + Tambah Aset
               </Button>
@@ -1115,7 +1159,7 @@ export function AssetListView() {
                   type="button"
                   onClick={action}
                   key={label}
-                  disabled={exporting}
+                  disabled={Boolean(exporting)}
                   className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                 >
                   {label}
@@ -1900,7 +1944,7 @@ function DateRangeFilter({
               type="date"
               value={from}
               onChange={(event) => onChange(event.target.value, to)}
-              className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
@@ -1910,7 +1954,7 @@ function DateRangeFilter({
               value={to}
               min={from || undefined}
               onChange={(event) => onChange(from, event.target.value)}
-              className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>
         </div>
@@ -1939,7 +1983,7 @@ function PriceRangeFilter({
     : "Rentang harga"
 
   return (
-    <div className={open ? "relative w-full lg:w-auto" : "relative"}>
+    <div className="relative w-full lg:w-auto">
       <div
         className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
       >
@@ -1967,9 +2011,9 @@ function PriceRangeFilter({
         )}
       </div>
       {open && (
-        <div className="mt-2 grid w-60 max-w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:right-0 lg:z-20 lg:mt-0">
+        <div className="mt-2 grid w-64 max-w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0">
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
-            Harga minimum
+            Dari harga
             <input
               type="text"
               inputMode="numeric"
@@ -1977,12 +2021,12 @@ function PriceRangeFilter({
               onChange={(event) =>
                 onChange(numericInput(event.target.value), max)
               }
-              placeholder="Rp. 20.000.000"
-              className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              placeholder="Rp 0"
+              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>
           <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
-            Harga maksimum
+            Sampai harga
             <input
               type="text"
               inputMode="numeric"
@@ -1991,7 +2035,7 @@ function PriceRangeFilter({
                 onChange(min, numericInput(event.target.value))
               }
               placeholder="Tanpa batas"
-              className="h-8 rounded-lg border border-[#e0e2e8] px-2 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
             />
           </label>
         </div>
