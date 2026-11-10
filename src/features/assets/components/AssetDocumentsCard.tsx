@@ -341,6 +341,7 @@ export function AssetDocumentsCard({
         )}
       </Card>
       <AssetDocumentPreviewDialog
+        assetId={assetId}
         document={previewDocument}
         open={previewDocument !== null}
         onOpenChange={(open) => {

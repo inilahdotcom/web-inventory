@@ -340,6 +340,13 @@ export const assetService = {
     await api.delete(`/assets/${assetId}/documents/${documentId}`)
   },
 
+  downloadDocument: async (assetId: string, documentId: number | string) => {
+    return api.get<Blob>(
+      `/assets/${assetId}/documents/${documentId}/download`,
+      { responseType: "blob" }
+    )
+  },
+
   delete: async (id: string, reason: string): Promise<void> => {
     await api.delete(`/assets/delete/${id}`, { data: { reason } })
   },

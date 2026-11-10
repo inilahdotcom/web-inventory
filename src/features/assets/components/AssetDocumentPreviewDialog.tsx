@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import { Download, Expand, FileText } from "lucide-react"
-import type { AssetDocument } from "@/services/assetServices"
+import { assetService, type AssetDocument } from "@/services/assetServices"
 import { documentPreviewKind } from "@/features/assets/asset-documents"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -15,12 +15,14 @@ import {
 } from "@/components/ui/dialog"
 
 type Props = {
+  assetId: string
   document: AssetDocument | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function AssetDocumentPreviewDialog({
+  assetId,
   document,
   open,
   onOpenChange,
@@ -37,14 +39,10 @@ export function AssetDocumentPreviewDialog({
     setDownloading(true)
     setDownloadError("")
     try {
-      const response = await fetch(document.fileUrl)
-      if (!response.ok) throw new Error("file tidak dapat diunduh")
-      downloadBlob(await response.blob(), document.fileName)
+      const response = await assetService.downloadDocument(assetId, document.id)
+      downloadBlob(response, document.fileName)
     } catch {
-      setDownloadError(
-        "Unduhan otomatis diblokir penyimpanan file. Dokumen dibuka di tab baru."
-      )
-      window.open(document.fileUrl, "_blank", "noopener,noreferrer")
+      setDownloadError("Dokumen gagal diunduh. Silakan coba lagi.")
     } finally {
       setDownloading(false)
     }
