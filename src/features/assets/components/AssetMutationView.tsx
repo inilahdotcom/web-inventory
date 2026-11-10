@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { assetService } from "@/services/assetServices"
+import { exportAssetHandoverPdf } from "@/features/reports/report-export"
 import {
   masterDataService,
   type MasterDataItem,
@@ -134,14 +135,15 @@ export function AssetMutationView() {
     setError("")
 
     try {
-      await assetService.moveAsset(selectedAsset.id, {
+      const mutation = await assetService.moveAsset(selectedAsset.id, {
         to_location_id: toLocationId,
         to_holder: holder.trim() || undefined,
         movement_date: movementDate,
         reason: reason.trim(),
       })
 
-      const nextLocationName = destinationLocation?.name ?? "lokasi tujuan"
+      const nextLocationName =
+        mutation.toLocation ?? destinationLocation?.name ?? "lokasi tujuan"
       setAssets((current) =>
         current.map((asset) =>
           asset.id === selectedAsset.id
@@ -158,9 +160,36 @@ export function AssetMutationView() {
         )
       )
       setReason("")
-      toast.success(
-        `Mutasi ${selectedAsset.attributes.name} berhasil disimpan.`
-      )
+      try {
+        await exportAssetHandoverPdf({
+          movementId: mutation.id,
+          assetId: mutation.assetId || selectedAsset.id,
+          assetCode: mutation.asset?.code ?? selectedAsset.attributes.code,
+          assetName: mutation.asset?.name ?? selectedAsset.attributes.name,
+          category:
+            mutation.asset?.category ?? selectedAsset.attributes.category,
+          quantity:
+            mutation.asset?.quantity ?? selectedAsset.attributes.quantity,
+          unit: mutation.asset?.unit ?? selectedAsset.attributes.unit,
+          condition:
+            mutation.asset?.condition ?? selectedAsset.attributes.condition,
+          fromLocation:
+            mutation.fromLocation ?? selectedAsset.attributes.location,
+          toLocation: nextLocationName,
+          fromHolder: mutation.fromHolder,
+          toHolder: mutation.toHolder,
+          movementDate: mutation.movementDate,
+          reason: mutation.reason,
+          actorName: mutation.actorName ?? "Staff GA",
+        })
+        toast.success(
+          `Mutasi ${selectedAsset.attributes.name} berhasil disimpan dan berita acara telah diunduh.`
+        )
+      } catch {
+        toast.warning(
+          "Mutasi berhasil disimpan, tetapi berita acara PDF gagal diunduh."
+        )
+      }
       await navigate({
         to: "/asset",
       })
@@ -333,7 +362,8 @@ export function AssetMutationView() {
                 </div>
 
                 <p className="text-[12px] text-muted-foreground">
-                  Berita acara PDF belum tersedia pada endpoint backend.
+                  Berita acara PDF akan dibuat otomatis dari data mutasi setelah
+                  berhasil disimpan.
                 </p>
 
                 <div className="flex justify-end gap-2">
