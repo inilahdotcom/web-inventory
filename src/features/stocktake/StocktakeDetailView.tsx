@@ -87,6 +87,12 @@ export function StocktakeDetailView({ id }: { id: string }) {
   const startMutation = useStartSession()
   const closeMutation = useCloseSession()
 
+  useEffect(() => {
+    if (session?.status === "draft") {
+      void navigate({ to: "/stocktake" })
+    }
+  }, [session?.status, navigate])
+
   const isOpen = session?.status === "open"
   const canSelect =
     canCheck && isOpen && (tab === "pending" || tab === "checked")
