@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from "react"
-import { authService } from "@/services/authServices"
 import { authStorage } from "@/lib/auth-storage"
 
 const TIMEOUT_DURATION = 60 * 60 * 1000
@@ -19,9 +18,12 @@ export function useAutoLogout() {
     }
   }, [isExpired])
 
+  // Logout karena sesi habis (idle): bukan pilihan user, jadi cukup hapus
+  // token lokal dan redirect, tanpa memanggil endpoint logout di backend
   const handleConfirmLogout = () => {
     setIsExpired(false)
-    authService.logout()
+    authStorage.clear()
+    window.location.href = "/auth/login"
   }
 
   useEffect(() => {

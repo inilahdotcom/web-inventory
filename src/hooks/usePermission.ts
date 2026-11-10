@@ -27,5 +27,6 @@ export function usePermission() {
     // Properti Spesifik untuk Audit Log & Master Data (Memperbaiki Error TypeScript)
     canViewAuditLog: isAdmin, // Akses halaman & data Audit Log
     canManageMasterData: isAdmin, // Tambah, Edit, Hapus Master Data
+    canManageStocktake: isAdmin || isStaffGA, // Akses & kelola Stok Opname (hanya Admin & Staff GA)
   }
 }

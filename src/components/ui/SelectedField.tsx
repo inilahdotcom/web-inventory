@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label"
 
 interface SelectedFieldProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
+  labelClassName?: string
   options: { label: string; value: string }[]
   errorText?: string | string[]
   helperText?: string
@@ -12,6 +13,7 @@ interface SelectedFieldProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 
 export function SelectedField({
   label,
+  labelClassName,
   options,
   errorText,
   helperText,
@@ -30,7 +32,9 @@ export function SelectedField({
     <div className="w-full space-y-1.5">
       {label && (
         <div className="flex items-center justify-between">
-          <Label htmlFor={selectId}>{label}</Label>
+          <Label htmlFor={selectId} className={labelClassName}>
+            {label}
+          </Label>
           {isLoading && (
             <span className="animate-pulse text-[10px] text-muted-foreground">
               Memuat pilihan...

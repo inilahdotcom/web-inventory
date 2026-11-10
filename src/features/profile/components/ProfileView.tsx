@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { useQueryClient } from "@tanstack/react-query"
 import { profileService } from "@/services/profileService"
 import { authService } from "@/services/authServices"
-import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
@@ -19,9 +16,6 @@ type PasswordValues = {
 }
 
 export function ProfileView() {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-
   const [profile, setProfile] = useState<Profile | null>(null)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -138,22 +132,13 @@ export function ProfileView() {
     }
   }
 
+  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {
-      if (authService?.logout) {
-        await authService.logout()
-      }
-    } catch (err) {
-      console.error("Gagal request logout:", err)
+      await authService.logout()
     } finally {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      sessionStorage.clear()
-
-      queryClient.clear()
-      toast.success("Berhasil keluar dari akun")
-      navigate({ to: "/auth/login" })
+      setIsLoggingOut(false)
     }
   }
 
