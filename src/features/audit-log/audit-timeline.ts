@@ -26,6 +26,8 @@ const FIELD_LABELS: Record<string, string> = {
   quantity: "Jumlah",
   status: "Status",
   unit: "Satuan",
+  email: "Email",
+  role: "Role",
 }
 
 const HIDDEN_FIELDS = new Set([
@@ -85,13 +87,21 @@ export function buildAuditTimelineEntries(
 
   if (changes.length > 0) return changes
 
+  let metaLabel = "Rekam aktivitas"
+  const upperType = log.type.toUpperCase()
+  if (upperType === "LOGIN" || upperType === "LOGOUT") {
+    metaLabel = "Autentikasi"
+  } else if (upperType === "EXPORT_EXCEL" || upperType === "EXPORT_PDF") {
+    metaLabel = "Ekspor data"
+  }
+
   return [
     {
       id: "aktivitas",
       title: `Aktivitas ${log.type.replaceAll("_", " ")}`,
       subtitle:
         log.description || "Tidak ada detail perubahan yang ditampilkan.",
-      meta: "Rekam aktivitas",
+      meta: metaLabel,
     },
   ]
 }

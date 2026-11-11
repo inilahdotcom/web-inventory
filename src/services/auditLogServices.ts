@@ -19,7 +19,7 @@ export interface AuditLogQueryParams {
   startDate?: string
   endDate?: string
   pageSize?: number
-  cursor?: number | null // ✅ Parameter cursor ditambahkan
+  cursor?: number | null
 }
 
 export interface AuditLogPaginationMeta {
@@ -39,6 +39,10 @@ export interface AuditLogMappedUI {
     | "RESTORE"
     | "MOVE"
     | "SPLIT"
+    | "EXPORT_EXCEL"
+    | "EXPORT_PDF"
+    | "LOGIN"
+    | "LOGOUT"
     | string
   user: {
     name: string
@@ -50,27 +54,26 @@ export interface AuditLogMappedUI {
   description?: string
 }
 
-// Response Wrapper untuk komponen UI (Data Mapped + Pagination Meta)
 export interface GetAuditLogsResponse {
   data: AuditLogMappedUI[]
   pagination: AuditLogPaginationMeta
 }
 
-// 1. Helper Parse JSON aman (Mendukung wrapper `attributes` maupun objek langsung)
-const safeParseJSON = (str?: string | null): Record<string, unknown> | null => {
+const safeParseJSON = (
+  str?: string | null
+): Record<string, unknown> | string | null => {
   if (!str) return null
   try {
     const parsed = JSON.parse(str)
     if (parsed && typeof parsed === "object" && "attributes" in parsed) {
       return (parsed as { attributes: Record<string, unknown> }).attributes
     }
-    return parsed as Record<string, unknown>
+    return parsed
   } catch {
-    return null
+    return str
   }
 }
 
-// 2. Normalisasi Key agar PascalCase & snake_case Terpeta ke Nama Standar UI yang Sama
 const normalizeObject = (obj: unknown) => {
   const res: Record<string, unknown> = {}
   if (!obj || typeof obj !== "object") return res
@@ -122,7 +125,6 @@ const normalizeObject = (obj: unknown) => {
   return res
 }
 
-// 3. Helper Diff UPDATE Presisi (Hanya mengambil field yang BERUBAH)
 const getDiffValues = (oldObj: unknown, newObj: unknown) => {
   if (!oldObj || !newObj) return { oldValues: undefined, newValues: undefined }
 
@@ -152,14 +154,37 @@ const getDiffValues = (oldObj: unknown, newObj: unknown) => {
   }
 }
 
-// 4. Helper Formatter Deskripsi Ramah Pengguna
 const formatDescription = (
   action: string,
   entityType: string,
   oldObj: unknown,
   newObj: unknown,
-  entityId: string
+  entityId: string,
+  userName?: string
 ) => {
+  const upperAction = action.toUpperCase()
+
+  if (typeof newObj === "string") return newObj
+  if (typeof oldObj === "string") return oldObj
+
+  const actorName = userName?.trim() || `User #${entityId}`
+  const userLabel = actorName.toLowerCase().startsWith("user")
+    ? actorName
+    : `User ${actorName}`
+
+  if (upperAction === "EXPORT_EXCEL") {
+    return "Mengekspor data ke file Excel."
+  }
+  if (upperAction === "EXPORT_PDF") {
+    return "Mengekspor data ke file PDF."
+  }
+  if (upperAction === "LOGIN") {
+    return `${userLabel} berhasil login ke sistem.`
+  }
+  if (upperAction === "LOGOUT") {
+    return `${userLabel} berhasil logout.`
+  }
+
   const data = (newObj || oldObj || {}) as Record<string, unknown>
   const name = String(data.name || data.Name || "")
   const code = String(data.asset_code || data.AssetCode || entityId)
@@ -167,7 +192,6 @@ const formatDescription = (
   const unit = String(data.unit || data.Unit || "Unit")
   const price = data.purchase_price || data.PurchasePrice
   const notes = data.notes || data.Notes
-  const upperAction = action.toUpperCase()
 
   if (upperAction === "CREATE") {
     let desc = `${name || entityType}`
@@ -182,7 +206,7 @@ const formatDescription = (
   }
 
   if (upperAction === "IMPORT_UPDATE") {
-    return `Aset ${name ? `'${name}'` : ""} (${code}) diperbarui lewat impor Excel. Tidak ada perubahan field yang terdeteksi.`
+    return `Aset ${name ? `'${name}'` : ""} (${code}) diperbarui lewat impor Excel.`
   }
 
   if (upperAction === "MOVE") {
@@ -196,13 +220,14 @@ const formatDescription = (
   if (
     upperAction === "DELETE" ||
     upperAction === "SOFT_DELETE" ||
-    upperAction === "PERMANENT_DELETE"
+    upperAction === "PERMANENT_DELETE" ||
+    upperAction === "BULK_DELETE"
   ) {
-    return `Soft delete. Record dipindahkan ke arsip/dihapus dari sistem. Target: ${code}`
+    return `Record dipindahkan ke arsip/dihapus dari sistem. Target: ${code}`
   }
 
   if (upperAction === "RESTORE") {
-    return `Record ${entityType} ${name ? `${name} (${code})` : code} berhasil dipulihkan dari arsip.`
+    return `Record ${entityType} ${name ? `${name} (${code})` : code} berhasil dipulihkan.`
   }
 
   return `Aktivitas ${action} pada ${entityType} berhasil dicatat.`
@@ -214,7 +239,6 @@ export const auditLogService = {
   ): Promise<GetAuditLogsResponse> => {
     const response = await api.get("/audit-logs", { params })
 
-    // Ambil raw array dan metadata pagination dari response backend
     const rawList: RawAuditLogFromGo[] = response.data?.data || []
     const paginationMeta: AuditLogPaginationMeta = response.data?.meta || {
       nextCursor: null,
@@ -222,7 +246,6 @@ export const auditLogService = {
       hasMore: false,
     }
 
-    // ❌ SEENMAP DIHAPUS: Langsung lakukan mapping dari data murni backend Go
     const mappedLogs: AuditLogMappedUI[] = rawList.map((item) => {
       const actionUpper = item.action.toUpperCase()
       const oldParsed = safeParseJSON(item.oldData)
@@ -238,12 +261,16 @@ export const auditLogService = {
           item.entityType,
           oldParsed,
           newParsed,
-          item.entityId
+          item.entityId,
+          item.userName
         )
+
+      const isObjOld = oldParsed && typeof oldParsed === "object"
+      const isObjNew = newParsed && typeof newParsed === "object"
 
       if (
         (actionUpper === "UPDATE" || actionUpper === "IMPORT_UPDATE") &&
-        (oldParsed || newParsed)
+        (isObjOld || isObjNew)
       ) {
         const diff = getDiffValues(oldParsed, newParsed)
         oldValues = diff.oldValues
@@ -255,27 +282,29 @@ export const auditLogService = {
         description = describe()
       }
 
-      let uiType: AuditLogMappedUI["type"]
-      if (actionUpper === "UPDATE") uiType = "UPDATE"
-      else if (actionUpper === "IMPORT_UPDATE") uiType = "IMPORT_UPDATE"
-      else if (actionUpper === "DELETE" || actionUpper === "SOFT_DELETE")
-        uiType = "DELETE"
-      else if (actionUpper === "IMPORT" || actionUpper === "IMPORT_CREATE")
-        uiType = "IMPORT"
-      else if (actionUpper === "RESTORE") uiType = "RESTORE"
-      else if (actionUpper === "MOVE") uiType = "MOVE"
-      else if (actionUpper === "SPLIT" || actionUpper === "CREATE_SPLIT")
-        uiType = "SPLIT"
-      else if (actionUpper === "CREATE") uiType = "CREATE"
-      else uiType = actionUpper as AuditLogMappedUI["type"]
+      const uiType: AuditLogMappedUI["type"] = actionUpper
 
-      const assetCode = String(
-        newParsed?.asset_code ||
-          newParsed?.AssetCode ||
-          oldParsed?.asset_code ||
-          oldParsed?.AssetCode ||
-          item.entityId.substring(0, 8)
-      )
+      let targetLabel = `${item.entityType.toLowerCase()} · ${item.entityId}`
+      const isAuthOrUser =
+        item.entityType.toLowerCase() === "auth" ||
+        item.entityType.toLowerCase() === "users" ||
+        actionUpper === "LOGIN" ||
+        actionUpper === "LOGOUT"
+
+      if (isAuthOrUser) {
+        const actorName = item.userName?.trim()
+        if (actorName) {
+          targetLabel = `${item.entityType.toLowerCase()} · ${actorName}`
+        }
+      } else if (isObjNew || isObjOld) {
+        const parsedObj = (newParsed || oldParsed) as Record<string, unknown>
+        const assetCode = String(
+          parsedObj?.asset_code ||
+            parsedObj?.AssetCode ||
+            item.entityId.substring(0, 8)
+        )
+        targetLabel = `${item.entityType.toLowerCase()} · ${assetCode}`
+      }
 
       return {
         id: item.id,
@@ -291,7 +320,7 @@ export const auditLogService = {
           minute: "2-digit",
           second: "2-digit",
         }),
-        target: `${item.entityType.toLowerCase()} · ${assetCode}`,
+        target: targetLabel,
         oldValues,
         newValues,
         description,
@@ -304,7 +333,6 @@ export const auditLogService = {
     }
   },
 
-  // Memanggil endpoint Backend Go untuk ekspor .xlsx
   exportLog: async (params?: AuditLogQueryParams) => {
     const response = await api.get("/audit-logs/export", {
       params,

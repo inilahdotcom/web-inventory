@@ -49,21 +49,17 @@ export function ProfileDropdown({
   const displayName = nameProp ?? profile?.attributes?.name ?? ""
   const initials = initsProp ?? (getInitials(displayName) || "?")
 
+  // Handler Logout
+  // authService.logout: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setOpen(false)
+    const toastId = toast.loading("Keluar dari akun...")
     try {
-      if (authService?.logout) {
-        await authService.logout()
-      }
-    } catch (err) {
-      console.error("Gagal request logout:", err)
-    } finally {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      sessionStorage.clear()
+      await authService.logout()
       queryClient.clear()
-      toast.success("Berhasil keluar dari akun")
-      navigate({ to: "/auth/login" })
+      toast.success("Berhasil keluar dari akun", { id: toastId })
+    } catch {
+      toast.error("Gagal keluar dari akun. Silakan coba lagi.", { id: toastId })
     }
   }
 

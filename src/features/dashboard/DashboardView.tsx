@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "../../lib/axios"
 import { profileService } from "@/services/profileService"
 import { assetService } from "@/services/assetServices"
@@ -17,14 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  ChevronDown,
-  LogOut,
-  User,
-  Inbox,
-  Plus,
-  FileSpreadsheet,
-} from "lucide-react"
+import { LogOut, User, Inbox, Plus, FileSpreadsheet } from "lucide-react"
 import { toast } from "sonner"
 
 interface DashboardData {
@@ -59,7 +52,6 @@ type ExportType = "excel" | "pdf"
 
 export function DashboardView() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
   // Ambil permission untuk menyembunyikan tombol UI bagi Viewer
   const { canCreateEditAsset, canImportExcel, canExportLaporan } =
@@ -100,29 +92,14 @@ export function DashboardView() {
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // State & Ref Popover Dropdown Export
-  const [isExportOpen, setIsExportOpen] = useState<boolean>(false)
+  // State Export
   const [exporting, setExporting] = useState<ExportType | null>(null)
-  const exportRef = useRef<HTMLDivElement>(null)
 
   // Handler Logout
+  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsProfileOpen(false)
-    try {
-      if (authService?.logout) {
-        await authService.logout()
-      }
-    } catch (err) {
-      console.error("Gagal request logout:", err)
-    } finally {
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      sessionStorage.clear()
-
-      queryClient.clear()
-      toast.success("Berhasil keluar dari akun")
-      navigate({ to: "/auth/login" })
-    }
+    await authService.logout()
   }
 
   // Tutup dropdown saat klik di luar
@@ -134,12 +111,6 @@ export function DashboardView() {
       ) {
         setIsProfileOpen(false)
       }
-      if (
-        exportRef.current &&
-        !exportRef.current.contains(event.target as Node)
-      ) {
-        setIsExportOpen(false)
-      }
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
@@ -147,7 +118,6 @@ export function DashboardView() {
 
   // Handler Export
   const runExport = async (type: ExportType) => {
-    setIsExportOpen(false)
     if (exporting) return
 
     const isExcel = type === "excel"
@@ -265,45 +235,25 @@ export function DashboardView() {
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             {canExportLaporan && (
-              <div className="relative hidden sm:inline-block" ref={exportRef}>
+              <div className="hidden items-center gap-2 sm:flex">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
-                  disabled={isDashboardEmpty}
-                  onClick={() => setIsExportOpen((prev) => !prev)}
-                  className="gap-1.5 rounded-full"
+                  disabled={isDashboardEmpty || exporting !== null}
+                  onClick={handleExportExcel}
                 >
-                  <span>{exporting ? "Mengekspor..." : "Export"}</span>
-                  <ChevronDown size={13} strokeWidth={2.5} />
+                  {exporting === "excel" ? "Mengekspor..." : "Export Excel"}
                 </Button>
-
-                {isExportOpen && (
-                  <Card className="absolute right-0 z-50 mt-2 w-44 overflow-hidden p-1.5 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={handleExportExcel}
-                      disabled={exporting !== null}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <span className="grid size-5 place-items-center rounded bg-emerald-100 text-[10px] font-bold text-emerald-700">
-                        XLS
-                      </span>
-                      {exporting === "excel" ? "Mengekspor..." : "Export Excel"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportPdf}
-                      disabled={exporting !== null}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <span className="grid size-5 place-items-center rounded bg-rose-100 text-[10px] font-bold text-rose-700">
-                        PDF
-                      </span>
-                      {exporting === "pdf" ? "Mengekspor..." : "Export PDF"}
-                    </button>
-                  </Card>
-                )}
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={isDashboardEmpty || exporting !== null}
+                  onClick={handleExportPdf}
+                >
+                  {exporting === "pdf" ? "Mengekspor..." : "Export PDF"}
+                </Button>
               </div>
             )}
 
