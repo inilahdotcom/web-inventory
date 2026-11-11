@@ -310,7 +310,7 @@ export function DashboardView() {
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Selamat datang, {displayName ? `Pak ${displayName}` : "Pak Dzaki"}
+              Selamat datang {displayName ? ` ${displayName}` : "User"}
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
               Data terhubung langsung dari Database Server Inventaris

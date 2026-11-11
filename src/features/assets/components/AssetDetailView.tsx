@@ -472,19 +472,8 @@ export function AssetDetailView() {
     detail.attributes.mutationHistory.length > 0 &&
     !detail.attributes.holderConfirmedAt
 
-  // Penggabungan data riwayat menjadi satu unified timeline (Task B1) - Aman dari error tipe TypeScript
+  // Penggabungan data riwayat menjadi satu unified timeline (Task B1)
   const attributesObj = detail.attributes as unknown as {
-    mutationHistory?: Array<{
-      id: string | number
-      mutationDate?: string
-      createdAt?: string
-      fromLocation?: string
-      toLocation?: string
-      fromHolder?: string
-      toHolder?: string
-      actorName?: string
-      reason?: string
-    }>
     auditLogs?: Array<{
       id: string | number
       createdAt?: string
@@ -539,6 +528,13 @@ export function AssetDetailView() {
     if (timelineFilter === "all") return true
     return item.type === timelineFilter
   })
+
+  const filterChips: Array<{ key: string; label: string }> = [
+    { key: "all", label: `Semua (${unifiedTimeline.length})` },
+    { key: "mutation", label: "Mutasi" },
+    { key: "audit", label: "Log Perubahan" },
+    { key: "check", label: "Pemeriksaan" },
+  ]
 
   return (
     <div className="min-h-svh min-w-0 bg-background text-foreground">
@@ -873,50 +869,20 @@ export function AssetDetailView() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setTimelineFilter("all")}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                      timelineFilter === "all"
-                        ? "bg-neutral-900 text-white"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                    }`}
-                  >
-                    Semua ({unifiedTimeline.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTimelineFilter("mutation")}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                      timelineFilter === "mutation"
-                        ? "bg-neutral-900 text-white"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                    }`}
-                  >
-                    Mutasi
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTimelineFilter("audit")}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                      timelineFilter === "audit"
-                        ? "bg-neutral-900 text-white"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                    }`}
-                  >
-                    Log Perubahan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTimelineFilter("check")}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                      timelineFilter === "check"
-                        ? "bg-neutral-900 text-white"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                    }`}
-                  >
-                    Pemeriksaan
-                  </button>
+                  {filterChips.map((chip) => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => setTimelineFilter(chip.key)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                        timelineFilter === chip.key
+                          ? "bg-neutral-900 text-white"
+                          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -930,6 +896,7 @@ export function AssetDetailView() {
                     </p>
                   </div>
                 )}
+
                 {filteredTimeline.length ? (
                   <div className="flex flex-col">
                     {filteredTimeline.map((item, index) => (
@@ -1250,6 +1217,7 @@ function auditTitle(log: AssetAuditLog) {
       DELETE: "Aset dihapus",
       IMPORT_CREATE: "Aset diimpor",
       HOLDER_CONFIRMED: "Pemegang dikonfirmasi",
+      CHECK: "Aset diperiksa",
     }[log.action] || log.action.replaceAll("_", " ")
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import type { ReactNode } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -86,6 +86,12 @@ export function StocktakeDetailView({ id }: { id: string }) {
 
   const startMutation = useStartSession()
   const closeMutation = useCloseSession()
+
+  useEffect(() => {
+    if (session?.status === "draft") {
+      void navigate({ to: "/stocktake" })
+    }
+  }, [session?.status, navigate])
 
   const isOpen = session?.status === "open"
   const canSelect =
