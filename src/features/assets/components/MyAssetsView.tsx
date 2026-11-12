@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { formatDate } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { CheckCircle2, Search } from "lucide-react"
@@ -29,11 +30,6 @@ const conditionVariant: Record<
   "Rusak Berat": "rusak-berat",
   Hilang: "hilang",
 }
-
-const confirmationDateFormatter = new Intl.DateTimeFormat("id-ID", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
 
 function errorMessage(error: unknown): string {
   const apiError = error as {
@@ -269,9 +265,10 @@ export function MyAssetsView() {
                         </Badge>
                         {attributes.holderConfirmedAt && (
                           <span className="text-[11px] text-[#6b6f7e]">
-                            {confirmationDateFormatter.format(
-                              new Date(attributes.holderConfirmedAt)
-                            )}
+                            {formatDate(attributes.holderConfirmedAt, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
                           </span>
                         )}
                       </dd>

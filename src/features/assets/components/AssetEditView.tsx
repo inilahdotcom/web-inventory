@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
+import { formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
@@ -37,7 +38,7 @@ const formatRupiahDisplay = (val: string | number): string => {
   if (!val) return ""
   const rawNumber = String(val).replace(/\D/g, "")
   if (!rawNumber) return ""
-  return "Rp " + Number(rawNumber).toLocaleString("id-ID")
+  return "Rp " + formatNumber(Number(rawNumber))
 }
 
 const parseRawNumber = (val: string): number => {

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { formatDateOnly } from "@/lib/formatters"
 import { FileText, Plus, Trash2, Upload } from "lucide-react"
 import {
   assetService,
@@ -37,14 +38,11 @@ function formatSize(size: number) {
 }
 
 function formatDate(value: string) {
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+  return formatDateOnly(value, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
 }
 
 function requestError(error: unknown) {

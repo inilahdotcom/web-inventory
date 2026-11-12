@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react"
+import { formatDate, formatNumber } from "@/lib/formatters"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { reportService } from "@/services/reportService"
@@ -33,7 +34,7 @@ const tabs: ReportTab[] = [
   "Per lokasi & pemegang",
   "Mutasi aset",
 ]
-const number = (value: number) => new Intl.NumberFormat("id-ID").format(value)
+const number = formatNumber
 
 type PeriodOption = {
   value: string
@@ -43,12 +44,6 @@ type PeriodOption = {
 }
 
 const allPeriod: PeriodOption = { value: "all", label: "Semua" }
-const monthLabel = new Intl.DateTimeFormat("id-ID", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-})
-
 function createPeriodOptions(dates: string[]): PeriodOption[] {
   const months = new Set(
     dates.flatMap((date) => {
@@ -66,7 +61,11 @@ function createPeriodOptions(dates: string[]): PeriodOption[] {
         const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
         return {
           value,
-          label: monthLabel.format(new Date(Date.UTC(year, month - 1, 1))),
+          label: formatDate(new Date(Date.UTC(year, month - 1, 1)), {
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC",
+          }),
           dateFrom: `${value}-01`,
           dateTo: `${value}-${String(lastDay).padStart(2, "0")}`,
         }
