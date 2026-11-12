@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
-import { assetService } from "@/services/assetServices"
+import { assetService, type HolderOption } from "@/services/assetServices"
 import { exportAssetHandoverPdf } from "@/features/reports/report-export"
 import {
   masterDataService,
@@ -22,7 +22,11 @@ export function AssetMutationView() {
   const [locations, setLocations] = useState<MasterDataItem[]>([])
   const [assetId, setAssetId] = useState("")
   const [toLocationId, setToLocationId] = useState(0)
-  const [holder, setHolder] = useState("")
+  const [holderSearch, setHolderSearch] = useState("")
+  const [holderOptions, setHolderOptions] = useState<HolderOption[]>([])
+  const [holderId, setHolderId] = useState(0)
+  const [isHolderLoading, setIsHolderLoading] = useState(false)
+  const [holderError, setHolderError] = useState("")
   const [movementDate, setMovementDate] = useState(today)
   const [reason, setReason] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -38,6 +42,35 @@ export function AssetMutationView() {
     () => locations.find((location) => location.id === toLocationId) ?? null,
     [locations, toLocationId]
   )
+
+  const selectedHolder = holderOptions.find((user) => user.id === holderId)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsHolderLoading(true)
+      setHolderError("")
+      try {
+        const users = await assetService.holderOptions(
+          holderSearch.trim(),
+          controller.signal
+        )
+        if (!controller.signal.aborted) setHolderOptions(users)
+      } catch {
+        if (!controller.signal.aborted) {
+          setHolderOptions([])
+          setHolderError("Daftar pengguna gagal dimuat.")
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsHolderLoading(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [holderSearch])
 
   useEffect(() => {
     let isMounted = true
@@ -58,7 +91,8 @@ export function AssetMutationView() {
         setLocations(locationResult)
         setAssetId("")
         setToLocationId(0)
-        setHolder("")
+        setHolderSearch("")
+        setHolderId(0)
       } catch {
         if (isMounted) {
           setError(
@@ -82,7 +116,8 @@ export function AssetMutationView() {
     if (!nextAsset) {
       setAssetId("")
       setToLocationId(0)
-      setHolder("")
+      setHolderSearch("")
+      setHolderId(0)
       setReason("")
       setError("")
       return
@@ -95,7 +130,8 @@ export function AssetMutationView() {
 
     setAssetId(nextAssetId)
     setToLocationId(nextLocation?.id ?? 0)
-    setHolder(nextAsset.attributes.holder ?? "")
+    setHolderSearch("")
+    setHolderId(0)
     setReason("")
     setError("")
   }
@@ -109,7 +145,8 @@ export function AssetMutationView() {
       ) ?? locations[0]
 
     setToLocationId(defaultLocation?.id ?? 0)
-    setHolder(selectedAsset.attributes.holder ?? "")
+    setHolderSearch("")
+    setHolderId(0)
     setMovementDate(today)
     setReason("")
     setError("")
@@ -126,6 +163,11 @@ export function AssetMutationView() {
       return
     }
 
+    if (!selectedHolder) {
+      setError("Pilih pemegang baru dari daftar pengguna aktif.")
+      return
+    }
+
     if (!reason.trim()) {
       setError("Alasan mutasi wajib diisi.")
       return
@@ -137,7 +179,7 @@ export function AssetMutationView() {
     try {
       const mutation = await assetService.moveAsset(selectedAsset.id, {
         to_location_id: toLocationId,
-        to_holder: holder.trim() || undefined,
+        to_holder_id: selectedHolder.id,
         movement_date: movementDate,
         reason: reason.trim(),
       })
@@ -153,7 +195,7 @@ export function AssetMutationView() {
                   ...asset.attributes,
                   locationId: toLocationId,
                   location: nextLocationName,
-                  holder: holder.trim() || null,
+                  holder: selectedHolder.name,
                 },
               }
             : asset
@@ -333,11 +375,40 @@ export function AssetMutationView() {
                       options={locationOptions}
                     />
                     <InputField
-                      label="Pemegang baru"
-                      value={holder}
-                      onChange={(e) => setHolder(e.target.value)}
+                      label="Cari pemegang baru *"
+                      value={holderSearch}
+                      onChange={(e) => {
+                        setHolderSearch(e.target.value)
+                        setHolderOptions([])
+                        setIsHolderLoading(true)
+                        setHolderId(0)
+                      }}
                       disabled={isSaving}
-                      placeholder="Kosongkan jika tidak ada pemegang"
+                      placeholder="Cari nama pengguna"
+                    />
+                    <SelectedField
+                      label="Pemegang baru *"
+                      value={String(holderId)}
+                      onChange={(e) => setHolderId(Number(e.target.value))}
+                      disabled={
+                        isSaving ||
+                        isHolderLoading ||
+                        holderOptions.length === 0
+                      }
+                      isLoading={isHolderLoading}
+                      options={[
+                        { label: "Pilih pengguna", value: "0" },
+                        ...holderOptions.map((user) => ({
+                          label: user.name,
+                          value: String(user.id),
+                        })),
+                      ]}
+                      helperText={
+                        holderError ||
+                        (holderOptions.length === 0 && !isHolderLoading
+                          ? "Pengguna tidak ditemukan. Mutasi tidak dapat disimpan."
+                          : "Hanya pengguna aktif yang dapat dipilih.")
+                      }
                     />
                   </LocationCard>
                 </div>
@@ -379,7 +450,7 @@ export function AssetMutationView() {
                     type="button"
                     variant="primary"
                     onClick={handleSave}
-                    disabled={isSaving || !assetId}
+                    disabled={isSaving || !assetId || !selectedHolder}
                   >
                     {isSaving ? "Menyimpan..." : "Simpan Mutasi"}
                   </Button>
