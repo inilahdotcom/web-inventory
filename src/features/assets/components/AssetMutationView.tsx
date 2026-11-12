@@ -379,6 +379,8 @@ export function AssetMutationView() {
                       value={holderSearch}
                       onChange={(e) => {
                         setHolderSearch(e.target.value)
+                        setHolderOptions([])
+                        setIsHolderLoading(true)
                         setHolderId(0)
                       }}
                       disabled={isSaving}
