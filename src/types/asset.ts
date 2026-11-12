@@ -8,7 +8,7 @@ export type AssetPhoto = {
   sortOrder: number
 }
 
-export type AssetListData = {
+export type AssetBaseData = {
   code: string
   slug: string
   name: string
@@ -25,9 +25,13 @@ export type AssetListData = {
   holder: string | null
   condition: AssetCondition
   status: string
-  holderConfirmedAt: string | null
+  holderConfirmedAt?: string | null
   createdAt: string | null
   updatedAt: string | null
+}
+
+export type AssetListData = AssetBaseData & {
+  holderConfirmedAt: string | null
   photos?: AssetPhoto[]
 }
 
@@ -71,4 +75,64 @@ export type AssetListParams = {
 export type AssetMasterItem = {
   id: number
   name: string
+}
+
+export type AssetDocumentType = "invoice" | "warranty" | "condition_evidence"
+
+export type AssetDocument = {
+  id: number
+  type: AssetDocumentType
+  fileName: string
+  fileUrl: string
+  mimeType: string
+  fileSize: number
+  warrantyExpiresAt: string | null
+  createdAt: string
+}
+
+export type AssetData = AssetBaseData & {
+  description: string | null
+  photos: AssetPhoto[]
+  documents: AssetDocument[]
+}
+
+export type AssetAttr = {
+  id: string
+  attributes: AssetData
+}
+
+export type AssetMutation = {
+  id: number
+  fromLocation: string
+  toLocation: string
+  fromHolder: string | null
+  toHolder: string | null
+  mutationDate: string
+  reason: string
+  actorName: string
+  createdAt: string | null
+}
+
+export type AssetAuditLog = {
+  id: number
+  actorName: string
+  action: string
+  fieldName: string | null
+  oldValue: string | null
+  newValue: string | null
+  createdAt: string | null
+}
+
+export type AssetDetailAttr = {
+  id: string
+  attributes: AssetData & {
+    mutationHistory: AssetMutation[]
+    auditLogs: AssetAuditLog[]
+    completeness: {
+      filled: number
+      total: number
+      percentage: number
+      missingFields: string[]
+    }
+  }
 }
