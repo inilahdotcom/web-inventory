@@ -172,9 +172,14 @@ export interface AssetWriteResult extends Record<string, unknown> {
 
 export interface MoveAssetPayload {
   to_location_id: number
-  to_holder?: string
+  to_holder_id: number
   movement_date: string
   reason: string
+}
+
+export interface HolderOption {
+  id: number
+  name: string
 }
 
 export interface MoveAssetResponse {
@@ -294,6 +299,17 @@ export const assetService = {
   ): Promise<MoveAssetResponse> => {
     const response = await api.post(`/assets/${id}/movements`, payload)
     return (response.data?.data || response.data) as MoveAssetResponse
+  },
+
+  holderOptions: async (
+    search: string,
+    signal?: AbortSignal
+  ): Promise<HolderOption[]> => {
+    const response = await api.get("/assets/holder-options", {
+      params: { search },
+      signal,
+    })
+    return response.data?.data || []
   },
 
   splitAsset: async (
