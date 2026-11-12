@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { formatDate } from "@/lib/formatters"
 import axios from "axios"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -65,14 +66,14 @@ function formatLastLogin(value: string | null): string {
   if (!value) return "Belum pernah"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
-  return new Intl.DateTimeFormat("id-ID", {
+  return formatDate(date, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(date)
+  })
 }
 
 function UserRow({

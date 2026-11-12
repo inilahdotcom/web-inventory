@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import type { ItemStatus, SessionStatus } from "@/types/stocktake"
+import { formatDate, formatDateOnly } from "@/lib/formatters"
 
 const SESSION_STATUS: Record<
   SessionStatus,
@@ -73,33 +74,22 @@ export function ProgressBar({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Tanggal. periodStart dan periodEnd dari backend berbentuk YYYY-MM-DD,
-// diuraikan manual supaya tidak bergeser oleh zona waktu.
-// ---------------------------------------------------------------------------
-const dateFmt = new Intl.DateTimeFormat("id-ID", {
+const dateOptions: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "short",
   year: "numeric",
-})
+}
 
-const dateTimeFmt = new Intl.DateTimeFormat("id-ID", {
+const dateTimeOptions: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "short",
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-})
-
-function parseDateOnly(value: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
-  if (!m) return null
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
 }
 
 export function formatDateID(value: string) {
-  const d = parseDateOnly(value)
-  return d ? dateFmt.format(d) : value
+  return formatDateOnly(value, dateOptions)
 }
 
 export function formatPeriod(start: string, end: string) {
@@ -108,8 +98,7 @@ export function formatPeriod(start: string, end: string) {
 
 export function formatDateTimeID(value: string | null | undefined) {
   if (!value) return "—"
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? "—" : dateTimeFmt.format(d)
+  return formatDate(value, dateTimeOptions, "—")
 }
 
 export function toISODate(d: Date) {

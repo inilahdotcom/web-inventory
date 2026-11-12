@@ -1,4 +1,5 @@
 import { LayoutGrid, Table2 } from "lucide-react"
+import { formatDate } from "@/lib/formatters"
 import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
@@ -68,7 +69,7 @@ export function AssetArchiveView() {
               "Dihapus dari inventaris"
           ),
           deletedAt: deletedAtVal
-            ? new Date(deletedAtVal).toLocaleDateString("id-ID")
+            ? formatDate(deletedAtVal)
             : "-",
           deletedBy: String(attr.deletedBy || attr.deleted_by || "Admin"),
           hasMovementHistory: Boolean(attr.has_movement_history),
