@@ -2,11 +2,17 @@ import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { assetService } from "@/services/assetServices"
+import { exportAssetHandoverPdf } from "@/features/reports/report-export"
 import {
   masterDataService,
   type MasterDataItem,
 } from "@/services/masterDataService"
 import type { AssetListItem } from "@/types/asset"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { InputField } from "@/components/ui/InputField"
+import { SelectedField } from "@/components/ui/SelectedField"
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -50,16 +56,14 @@ export function AssetMutationView() {
 
         setAssets(assetResult.assets)
         setLocations(locationResult)
-        const firstAsset = assetResult.assets[0]
-        const firstDestination = locationResult.find(
-          (location) => location.id !== firstAsset?.attributes.locationId
-        ) ?? locationResult[0]
-        setAssetId(firstAsset?.id ?? "")
-        setToLocationId(firstDestination?.id ?? 0)
-        setHolder(firstAsset?.attributes.holder ?? "")
+        setAssetId("")
+        setToLocationId(0)
+        setHolder("")
       } catch {
         if (isMounted) {
-          setError("Data aset atau lokasi gagal dimuat. Silakan muat ulang halaman.")
+          setError(
+            "Data aset atau lokasi gagal dimuat. Silakan muat ulang halaman."
+          )
         }
       } finally {
         if (isMounted) setIsLoading(false)
@@ -75,14 +79,23 @@ export function AssetMutationView() {
 
   const handleAssetChange = (nextAssetId: string) => {
     const nextAsset = assets.find((asset) => asset.id === nextAssetId)
+    if (!nextAsset) {
+      setAssetId("")
+      setToLocationId(0)
+      setHolder("")
+      setReason("")
+      setError("")
+      return
+    }
+
     const nextLocation =
       locations.find(
-        (location) => location.id !== nextAsset?.attributes.locationId
+        (location) => location.id !== nextAsset.attributes.locationId
       ) ?? locations[0]
 
     setAssetId(nextAssetId)
     setToLocationId(nextLocation?.id ?? 0)
-    setHolder(nextAsset?.attributes.holder ?? "")
+    setHolder(nextAsset.attributes.holder ?? "")
     setReason("")
     setError("")
   }
@@ -122,14 +135,15 @@ export function AssetMutationView() {
     setError("")
 
     try {
-      await assetService.moveAsset(selectedAsset.id, {
+      const mutation = await assetService.moveAsset(selectedAsset.id, {
         to_location_id: toLocationId,
         to_holder: holder.trim() || undefined,
         movement_date: movementDate,
         reason: reason.trim(),
       })
 
-      const nextLocationName = destinationLocation?.name ?? "lokasi tujuan"
+      const nextLocationName =
+        mutation.toLocation ?? destinationLocation?.name ?? "lokasi tujuan"
       setAssets((current) =>
         current.map((asset) =>
           asset.id === selectedAsset.id
@@ -146,7 +160,36 @@ export function AssetMutationView() {
         )
       )
       setReason("")
-      toast.success(`Mutasi ${selectedAsset.attributes.name} berhasil disimpan.`)
+      try {
+        await exportAssetHandoverPdf({
+          movementId: mutation.id,
+          assetId: mutation.assetId || selectedAsset.id,
+          assetCode: mutation.asset?.code ?? selectedAsset.attributes.code,
+          assetName: mutation.asset?.name ?? selectedAsset.attributes.name,
+          category:
+            mutation.asset?.category ?? selectedAsset.attributes.category,
+          quantity:
+            mutation.asset?.quantity ?? selectedAsset.attributes.quantity,
+          unit: mutation.asset?.unit ?? selectedAsset.attributes.unit,
+          condition:
+            mutation.asset?.condition ?? selectedAsset.attributes.condition,
+          fromLocation:
+            mutation.fromLocation ?? selectedAsset.attributes.location,
+          toLocation: nextLocationName,
+          fromHolder: mutation.fromHolder,
+          toHolder: mutation.toHolder,
+          movementDate: mutation.movementDate,
+          reason: mutation.reason,
+          actorName: mutation.actorName ?? "Staff GA",
+        })
+        toast.success(
+          `Mutasi ${selectedAsset.attributes.name} berhasil disimpan dan berita acara telah diunduh.`
+        )
+      } catch {
+        toast.warning(
+          "Mutasi berhasil disimpan, tetapi berita acara PDF gagal diunduh."
+        )
+      }
       await navigate({
         to: "/asset",
       })
@@ -174,21 +217,41 @@ export function AssetMutationView() {
 
   const assetDetail = selectedAsset?.attributes
   const assetSummary = assetDetail
-    ? [assetDetail.category, assetDetail.quantity + " " + assetDetail.unit, assetDetail.condition]
+    ? [
+        assetDetail.category,
+        assetDetail.quantity + " " + assetDetail.unit,
+        assetDetail.condition,
+      ]
         .filter(Boolean)
         .join(" · ")
     : ""
 
+  const assetOptions = [
+    { label: "Pilih aset", value: "" },
+    ...assets.map((asset) => ({
+      label: `${asset.attributes.code} — ${asset.attributes.name}`,
+      value: asset.id,
+    })),
+  ]
+
+  const locationOptions = [
+    { label: "Pilih lokasi tujuan", value: "0" },
+    ...locations.map((location) => ({
+      label: `${location.name}${location.id === assetDetail?.locationId ? " (lokasi saat ini)" : ""}`,
+      value: String(location.id),
+    })),
+  ]
+
   return (
-    <div className="min-h-svh bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="flex h-16 items-center overflow-hidden border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 text-[13px] text-[#8e91a0] sm:pr-6 lg:px-6">
-        <span className="text-[#6b6f7e]">Daftar Aset</span>
+    <div className="min-h-svh bg-background text-foreground">
+      <header className="flex h-16 items-center overflow-hidden border-b border-hairline bg-card py-0 pr-4 pl-16 text-[13px] text-muted-foreground sm:pr-6 lg:px-6">
+        <span className="text-muted-foreground">Daftar Aset</span>
         <span className="px-2">/</span>
         <span className="truncate font-mono">
           {assetDetail?.code ?? (isLoading ? "Memuat..." : "-")}
         </span>
         <span className="px-2">/</span>
-        <span className="text-[#1c1c1e]">Mutasi</span>
+        <span className="text-foreground">Mutasi</span>
       </header>
 
       <main className="mx-auto flex w-full max-w-219 flex-col gap-4.5 p-4 py-7 sm:p-7">
@@ -196,142 +259,141 @@ export function AssetMutationView() {
           <h1 className="text-[28px] font-semibold tracking-[-.6px]">
             Mutasi &amp; serah terima aset
           </h1>
-          <p className="mt-1 text-[13px] text-[#6b6f7e]">
-            Mutasi memperbarui lokasi atau pemegang aset dan tercatat di riwayat mutasi.
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Mutasi memperbarui lokasi atau pemegang aset dan tercatat di riwayat
+            mutasi.
           </p>
         </div>
 
         {error && (
-          <button
-            type="button"
+          <Alert
+            variant="destructive"
             onClick={() => setError("")}
-            className="rounded-lg bg-[#ffe3e3] px-4 py-3 text-left text-[13px] text-[#a21c1c]"
+            className="cursor-pointer"
           >
-            {error} ×
-          </button>
+            <AlertDescription>{error} ×</AlertDescription>
+          </Alert>
         )}
 
-        <section className="flex flex-col gap-5 rounded-[20px] border border-[#eef0f3] bg-white p-5 sm:p-5.5">
-          <SelectField
-            label="Aset yang dimutasi *"
-            value={assetId}
-            onChange={handleAssetChange}
-            disabled={isLoading || isSaving || assets.length === 0}
-          >
-            <option value="">Pilih aset</option>
-            {assets.map((asset) => (
-              <option key={asset.id} value={asset.id}>
-                {asset.attributes.code} — {asset.attributes.name}
-              </option>
-            ))}
-          </SelectField>
+        <Card className="rounded-[20px]">
+          <CardContent className="flex flex-col gap-5 p-5 sm:p-5.5">
+            <SelectedField
+              label="Aset yang dimutasi *"
+              value={assetId}
+              onChange={(e) => handleAssetChange(e.target.value)}
+              disabled={isLoading || isSaving || assets.length === 0}
+              options={assetOptions}
+            />
 
-          {assetDetail ? (
-            <>
-              <div className="flex items-center gap-3.5 border-b border-[#eef0f3] pb-4.5">
-                {assetDetail.photos?.[0]?.url ? (
-                  <img
-                    src={assetDetail.photos[0].url}
-                    alt={assetDetail.name}
-                    className="size-14 rounded-xl border border-[#e0e2e8] object-cover"
-                  />
-                ) : (
-                  <div className="size-14 rounded-xl border border-[#e0e2e8] bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)]" />
-                )}
-                <div className="min-w-0">
-                  <p className="font-mono text-[12px] text-[#4262ff]">
-                    {assetDetail.code}
-                  </p>
-                  <h2 className="truncate text-[17px] font-semibold">
-                    {assetDetail.name}
-                  </h2>
-                  <p className="text-[12px] text-[#6b6f7e]">{assetSummary}</p>
+            {assetDetail ? (
+              <>
+                <div className="flex items-center gap-3.5 border-b border-hairline pb-4.5">
+                  {assetDetail.photos?.[0]?.url ? (
+                    <img
+                      src={assetDetail.photos[0].url}
+                      alt={assetDetail.name}
+                      className="size-14 rounded-xl border border-hairline object-cover"
+                    />
+                  ) : (
+                    <div className="size-14 rounded-xl border border-hairline bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)]" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-mono text-[12px] text-brand-blue">
+                      {assetDetail.code}
+                    </p>
+                    <h2 className="truncate text-[17px] font-semibold">
+                      {assetDetail.name}
+                    </h2>
+                    <p className="text-[12px] text-muted-foreground">
+                      {assetSummary}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid gap-4 md:grid-cols-[1fr_40px_1fr] md:items-center">
-                <LocationCard title="Dari" tone="neutral">
-                  <Data label="Lokasi" value={assetDetail.location || "Belum ditentukan"} />
-                  <Data label="Pemegang" value={assetDetail.holder || "Belum ditentukan"} />
-                </LocationCard>
-                <span className="text-center text-[22px] text-[#8e91a0]">→</span>
-                <LocationCard title="Ke" tone="target">
-                  <SelectField
-                    label="Lokasi tujuan *"
-                    value={String(toLocationId)}
-                    onChange={(value) => setToLocationId(Number(value))}
+                <div className="grid gap-4 md:grid-cols-[1fr_40px_1fr] md:items-center">
+                  <LocationCard title="Dari" tone="neutral">
+                    <Data
+                      label="Lokasi"
+                      value={assetDetail.location || "Belum ditentukan"}
+                    />
+                    <Data
+                      label="Pemegang"
+                      value={assetDetail.holder || "Belum ditentukan"}
+                    />
+                  </LocationCard>
+                  <span className="text-center text-[22px] text-muted-foreground">
+                    →
+                  </span>
+                  <LocationCard title="Ke" tone="target">
+                    <SelectedField
+                      label="Lokasi tujuan *"
+                      value={String(toLocationId)}
+                      onChange={(e) => setToLocationId(Number(e.target.value))}
+                      disabled={isSaving}
+                      options={locationOptions}
+                    />
+                    <InputField
+                      label="Pemegang baru"
+                      value={holder}
+                      onChange={(e) => setHolder(e.target.value)}
+                      disabled={isSaving}
+                      placeholder="Kosongkan jika tidak ada pemegang"
+                    />
+                  </LocationCard>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
+                  <InputField
+                    label="Tanggal mutasi *"
+                    value={movementDate}
+                    onChange={(e) => setMovementDate(e.target.value)}
+                    type="date"
+                    max={today}
+                    disabled={isSaving}
+                  />
+                  <InputField
+                    label="Alasan mutasi *"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    disabled={isSaving}
+                    maxLength={500}
+                    placeholder="Jelaskan alasan pemindahan aset"
+                  />
+                </div>
+
+                <p className="text-[12px] text-muted-foreground">
+                  Berita acara PDF akan dibuat otomatis dari data mutasi setelah
+                  berhasil disimpan.
+                </p>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={reset}
                     disabled={isSaving}
                   >
-                    <option value="0">Pilih lokasi tujuan</option>
-                    {locations.map((location) => (
-                      <option
-                        key={location.id}
-                        value={location.id}
-                        disabled={location.id === assetDetail.locationId}
-                      >
-                        {location.name}
-                        {location.id === assetDetail.locationId ? " (lokasi saat ini)" : ""}
-                      </option>
-                    ))}
-                  </SelectField>
-                  <Field
-                    label="Pemegang baru"
-                    value={holder}
-                    onChange={setHolder}
-                    disabled={isSaving}
-                    placeholder="Kosongkan jika tidak ada pemegang"
-                  />
-                </LocationCard>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
-                <Field
-                  label="Tanggal mutasi *"
-                  value={movementDate}
-                  onChange={setMovementDate}
-                  type="date"
-                  max={today}
-                  disabled={isSaving}
-                />
-                <Field
-                  label="Alasan mutasi *"
-                  value={reason}
-                  onChange={setReason}
-                  disabled={isSaving}
-                  maxLength={500}
-                  placeholder="Jelaskan alasan pemindahan aset"
-                />
-              </div>
-
-              <p className="text-[12px] text-[#8e91a0]">
-                Berita acara PDF belum tersedia pada endpoint backend.
+                    Batal
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleSave}
+                    disabled={isSaving || !assetId}
+                  >
+                    {isSaving ? "Menyimpan..." : "Simpan Mutasi"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-[14px] text-muted-foreground">
+                {isLoading
+                  ? "Memuat aset..."
+                  : "Tidak ada aset yang dapat dimutasi."}
               </p>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={reset}
-                  disabled={isSaving}
-                  className="h-11 rounded-full px-5 text-[14px] font-semibold text-[#555a6a] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isSaving || !assetId}
-                  className="h-11 rounded-full bg-[#1c1c1e] px-6 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSaving ? "Menyimpan..." : "Simpan Mutasi"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="text-[14px] text-[#6b6f7e]">
-              {isLoading ? "Memuat aset..." : "Tidak ada aset yang dapat dimutasi."}
-            </p>
-          )}
-        </section>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   )
@@ -350,13 +412,13 @@ function LocationCard({
     <div
       className={
         "flex flex-col gap-3 rounded-2xl p-4.5 " +
-        (tone === "target" ? "bg-[#c3faf5]" : "bg-[#f7f8fa]")
+        (tone === "target" ? "bg-[#c3faf5]" : "bg-muted/50")
       }
     >
       <span
         className={
           "text-[11px] font-semibold tracking-[.5px] uppercase " +
-          (tone === "target" ? "text-[#187574]" : "text-[#6b6f7e]")
+          (tone === "target" ? "text-[#187574]" : "text-muted-foreground")
         }
       >
         {title}
@@ -369,72 +431,8 @@ function LocationCard({
 function Data({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11.5px] text-[#6b6f7e]">{label}</p>
+      <p className="text-[11.5px] text-muted-foreground">{label}</p>
       <p className="text-[15px] font-semibold">{value}</p>
     </div>
-  )
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  max,
-  maxLength,
-  disabled = false,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: "date" | "text"
-  max?: string
-  maxLength?: number
-  disabled?: boolean
-  placeholder?: string
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[11.5px] text-[#6b6f7e]">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        max={max}
-        maxLength={maxLength}
-        disabled={disabled}
-        placeholder={placeholder}
-        className="h-11 rounded-lg border border-[#c7cad5] bg-white px-3.25 text-[14px] outline-none disabled:cursor-not-allowed disabled:opacity-60"
-      />
-    </label>
-  )
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  disabled = false,
-  children,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
-  children: ReactNode
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[11.5px] text-[#6b6f7e]">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-        className="h-11 rounded-lg border border-[#c7cad5] bg-white px-3.25 text-[14px] outline-none disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {children}
-      </select>
-    </label>
   )
 }

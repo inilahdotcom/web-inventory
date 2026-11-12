@@ -23,5 +23,3 @@ export interface ChangePasswordRequest {
   new_password: string
   new_password_confirmation: string
 }
-
-

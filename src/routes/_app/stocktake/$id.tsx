@@ -1,0 +1,41 @@
+import { createFileRoute, redirect } from "@tanstack/react-router"
+import { QueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
+import { StocktakeDetailView } from "@/features/stocktake/StocktakeDetailView"
+import { profileService } from "@/services/profileService"
+
+function StocktakeDetailPage() {
+  const { id } = Route.useParams()
+  return <StocktakeDetailView id={id} />
+}
+
+export const Route = createFileRoute("/_app/stocktake/$id")({
+  beforeLoad: async ({ context }) => {
+    try {
+      const queryClient = (context as { queryClient?: QueryClient }).queryClient
+
+      const profile = queryClient
+        ? await queryClient.fetchQuery({
+            queryKey: ["profile"],
+            queryFn: () => profileService.get(),
+          })
+        : await profileService.get()
+
+      const role = profile?.attributes?.role?.toLowerCase() || ""
+
+      // Hanya Admin dan Staff GA yang diizinkan mengakses fitur Stok Opname
+      if (role !== "admin" && role !== "staff_ga") {
+        toast.error(
+          "Akses ditolak. Fitur Stok Opname hanya dapat diakses oleh Admin dan Staff GA."
+        )
+        throw redirect({
+          to: "/",
+        })
+      }
+    } catch (error) {
+      if ((error as { to?: string })?.to) throw error
+      throw redirect({ to: "/" })
+    }
+  },
+  component: StocktakeDetailPage,
+})

@@ -1,17 +1,33 @@
-import React from 'react'
+import * as React from "react"
+import { cn } from "@/lib/utils"
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    label?: string
-}
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement>
 
-export function Input({ label, className = '', ...props }: InputProps) {
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
     return (
-        <div className="space-y-1">
-            {label && <label className="text-xs font-medium text-neutral-700">{label}</label>}
-            <input 
-                className={`w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900 ${className}`}
-                {...props}
-            />
-        </div>
+      <input
+        type={type}
+        data-slot="input"
+        className={cn(
+          "flex h-10 w-full min-w-0 rounded-lg border bg-white px-3 py-2 text-sm text-foreground shadow-none transition outline-none",
+          "border-hairline-strong focus:border-primary focus:ring-1 focus:ring-primary/30",
+          // Placeholder
+          "placeholder:text-muted-foreground/60",
+          // Disabled
+          "disabled:cursor-not-allowed disabled:border-hairline disabled:bg-muted disabled:text-muted-foreground",
+          // Invalid / aria-invalid
+          "aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/30",
+          // Dark mode
+          "dark:border-hairline dark:bg-card dark:focus:border-primary",
+          className
+        )}
+        ref={ref}
+        {...props}
+      />
     )
-}
+  }
+)
+Input.displayName = "Input"
+
+export { Input }

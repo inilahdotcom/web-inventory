@@ -3,7 +3,6 @@ dist
 .git
 .husky
 *.log
-package-lock.json
 Dockerfile
 .dockerignore
 Jenkinsfile

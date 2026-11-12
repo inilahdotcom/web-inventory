@@ -14,12 +14,17 @@
 // privat.
 //
 // KREDENSIAL YANG HARUS SUDAH ADA DI JENKINS:
-//   robothb            Username with password         robot Harbor (push + scan untuk Jenkins, pull untuk VM)
+//   robothb            Username with password    robot Harbor (push + scan untuk Jenkins, pull untuk VM)
 //   vm-deploy          SSH Username with private key  kunci SSH ke VM tujuan
-//   web-inventory-env  Secret file                    isi .env frontend (VITE_API_URL, VITE_API_KEY)
+//   web-inventory-env  Secret file                  isi .env frontend (VITE_API_URL, VITE_API_KEY)
 
 pipeline {
     agent any
+
+    // Menggunakan tool Node.js 24 untuk mendukung `node --test`
+    tools {
+        nodejs 'Node24'
+    }
 
     // Dipicu webhook GitHub push, sama seperti inventory-service. Webhook repo
     // inilahdotcom/web-inventory harus diarahkan ke https://jk.inilahtv.com/github-webhook/
@@ -62,6 +67,17 @@ pipeline {
                     echo "commit : $SHA - $(git log -1 --pretty=%s)"
                     echo "image  : $IMAGE:$TAG dan $IMAGE:$BRANCH"
                     echo "tujuan : $VM ($BIND:$PORT -> 5000)"
+                '''
+            }
+        }
+
+        // 🟢 STAGE TEST: Menjalankan unit test sebelum proses build image Docker
+        stage('Test') {
+            steps {
+                sh '''
+                    set -eu
+                    npm ci
+                    npm run test
                 '''
             }
         }
@@ -138,7 +154,7 @@ pipeline {
                             def s = r.summary?.summary ?: [:]
                             env.SCAN = ['Critical', 'High', 'Medium', 'Low', 'Unknown']
                                 .collect { "• ${it.toUpperCase()}: ${s[it] ?: 0}" }
-                                .join('\n') + "\n• bisa diperbaiki: ${r.summary?.fixable ?: 0}"
+                                .join('\n') + "\nbisa diperbaiki: ${r.summary?.fixable ?: 0}"
                         }
                         env.SCAN_URL = "https://${env.REGISTRY}/harbor/projects/${a.project_id}/repositories/" +
                                        "${a.repository_name.split('/', 2)[1]}/artifacts-tab/artifacts/${a.digest}"

@@ -14,6 +14,8 @@ export const buttonVariants = cva(
         blue: "rounded-full bg-brand-blue text-brand-blue-foreground hover:bg-[color-mix(in_oklab,var(--brand-blue)_92%,black_8%)] active:bg-[color-mix(in_oklab,var(--brand-blue)_85%,black_15%)] disabled:bg-hairline disabled:text-muted-foreground",
         secondary:
           "rounded-full border border-hairline-strong bg-transparent text-foreground hover:bg-muted active:bg-[color-mix(in_oklab,var(--muted)_80%,black_20%)] disabled:border-hairline disabled:text-muted-foreground",
+        outline:
+          "rounded-full border border-hairline-strong bg-transparent text-foreground hover:bg-muted active:bg-[color-mix(in_oklab,var(--muted)_80%,black_20%)] disabled:border-hairline disabled:text-muted-foreground",
         "on-dark":
           "rounded-full bg-white text-primary hover:bg-white/90 active:bg-white/80 disabled:bg-white/40 disabled:text-primary/50",
         ghost:

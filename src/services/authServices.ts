@@ -2,6 +2,15 @@ import { api } from "@/lib/axios"
 import { authStorage } from "@/lib/auth-storage"
 import type { ApiResponse, LoginRequest, LoginResponse } from "@/types/auth"
 
+export interface PublicDashboardStats {
+  summary: {
+    total_asset_types: number
+    total_quantity: number
+    total_asset_value: number
+    total_damaged: number
+  }
+}
+
 export const authService = {
   login: async (
     payload: LoginRequest,
@@ -25,7 +34,17 @@ export const authService = {
     return data
   },
 
-  // 1. Fungsi Permintaan Lupa Password (Kirim Link/Token ke Email)
+  getPublicStats: async (): Promise<PublicDashboardStats | null> => {
+    try {
+      const response = await api.get<{ data: PublicDashboardStats }>(
+        "/public/stats"
+      )
+      return response.data?.data || response.data
+    } catch {
+      return null
+    }
+  },
+
   forgotPassword: async (email: string) => {
     const response = await api.post(
       "/users/forgot-password",
@@ -39,14 +58,13 @@ export const authService = {
     return response.data
   },
 
-  // 2. Fungsi Eksekusi Reset Password
   resetPassword: async (payload: { token: string; new_password: string }) => {
     const response = await api.post(
       "/users/reset-password",
       {
         token: payload.token,
-        password: payload.new_password,     // Dikirim jika DTO Go memakai struct tag `json:"password"`
-        new_password: payload.new_password, // Dikirim jika DTO Go memakai struct tag `json:"new_password"`
+        password: payload.new_password,
+        new_password: payload.new_password,
       },
       {
         headers: {
@@ -57,8 +75,25 @@ export const authService = {
     return response.data
   },
 
-  logout: () => {
-    authStorage.clear()
-    window.location.href = "/auth/login"
+  logout: async () => {
+    try {
+      const token = authStorage.getAccessToken()
+
+      await api.post(
+        "/users/logout",
+        {},
+        {
+          headers: {
+            "x-api-key": import.meta.env.VITE_API_KEY || "API_KEY",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      )
+    } catch (err) {
+      console.error("Gagal mencatat logout di server:", err)
+    } finally {
+      authStorage.clear()
+      window.location.href = "/auth/login"
+    }
   },
 }
