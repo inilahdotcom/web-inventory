@@ -127,7 +127,7 @@ export function DashboardView() {
     )
 
     try {
-      const params = { sort: "code:asc" }
+      const params = { sort: "code:asc" } as const
       const response = isExcel
         ? await assetService.exportExcel(params)
         : await assetService.exportPdf(params)
