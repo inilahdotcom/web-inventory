@@ -33,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TimelineItem } from "@/components/ui/timeline"
 import { LogOut, User } from "lucide-react"
+import { AssetDocumentsCard } from "@/features/assets/components/AssetDocumentsCard"
+import { getConfirmedMutationHistory } from "../my-assets-rules"
 
 type AssetDraft = Record<
   | "name"
@@ -162,6 +164,7 @@ export function AssetDetailView() {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Handler Logout
+  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsProfileOpen(false)
     await authService.logout()
@@ -461,6 +464,13 @@ export function AssetDetailView() {
   }
 
   const photos = detail.attributes.photos.map((photo) => photo.url)
+  const mutationHistory = getConfirmedMutationHistory(
+    detail.attributes.mutationHistory,
+    detail.attributes.holderConfirmedAt
+  )
+  const mutationConfirmationPending =
+    detail.attributes.mutationHistory.length > 0 &&
+    !detail.attributes.holderConfirmedAt
 
   // Penggabungan data riwayat menjadi satu unified timeline (Task B1)
   const attributesObj = detail.attributes as unknown as {
@@ -485,6 +495,15 @@ export function AssetDetailView() {
   }
 
   const unifiedTimeline = [
+    ...mutationHistory.map((m) => ({
+      id: `mutation-${m.id}`,
+      type: "mutation" as const,
+      date: new Date(m.mutationDate || m.createdAt || new Date().toISOString()),
+      title: `${m.fromLocation || "—"} → ${m.toLocation || "—"}`,
+      subtitle: `Pemegang: ${m.fromHolder || "—"} → ${m.toHolder || "—"}`,
+      meta: `${displayDate(m.mutationDate || "")} · ${m.actorName || ""} · alasan: ${m.reason || ""}`,
+      badge: "Mutasi",
+    })),
     ...(attributesObj.auditLogs || []).map((log) => ({
       id: `audit-${log.id}`,
       type: "audit" as const,
@@ -729,6 +748,14 @@ export function AssetDetailView() {
               </div>
             </Card>
 
+            <AssetDocumentsCard
+              assetId={detail.id}
+              documents={detail.attributes.documents ?? []}
+              canManage={canCreateEditAsset}
+              onChanged={refreshDetail}
+              onNotice={setNotice}
+            />
+
             <Card className="flex flex-col gap-4 rounded-[20px] p-5">
               <h2 className="text-[16px] font-semibold">Informasi aset</h2>
               <div className="grid gap-x-7 gap-y-4 sm:grid-cols-2">
@@ -860,6 +887,16 @@ export function AssetDetailView() {
               </div>
 
               <div className="mt-2">
+                {mutationConfirmationPending && (
+                  <div className="mb-4 rounded-xl border border-[#f3df9a] bg-[#fff8e0] p-4">
+                    <Badge variant="warning">Menunggu konfirmasi</Badge>
+                    <p className="mt-2 text-xs leading-5 text-[#746019]">
+                      Riwayat mutasi akan ditampilkan setelah pemegang aset
+                      mengonfirmasi kepemilikan.
+                    </p>
+                  </div>
+                )}
+
                 {filteredTimeline.length ? (
                   <div className="flex flex-col">
                     {filteredTimeline.map((item, index) => (

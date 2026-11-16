@@ -132,6 +132,7 @@ export function ProfileView() {
     }
   }
 
+  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsLoggingOut(true)
     try {

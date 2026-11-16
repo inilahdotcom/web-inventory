@@ -137,7 +137,8 @@ function formatTimestamp(dateStr: string): string {
   })
 }
 
-function getActivityBadgeVariant() {
+function getActivityBadgeVariant(_action?: string) {
+  void _action
   return "secondary" as const
 }
 
