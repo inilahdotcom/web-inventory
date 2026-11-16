@@ -1,4 +1,5 @@
 import type { ReportData, ReportTab } from "@/types/report"
+import type { jsPDF as JsPdf } from "jspdf"
 
 export interface ExportTable {
   title: string
@@ -7,6 +8,24 @@ export interface ExportTable {
   totalRow?: Array<string | number>
   pricedCount?: number
   assetCount?: number
+}
+
+export interface AssetHandoverData {
+  movementId: number | string
+  assetId: string
+  assetCode: string
+  assetName: string
+  category: string
+  quantity: number
+  unit: string
+  condition: string
+  fromLocation: string
+  toLocation: string
+  fromHolder: string | null
+  toHolder: string | null
+  movementDate: string
+  reason: string
+  actorName: string
 }
 
 const number = (value: number) => new Intl.NumberFormat("id-ID").format(value)
@@ -19,6 +38,131 @@ const date = (value: string) => {
         month: "short",
         year: "numeric",
       }).format(parsed)
+}
+
+const displayValue = (value: string | null | undefined) => value?.trim() || "-"
+
+function drawCompanyHeader(doc: JsPdf) {
+  const width = doc.internal.pageSize.getWidth()
+  doc.setFillColor(255, 208, 47)
+  doc.roundedRect(14, 13, 10, 10, 2, 2, "F")
+  doc.setTextColor(28, 28, 30)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(8)
+  doc.text("GA", 19, 19.5, { align: "center" })
+  doc.setFontSize(12)
+  doc.text("PT. INDONESIA NEWS CENTER", 28, 17)
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8)
+  doc.text("General Affairs", 28, 22)
+  doc.setDrawColor(224, 226, 232)
+  doc.line(14, 27, width - 14, 27)
+}
+
+export function assetHandoverFilename(data: AssetHandoverData) {
+  const code = data.assetCode
+    .trim()
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-|-$/g, "")
+  const movementDate = data.movementDate.slice(0, 10)
+  return `berita-acara-serah-terima-${code || data.assetId}-${movementDate}.pdf`
+}
+
+export async function exportAssetHandoverPdf(data: AssetHandoverData) {
+  const doc = await buildAssetHandoverPdf(data)
+  doc.save(assetHandoverFilename(data))
+}
+
+export async function buildAssetHandoverPdf(data: AssetHandoverData) {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ])
+  const doc = new jsPDF()
+  const width = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const documentNumber = `BAST/GA/${data.movementId}/${new Date(data.movementDate).getFullYear()}`
+
+  drawCompanyHeader(doc)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(15)
+  doc.text("BERITA ACARA SERAH TERIMA ASET", width / 2, 38, {
+    align: "center",
+  })
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(9)
+  doc.text(`Nomor: ${documentNumber}`, width / 2, 44, { align: "center" })
+
+  const introduction = doc.splitTextToSize(
+    `Pada tanggal ${date(data.movementDate)}, telah dilakukan serah terima aset dengan data yang tercatat pada sistem inventaris sebagai berikut:`,
+    width - 28
+  )
+  doc.text(introduction, 14, 55)
+
+  autoTable(doc, {
+    startY: 63,
+    body: [
+      ["Kode aset", data.assetCode],
+      ["Nama aset", data.assetName],
+      ["Kategori", displayValue(data.category)],
+      ["Jumlah", `${number(data.quantity)} ${data.unit}`],
+      ["Kondisi", displayValue(data.condition)],
+    ],
+    theme: "grid",
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
+    columnStyles: {
+      0: { fontStyle: "bold", fillColor: [247, 248, 250], cellWidth: 42 },
+    },
+    margin: { left: 14, right: 14 },
+  })
+
+  const assetTableEnd =
+    (doc as typeof doc & { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ?.finalY ?? 102
+  autoTable(doc, {
+    startY: assetTableEnd + 8,
+    head: [["Data serah terima", "Sebelum", "Sesudah"]],
+    body: [
+      [
+        "Lokasi",
+        displayValue(data.fromLocation),
+        displayValue(data.toLocation),
+      ],
+      ["Pemegang", displayValue(data.fromHolder), displayValue(data.toHolder)],
+    ],
+    theme: "grid",
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 3 },
+    headStyles: { fillColor: [28, 28, 30], textColor: [255, 255, 255] },
+    margin: { left: 14, right: 14 },
+  })
+
+  const movementTableEnd =
+    (doc as typeof doc & { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ?.finalY ?? 145
+  doc.setFont("helvetica", "bold")
+  doc.text("Alasan mutasi", 14, movementTableEnd + 10)
+  doc.setFont("helvetica", "normal")
+  const reason = doc.splitTextToSize(displayValue(data.reason), width - 28)
+  doc.text(reason, 14, movementTableEnd + 16)
+
+  const signatureY = Math.max(movementTableEnd + 44, pageHeight - 52)
+  doc.setDrawColor(224, 226, 232)
+  doc.line(14, signatureY - 8, width - 14, signatureY - 8)
+  doc.setFontSize(8)
+  doc.text("Pihak yang menyerahkan,", 14, signatureY)
+  doc.text("Pihak yang menerima,", width - 72, signatureY)
+  doc.setFont("helvetica", "bold")
+  doc.text(displayValue(data.fromHolder), 14, signatureY + 22)
+  doc.text(displayValue(data.toHolder), width - 72, signatureY + 22)
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(107, 111, 126)
+  doc.text(
+    `Dicatat oleh sistem: ${displayValue(data.actorName)}`,
+    14,
+    pageHeight - 12
+  )
+
+  return doc
 }
 
 export function createExportTable<T extends ReportTab>(
@@ -236,18 +380,7 @@ export async function buildPdf(
     orientation: table.columns.length > 6 ? "landscape" : "portrait",
   })
   const width = doc.internal.pageSize.getWidth()
-  doc.setFillColor(255, 208, 47)
-  doc.roundedRect(14, 13, 10, 10, 2, 2, "F")
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(8)
-  doc.text("GA", 19, 19.5, { align: "center" })
-  doc.setFontSize(12)
-  doc.text("PT. INDONESIA NEWS CENTER", 28, 17)
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(8)
-  doc.text("General Affairs", 28, 22)
-  doc.setDrawColor(224, 226, 232)
-  doc.line(14, 27, width - 14, 27)
+  drawCompanyHeader(doc)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(15)
   doc.text(table.title, 14, 37)

@@ -25,6 +25,7 @@ export type AssetListData = {
   holder: string | null
   condition: AssetCondition
   status: string
+  holderConfirmedAt: string | null
   createdAt: string | null
   updatedAt: string | null
   photos?: AssetPhoto[]

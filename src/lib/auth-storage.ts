@@ -3,6 +3,7 @@ import type { LoginResponse } from "@/types/auth"
 const ACCESS_TOKEN_KEY = "access_token"
 const REFRESH_TOKEN_KEY = "refresh_token"
 const LOGIN_SUCCESS_KEY = "login_success"
+const LOGOUT_SUCCESS_KEY = "logout_success"
 
 function storages(): Storage[] {
   if (typeof window === "undefined") return []
@@ -73,5 +74,17 @@ export function consumeLoginSuccess() {
   if (typeof window === "undefined") return false
   const succeeded = window.sessionStorage.getItem(LOGIN_SUCCESS_KEY) === "true"
   window.sessionStorage.removeItem(LOGIN_SUCCESS_KEY)
+  return succeeded
+}
+
+export function markLogoutSuccess() {
+  if (typeof window === "undefined") return
+  window.sessionStorage.setItem(LOGOUT_SUCCESS_KEY, "true")
+}
+
+export function consumeLogoutSuccess() {
+  if (typeof window === "undefined") return false
+  const succeeded = window.sessionStorage.getItem(LOGOUT_SUCCESS_KEY) === "true"
+  window.sessionStorage.removeItem(LOGOUT_SUCCESS_KEY)
   return succeeded
 }

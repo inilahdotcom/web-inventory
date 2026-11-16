@@ -9,6 +9,7 @@ import { parseApiError } from "@/services/stocktake"
 import {
   useCreateSession,
   useSessions,
+  useStartSession,
   useStocktakePermission,
 } from "@/hooks/useStocktake"
 import { Button } from "@/components/ui/button"
@@ -49,6 +50,11 @@ export function StocktakeListView() {
     [rawSessions]
   )
   const [createOpen, setCreateOpen] = useState(false)
+  const [draftSessionToStart, setDraftSessionToStart] = useState<{
+    id: string
+    name: string
+  } | null>(null)
+  const startMutation = useStartSession()
 
   return (
     <div className="min-h-screen w-full bg-neutral-50/50 text-neutral-900">
@@ -138,12 +144,19 @@ export function StocktakeListView() {
                   return (
                     <TableRow
                       key={session.id}
-                      onClick={() =>
-                        void navigate({
-                          to: "/stocktake/$id",
-                          params: { id: session.id },
-                        })
-                      }
+                      onClick={() => {
+                        if (session.status === "draft") {
+                          setDraftSessionToStart({
+                            id: session.id,
+                            name: session.name,
+                          })
+                        } else {
+                          void navigate({
+                            to: "/stocktake/$id",
+                            params: { id: session.id },
+                          })
+                        }
+                      }}
                       className="cursor-pointer border-b border-hairline transition-colors hover:bg-muted/40"
                     >
                       <TableCell className="px-6 py-4 font-semibold text-foreground">
@@ -182,14 +195,78 @@ export function StocktakeListView() {
       </div>
 
       {createOpen && (
-        <CreateSessionDialog onClose={() => setCreateOpen(false)} />
+        <CreateSessionDialog
+          onClose={() => setCreateOpen(false)}
+          onCreated={(newSession) => {
+            setDraftSessionToStart(newSession)
+          }}
+        />
+      )}
+
+      {draftSessionToStart && (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !startMutation.isPending) {
+              setDraftSessionToStart(null)
+            }
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Mulai sesi stok opname?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Sesi <b>&ldquo;{draftSessionToStart.name}&rdquo;</b> saat ini
+              berstatus draft. Mulai sesi sekarang untuk membekukan daftar aset
+              dan membuka formulir pemeriksaan, atau pilih nanti untuk tetap
+              menyimpannya sebagai draft.
+            </p>
+            <DialogFooter className="pt-3">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={startMutation.isPending}
+                onClick={() => setDraftSessionToStart(null)}
+              >
+                Nanti
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={startMutation.isPending}
+                onClick={() => {
+                  startMutation.mutate(draftSessionToStart.id, {
+                    onSuccess: () => {
+                      const sid = draftSessionToStart.id
+                      setDraftSessionToStart(null)
+                      void navigate({
+                        to: "/stocktake/$id",
+                        params: { id: sid },
+                      })
+                    },
+                  })
+                }}
+              >
+                {startMutation.isPending ? "Memulai..." : "Mulai Sesi"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
 }
 
-function CreateSessionDialog({ onClose }: { onClose: () => void }) {
-  const navigate = useNavigate()
+function CreateSessionDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (session: { id: string; name: string }) => void
+}) {
   const createMutation = useCreateSession()
 
   const { data: locationData } = useQuery({
@@ -242,9 +319,9 @@ function CreateSessionDialog({ onClose }: { onClose: () => void }) {
         periodStart,
         periodEnd,
       })
-      toast.success("Sesi dibuat. Mulai sesi untuk membekukan daftar aset.")
+      toast.success("Sesi berhasil dibuat.")
       onClose()
-      void navigate({ to: "/stocktake/$id", params: { id: session.id } })
+      onCreated({ id: session.id, name: name.trim() })
     } catch {
       // pesan error ditangani hook
     }

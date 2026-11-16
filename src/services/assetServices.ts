@@ -14,6 +14,19 @@ export interface AssetPhoto {
   sortOrder: number
 }
 
+export type AssetDocumentType = "invoice" | "warranty" | "condition_evidence"
+
+export interface AssetDocument {
+  id: number
+  type: AssetDocumentType
+  fileName: string
+  fileUrl: string
+  mimeType: string
+  fileSize: number
+  warrantyExpiresAt: string | null
+  createdAt: string
+}
+
 export interface AssetData {
   code: string
   slug: string
@@ -32,7 +45,9 @@ export interface AssetData {
   condition: string
   status: string
   description: string | null
+  holderConfirmedAt?: string | null
   photos: AssetPhoto[]
+  documents: AssetDocument[]
   createdAt: string | null
   updatedAt: string | null
 }
@@ -167,10 +182,23 @@ export interface MoveAssetResponse {
   assetId: string
   fromLocationId: number
   toLocationId: number
+  fromLocation?: string
+  toLocation?: string
   fromHolder: string | null
   toHolder: string | null
   movementDate: string
   reason: string
+  actorName?: string
+  createdAt?: string | null
+  asset?: {
+    id?: string
+    code?: string
+    name?: string
+    category?: string
+    quantity?: number
+    unit?: string
+    condition?: string
+  }
 }
 
 export interface SplitAssetPayload {
@@ -203,6 +231,10 @@ export interface SplitAssetRecord {
 export interface SplitAssetResponse {
   original: SplitAssetRecord
   created: SplitAssetRecord
+}
+
+export interface ConfirmAssetHolderPayload {
+  notes: "konfirmasi pemegang"
 }
 
 // ===== ASSET SERVICE =====
@@ -272,6 +304,13 @@ export const assetService = {
     return response.data?.data || response.data
   },
 
+  confirmHolder: async (id: string): Promise<void> => {
+    const payload: ConfirmAssetHolderPayload = {
+      notes: "konfirmasi pemegang",
+    }
+    await api.post(`/assets/${id}/checks`, payload)
+  },
+
   uploadPhoto: async (files: File[]): Promise<string[]> => {
     const formData = new FormData()
     files.forEach((file) => {
@@ -298,6 +337,39 @@ export const assetService = {
 
   deletePhoto: async (photoId: number | string): Promise<void> => {
     await api.delete(`/assets/photos/${photoId}`)
+  },
+
+  uploadDocument: async (
+    assetId: string,
+    file: File,
+    type: AssetDocumentType,
+    warrantyExpiresAt?: string
+  ): Promise<AssetDocument> => {
+    const formData = new FormData()
+    formData.append("document", file)
+    formData.append("type", type)
+    if (warrantyExpiresAt) {
+      formData.append("warranty_expires_at", warrantyExpiresAt)
+    }
+
+    const response = await api.post(`/assets/${assetId}/documents`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+    return (response.data?.data || response.data) as AssetDocument
+  },
+
+  deleteDocument: async (
+    assetId: string,
+    documentId: number | string
+  ): Promise<void> => {
+    await api.delete(`/assets/${assetId}/documents/${documentId}`)
+  },
+
+  downloadDocument: async (assetId: string, documentId: number | string) => {
+    return api.get<Blob>(
+      `/assets/${assetId}/documents/${documentId}/download`,
+      { responseType: "blob" }
+    )
   },
 
   delete: async (id: string, reason: string): Promise<void> => {

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { bulkCheckInBatches } from "@/services/stocktake"
 import type { BatchedCheckOutcome } from "@/services/stocktake"
@@ -75,13 +76,34 @@ export function SessionCheckDialog({
       (done, total) => setProgress({ done, total })
     )
 
+    const finalResults = [...(previous?.results ?? []), ...(res.results ?? [])]
+    const finalSummary = mergeSummary(previous?.summary, res.summary)
+
     setOutcome({
-      results: [...(previous?.results ?? []), ...(res.results ?? [])],
-      summary: mergeSummary(previous?.summary, res.summary),
+      results: finalResults,
+      summary: finalSummary,
       notProcessed: res.notProcessed,
       error: res.error,
     })
-    setPhase("result")
+    const currentOkCount = finalSummary.ok ?? 0
+    const failureCount = finalResults.filter((r) => r.status !== "ok").length
+
+    // Tampilkan notifikasi toast sonner dan langsung tutup dialog
+    if (res.error) {
+      toast.error("Pemeriksaan selesai dengan kendala", {
+        description: `${currentOkCount} berhasil diperiksa, ${res.notProcessed.length} belum sempat diproses. ${res.error.message}`,
+      })
+    } else if (failureCount > 0) {
+      toast.warning("Hasil Pemeriksaan", {
+        description: `${currentOkCount} berhasil diperiksa, ${failureCount} aset berkendala.`,
+      })
+    } else {
+      toast.success("Berhasil diperiksa", {
+        description: `${currentOkCount} aset berhasil diperiksa dan disimpan.`,
+      })
+    }
+
+    onClose(currentOkCount > 0)
   }
 
   const failures = (outcome?.results ?? []).filter((r) => r.status !== "ok")

@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import type { ReactNode } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft } from "lucide-react"
+import { ChevronLeft, ExternalLink } from "lucide-react"
 
 import {
   stocktakeKeys,
@@ -86,6 +86,12 @@ export function StocktakeDetailView({ id }: { id: string }) {
 
   const startMutation = useStartSession()
   const closeMutation = useCloseSession()
+
+  useEffect(() => {
+    if (session?.status === "draft") {
+      void navigate({ to: "/stocktake" })
+    }
+  }, [session?.status, navigate])
 
   const isOpen = session?.status === "open"
   const canSelect =
@@ -381,57 +387,80 @@ export function StocktakeDetailView({ id }: { id: string }) {
                           <TableHead className="px-4 py-3.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                             Waktu Cek
                           </TableHead>
+                          <TableHead className="w-16 px-4 py-3.5 text-right text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                            Aksi
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.map((item) => (
-                          <TableRow
-                            key={item.assetId}
-                            className={`border-b border-hairline transition-colors ${
-                              selected.has(item.assetId)
-                                ? "bg-muted/60"
-                                : "hover:bg-muted/40"
-                            }`}
-                          >
-                            {canSelect && (
-                              <TableCell className="w-12 px-4 py-3.5">
-                                <Checkbox
-                                  checked={selected.has(item.assetId)}
-                                  onChange={() => toggleItem(item.assetId)}
-                                />
-                              </TableCell>
-                            )}
-                            <TableCell className="px-4 py-3.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void navigate({
-                                    to: "/asset/$id",
-                                    params: { id: item.assetId },
-                                  })
+                        {items.map((item) => {
+                          const isItemSelected = selected.has(item.assetId)
+                          return (
+                            <TableRow
+                              key={item.assetId}
+                              onClick={() => {
+                                if (canSelect) {
+                                  toggleItem(item.assetId)
                                 }
-                                className="cursor-pointer font-mono text-xs font-semibold text-primary hover:underline"
-                              >
+                              }}
+                              className={`border-b border-hairline transition-colors select-none ${
+                                canSelect ? "cursor-pointer" : ""
+                              } ${
+                                isItemSelected
+                                  ? "bg-blue-50/70 hover:bg-blue-100/60"
+                                  : "hover:bg-muted/40"
+                              }`}
+                            >
+                              {canSelect && (
+                                <TableCell
+                                  className="w-12 px-4 py-3.5"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Checkbox
+                                    checked={isItemSelected}
+                                    onChange={() => toggleItem(item.assetId)}
+                                  />
+                                </TableCell>
+                              )}
+                              <TableCell className="px-4 py-3.5 font-mono text-xs font-semibold text-primary">
                                 {item.code}
-                              </button>
-                            </TableCell>
-                            <TableCell className="px-4 py-3.5 text-sm font-semibold text-foreground">
-                              {item.name}
-                            </TableCell>
-                            <TableCell className="px-4 py-3.5 text-xs text-muted-foreground">
-                              {item.location}
-                            </TableCell>
-                            <TableCell className="px-4 py-3.5 text-xs text-muted-foreground">
-                              {item.condition}
-                            </TableCell>
-                            <TableCell className="px-4 py-3.5">
-                              <ItemStatusBadge status={item.status} />
-                            </TableCell>
-                            <TableCell className="px-4 py-3.5 text-xs text-muted-foreground">
-                              {formatDateTimeID(item.checkedAt)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                              </TableCell>
+                              <TableCell className="px-4 py-3.5 text-sm font-semibold text-foreground">
+                                {item.name}
+                              </TableCell>
+                              <TableCell className="px-4 py-3.5 text-xs text-muted-foreground">
+                                {item.location}
+                              </TableCell>
+                              <TableCell className="px-4 py-3.5 text-xs text-muted-foreground">
+                                {item.condition}
+                              </TableCell>
+                              <TableCell className="px-4 py-3.5">
+                                <ItemStatusBadge status={item.status} />
+                              </TableCell>
+                              <TableCell className="px-4 py-3.5 text-xs text-muted-foreground">
+                                {formatDateTimeID(item.checkedAt)}
+                              </TableCell>
+                              <TableCell
+                                className="w-16 px-4 py-3.5 text-right"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void navigate({
+                                      to: "/asset/$id",
+                                      params: { id: item.assetId },
+                                    })
+                                  }
+                                  title="Lihat Detail Aset"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-neutral-200/60 hover:text-foreground"
+                                >
+                                  <ExternalLink size={14} />
+                                </button>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
                       </TableBody>
                     </Table>
 
