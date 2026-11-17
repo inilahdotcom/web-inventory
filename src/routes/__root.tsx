@@ -47,7 +47,19 @@ export const Route = createRootRoute({
 function RootLayout() {
   return (
     <>
-      <Toaster position="top-right" richColors closeButton />
+      <div
+        role="region"
+        aria-label="Notifikasi"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          containerAriaLabel="Notifikasi sistem"
+        />
+      </div>
 
       <Outlet />
 

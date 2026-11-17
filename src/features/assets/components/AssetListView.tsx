@@ -1357,9 +1357,45 @@ function AssetRow({
         ? "bg-[#f5f3ff]"
         : "bg-white"
 
+  const handleRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const current = e.currentTarget
+    const parent = current.parentElement
+    if (!parent) return
+
+    const rows = Array.from(
+      parent.querySelectorAll<HTMLDivElement>("[data-asset-row='true']")
+    )
+    const index = rows.indexOf(current)
+    if (index === -1) return
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      rows[Math.min(index + 1, rows.length - 1)]?.focus()
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      rows[Math.max(index - 1, 0)]?.focus()
+    } else if (e.key === "Home") {
+      e.preventDefault()
+      rows[0]?.focus()
+    } else if (e.key === "End") {
+      e.preventDefault()
+      rows[rows.length - 1]?.focus()
+    } else if (e.target === current && e.key === "Enter") {
+      e.preventDefault()
+      onOpen()
+    } else if (e.target === current && e.key === " ") {
+      e.preventDefault()
+      onToggle()
+    }
+  }
+
   return (
     <div
-      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-all duration-700 last:border-b-0 ${rowStyle}`}
+      role="row"
+      tabIndex={0}
+      data-asset-row="true"
+      onKeyDown={handleRowKeyDown}
+      className={`grid h-14 ${tableColumns} items-center gap-2.25 border-b border-[#eef0f3] px-4.5 transition-all duration-700 last:border-b-0 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:outline-none focus-visible:ring-inset ${rowStyle}`}
     >
       <CheckBox selected={selected} onClick={onToggle} />
       <button
