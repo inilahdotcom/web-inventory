@@ -1,5 +1,6 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { assetService, type HolderOption } from "@/services/assetServices"
 import { exportAssetHandoverPdf } from "@/features/reports/report-export"
@@ -12,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { InputField } from "@/components/ui/InputField"
+import { Input } from "@/components/ui/Input"
+import { Label } from "@/components/ui/label"
 import { SelectedField } from "@/components/ui/SelectedField"
 
 const today = new Date().toISOString().slice(0, 10)
@@ -24,9 +27,13 @@ export function AssetMutationView() {
   const [toLocationId, setToLocationId] = useState(0)
   const [holderSearch, setHolderSearch] = useState("")
   const [holderOptions, setHolderOptions] = useState<HolderOption[]>([])
-  const [holderId, setHolderId] = useState(0)
+  const [selectedHolder, setSelectedHolder] = useState<HolderOption | null>(null)
+  const [isHolderOpen, setIsHolderOpen] = useState(false)
+  const [activeHolderIndex, setActiveHolderIndex] = useState(0)
   const [isHolderLoading, setIsHolderLoading] = useState(false)
   const [holderError, setHolderError] = useState("")
+  const holderInputRef = useRef<HTMLInputElement>(null)
+  const holderListId = useId()
   const [movementDate, setMovementDate] = useState(today)
   const [reason, setReason] = useState("")
   const [isLoading, setIsLoading] = useState(true)
@@ -42,8 +49,6 @@ export function AssetMutationView() {
     () => locations.find((location) => location.id === toLocationId) ?? null,
     [locations, toLocationId]
   )
-
-  const selectedHolder = holderOptions.find((user) => user.id === holderId)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -92,7 +97,7 @@ export function AssetMutationView() {
         setAssetId("")
         setToLocationId(0)
         setHolderSearch("")
-        setHolderId(0)
+        setSelectedHolder(null)
       } catch {
         if (isMounted) {
           setError(
@@ -117,7 +122,8 @@ export function AssetMutationView() {
       setAssetId("")
       setToLocationId(0)
       setHolderSearch("")
-      setHolderId(0)
+      setSelectedHolder(null)
+      setIsHolderOpen(false)
       setReason("")
       setError("")
       return
@@ -131,7 +137,8 @@ export function AssetMutationView() {
     setAssetId(nextAssetId)
     setToLocationId(nextLocation?.id ?? 0)
     setHolderSearch("")
-    setHolderId(0)
+    setSelectedHolder(null)
+    setIsHolderOpen(false)
     setReason("")
     setError("")
   }
@@ -146,7 +153,8 @@ export function AssetMutationView() {
 
     setToLocationId(defaultLocation?.id ?? 0)
     setHolderSearch("")
-    setHolderId(0)
+    setSelectedHolder(null)
+    setIsHolderOpen(false)
     setMovementDate(today)
     setReason("")
     setError("")
@@ -374,42 +382,131 @@ export function AssetMutationView() {
                       disabled={isSaving}
                       options={locationOptions}
                     />
-                    <InputField
-                      label="Cari pemegang baru *"
-                      value={holderSearch}
-                      onChange={(e) => {
-                        setHolderSearch(e.target.value)
-                        setHolderOptions([])
-                        setIsHolderLoading(true)
-                        setHolderId(0)
+                    <div
+                      className="relative w-full space-y-1.5"
+                      onBlur={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) {
+                          setIsHolderOpen(false)
+                        }
                       }}
-                      disabled={isSaving}
-                      placeholder="Cari nama pengguna"
-                    />
-                    <SelectedField
-                      label="Pemegang baru *"
-                      value={String(holderId)}
-                      onChange={(e) => setHolderId(Number(e.target.value))}
-                      disabled={
-                        isSaving ||
-                        isHolderLoading ||
-                        holderOptions.length === 0
-                      }
-                      isLoading={isHolderLoading}
-                      options={[
-                        { label: "Pilih pengguna", value: "0" },
-                        ...holderOptions.map((user) => ({
-                          label: user.name,
-                          value: String(user.id),
-                        })),
-                      ]}
-                      helperText={
-                        holderError ||
-                        (holderOptions.length === 0 && !isHolderLoading
-                          ? "Pengguna tidak ditemukan. Mutasi tidak dapat disimpan."
-                          : "Hanya pengguna aktif yang dapat dipilih.")
-                      }
-                    />
+                    >
+                      <Label htmlFor={`${holderListId}-input`}>
+                        Pemegang baru *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          ref={holderInputRef}
+                          id={`${holderListId}-input`}
+                          role="combobox"
+                          aria-autocomplete="list"
+                          aria-expanded={isHolderOpen}
+                          aria-controls={holderListId}
+                          aria-activedescendant={
+                            isHolderOpen && holderOptions.length > 0
+                              ? `${holderListId}-${activeHolderIndex}`
+                              : undefined
+                          }
+                          value={holderSearch}
+                          onFocus={() => setIsHolderOpen(true)}
+                          onChange={(event) => {
+                            setHolderSearch(event.target.value)
+                            setHolderOptions([])
+                            setSelectedHolder(null)
+                            setHolderError("")
+                            setIsHolderLoading(true)
+                            setIsHolderOpen(true)
+                            setActiveHolderIndex(0)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                              setIsHolderOpen(false)
+                              return
+                            }
+                            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                              event.preventDefault()
+                              setIsHolderOpen(true)
+                              setActiveHolderIndex((current) =>
+                                Math.max(
+                                  0,
+                                  Math.min(
+                                    holderOptions.length - 1,
+                                    current + (event.key === "ArrowDown" ? 1 : -1)
+                                  )
+                                )
+                              )
+                            }
+                            if (
+                              event.key === "Enter" &&
+                              isHolderOpen &&
+                              holderOptions[activeHolderIndex]
+                            ) {
+                              event.preventDefault()
+                              const user = holderOptions[activeHolderIndex]
+                              setSelectedHolder(user)
+                              setHolderSearch(user.name)
+                              setActiveHolderIndex(0)
+                              setIsHolderOpen(false)
+                            }
+                          }}
+                          disabled={isSaving}
+                          autoComplete="off"
+                          placeholder="Cari atau pilih pengguna"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Tampilkan pilihan pengguna"
+                          disabled={isSaving}
+                          onClick={() => {
+                            holderInputRef.current?.focus()
+                            setIsHolderOpen(true)
+                          }}
+                          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground"
+                        >
+                          <ChevronDown size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                      {isHolderOpen && (
+                        <div
+                          id={holderListId}
+                          role="listbox"
+                          aria-label="Pilihan pemegang baru"
+                          className="absolute top-full right-0 left-0 z-50 mt-1 max-h-56 overflow-y-auto rounded-xl border border-hairline bg-white p-1 shadow-lg"
+                        >
+                          {isHolderLoading ? (
+                            <p className="px-3 py-2 text-xs text-muted-foreground">Memuat pengguna...</p>
+                          ) : holderError ? (
+                            <p className="px-3 py-2 text-xs text-destructive">{holderError}</p>
+                          ) : holderOptions.length === 0 ? (
+                            <p className="px-3 py-2 text-xs text-muted-foreground">Pengguna tidak ditemukan.</p>
+                          ) : (
+                            holderOptions.map((user, index) => (
+                              <button
+                                key={user.id}
+                                id={`${holderListId}-${index}`}
+                                type="button"
+                                role="option"
+                                aria-selected={selectedHolder?.id === user.id}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseEnter={() => setActiveHolderIndex(index)}
+                                onClick={() => {
+                                  setSelectedHolder(user)
+                                  setHolderSearch(user.name)
+                                  setActiveHolderIndex(0)
+                                  setIsHolderOpen(false)
+                                }}
+                                className={`w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-[#f0f4ff] ${index === activeHolderIndex ? "bg-[#f0f4ff]" : ""}`}
+                              >
+                                {user.name}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                      {holderError && !isHolderOpen && (
+                        <p className="text-[10px] text-destructive">{holderError}</p>
+                      )}
+                    </div>
                   </LocationCard>
                 </div>
 
