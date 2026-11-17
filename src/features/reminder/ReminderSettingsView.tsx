@@ -243,7 +243,7 @@ export function ReminderSettingsView() {
   const savedEnabled = data.settings.enabled
 
   return (
-    <div className="w-full text-[#1C1C1E]">
+    <div className="w-full text-foreground">
       <div className="mx-auto max-w-6xl space-y-6 px-4 pt-6 pb-28 sm:px-6 lg:px-8">
         {/* HEADER */}
         <div className="flex flex-col gap-3 pl-12 sm:flex-row sm:items-end sm:justify-between lg:pl-0">
@@ -320,7 +320,7 @@ export function ReminderSettingsView() {
                 className={`size-2.5 rounded-full ${enabled ? "bg-[#187574]" : "bg-[#b08900]"}`}
               />
               <h2
-                className={`text-sm font-bold ${enabled ? "text-[#187574]" : "text-[#746019]"}`}
+                className={`text-sm font-bold ${enabled ? "text-chart-5" : "text-[#746019]"}`}
               >
                 {enabled ? "Pengingat aktif" : "Pengingat dijeda"}
               </h2>
@@ -329,7 +329,7 @@ export function ReminderSettingsView() {
               )}
             </div>
             <p
-              className={`mt-1 text-xs leading-relaxed ${enabled ? "text-[#187574]" : "text-[#746019]"}`}
+              className={`mt-1 text-xs leading-relaxed ${enabled ? "text-chart-5" : "text-[#746019]"}`}
             >
               {enabled
                 ? "Email ringkasan dikirim otomatis ke Admin, Staff GA, dan pemegang aset setiap Senin pukul 10:00."
@@ -344,7 +344,7 @@ export function ReminderSettingsView() {
             disabled={!canManageAdminData}
             onClick={() => setEnabled((v) => !v)}
             className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              enabled ? "bg-[#187574]" : "bg-[#c7cad5]"
+              enabled ? "bg-[#187574]" : "bg-input"
             }`}
           >
             <span
@@ -411,23 +411,23 @@ export function ReminderSettingsView() {
             </div>
           </Card>
 
-          <Card className="space-y-3 bg-[#f7f8fa] p-6">
+          <Card className="space-y-3 bg-background p-6">
             <h2 className="text-sm font-bold text-foreground">Cara kerja</h2>
             <ol className="space-y-2.5 text-xs leading-relaxed text-neutral-600">
               <li className="flex gap-2.5">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#1c1c1e] text-[10px] font-bold text-white">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] font-bold text-white">
                   1
                 </span>
                 Jatuh tempo = tanggal pemeriksaan terakhir + jeda pemeriksaan.
               </li>
               <li className="flex gap-2.5">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#1c1c1e] text-[10px] font-bold text-white">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] font-bold text-white">
                   2
                 </span>
                 Aset yang belum pernah diperiksa dihitung dari tanggal dibuat.
               </li>
               <li className="flex gap-2.5">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#1c1c1e] text-[10px] font-bold text-white">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] font-bold text-white">
                   3
                 </span>
                 Setiap pemeriksaan (termasuk stok opname) menggeser jatuh tempo
@@ -531,8 +531,8 @@ export function ReminderSettingsView() {
                                 }
                                 className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${
                                   raw === String(p)
-                                    ? "bg-[#1c1c1e] text-white"
-                                    : "bg-[#f0f1f4] text-[#555a6a] hover:bg-[#e0e2e8]"
+                                    ? "bg-primary text-white"
+                                    : "bg-[#f0f1f4] text-[#555a6a] hover:bg-border"
                                 }`}
                               >
                                 {humanDays(p)}
@@ -577,7 +577,7 @@ export function ReminderSettingsView() {
       {/* BAR SIMPAN (muncul jika ada perubahan) */}
       {canManageAdminData && hasChanges && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-20 flex justify-center px-4 lg:pl-58">
-          <div className="pointer-events-auto flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-[#e0e2e8] bg-white px-4 py-3 text-[#1c1c1e] shadow-[0_8px_30px_rgba(28,28,30,0.12)]">
+          <div className="pointer-events-auto flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-foreground shadow-[0_8px_30px_rgba(28,28,30,0.12)]">
             <span className="size-2.5 shrink-0 rounded-full bg-amber-500" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">
@@ -593,7 +593,7 @@ export function ReminderSettingsView() {
               type="button"
               disabled={saveAll.isPending}
               onClick={resetDrafts}
-              className="h-9 rounded-full border border-[#e0e2e8] bg-white px-4 text-xs font-semibold text-[#1c1c1e] transition hover:bg-[#f7f8fa] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-9 rounded-full border border-border bg-white px-4 text-xs font-semibold text-foreground transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
             >
               Batalkan
             </button>
@@ -601,7 +601,7 @@ export function ReminderSettingsView() {
               type="button"
               disabled={hasInvalid || saveAll.isPending}
               onClick={handleSave}
-              className="h-9 rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white transition hover:bg-[#343438] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-9 rounded-full bg-primary px-4 text-xs font-semibold text-white transition hover:bg-[#343438] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saveAll.isPending ? "Menyimpan…" : "Simpan semua"}
             </button>

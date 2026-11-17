@@ -34,14 +34,14 @@ function PageSizeMenu({ pageSize, onChange }: PageSizeMenuProps) {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-[#e0e2e8] bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5]"
+        className="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-[#555a6a] hover:border-[#a5a8b5]"
       >
         <span>{pageSize} / halaman</span>
         <ChevronDown size={13} strokeWidth={2.5} />
       </button>
 
       {open && (
-        <div className="absolute right-0 bottom-10 z-20 w-32 rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
+        <div className="absolute right-0 bottom-10 z-20 w-32 rounded-xl border border-border bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]">
           {PAGE_SIZES.map((size) => (
             <button
               key={size}
@@ -52,7 +52,7 @@ function PageSizeMenu({ pageSize, onChange }: PageSizeMenuProps) {
               }}
               className={`flex w-full cursor-pointer rounded-lg px-3 py-1.5 text-left text-xs font-medium hover:bg-[#f5f6f8] ${
                 pageSize === size
-                  ? "bg-[#f0efff] text-[#4262ff]"
+                  ? "bg-[#f0efff] text-brand-blue"
                   : "text-[#555a6a]"
               }`}
             >
@@ -89,9 +89,9 @@ function PageButton({
       onClick={onClick}
       className={`grid size-8 cursor-pointer place-items-center rounded-full text-xs disabled:cursor-not-allowed disabled:opacity-35 ${
         active
-          ? "bg-[#1c1c1e] font-semibold text-white"
+          ? "bg-primary font-semibold text-white"
           : bordered
-            ? "border border-[#e0e2e8] bg-white text-[#1c1c1e]"
+            ? "border border-border bg-white text-foreground"
             : "text-[#555a6a]"
       }`}
     >
@@ -127,10 +127,10 @@ export function PagePagination({
 }: PagePaginationProps) {
   return (
     <footer
-      className={`flex items-center gap-3 border-t border-[#e0e2e8] bg-[#fafbfc] px-4.5 py-3 ${className}`}
+      className={`flex items-center gap-3 border-t border-border bg-[#fafbfc] px-4.5 py-3 ${className}`}
     >
       {totalVisible !== undefined && (
-        <span className="text-xs text-[#6b6f7e]">
+        <span className="text-xs text-muted-foreground">
           Menampilkan {totalVisible} item &middot; Halaman {currentPage}
         </span>
       )}

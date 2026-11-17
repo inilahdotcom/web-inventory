@@ -137,8 +137,8 @@ export function MyAssetsView() {
   const error = profileQuery.error || assetsQuery.error
 
   return (
-    <div className="min-h-svh bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[#e0e2e8] bg-white pr-4 pl-16 sm:pr-7 lg:pl-7">
+    <div className="min-h-svh bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-white pr-4 pl-16 sm:pr-7 lg:pl-7">
         <div className="relative min-w-0 flex-1 sm:max-w-96">
           <Search
             size={16}
@@ -150,7 +150,7 @@ export function MyAssetsView() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Cari aset yang saya pegang"
             aria-label="Cari aset yang saya pegang"
-            className="h-10 w-full rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] pr-3 pl-9 text-sm outline-none focus:border-[#4262ff]"
+            className="h-10 w-full rounded-lg border border-border bg-background pr-3 pl-9 text-sm outline-none focus:border-brand-blue"
           />
         </div>
         <div className="ml-auto">
@@ -161,22 +161,22 @@ export function MyAssetsView() {
       <main className="space-y-5 px-4 py-6 sm:px-7">
         <section className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-1 text-xs font-semibold tracking-wide text-[#6b6f7e] uppercase">
+            <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Tanggung jawab saya
             </p>
             <h1 className="text-3xl font-semibold tracking-tight">
               Aset yang saya pegang
             </h1>
-            <p className="mt-1.5 text-sm text-[#6b6f7e]">
+            <p className="mt-1.5 text-sm text-muted-foreground">
               Aset yang tercatat atas nama {holderName || "profil Anda"}.
             </p>
           </div>
           {!loading && !error && (
-            <div className="flex gap-2 text-xs text-[#6b6f7e]">
-              <span className="rounded-full border border-[#e0e2e8] bg-white px-3 py-1.5">
+            <div className="flex gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full border border-border bg-white px-3 py-1.5">
                 {assetsQuery.data?.length ?? 0} jenis aset
               </span>
-              <span className="rounded-full border border-[#e0e2e8] bg-white px-3 py-1.5">
+              <span className="rounded-full border border-border bg-white px-3 py-1.5">
                 {totalUnits} unit
               </span>
             </div>
@@ -220,13 +220,13 @@ export function MyAssetsView() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-mono text-[11px] font-semibold text-[#4262ff]">
+                      <p className="font-mono text-[11px] font-semibold text-brand-blue">
                         {attributes.code}
                       </p>
                       <h2 className="mt-1 truncate text-lg font-semibold">
                         {attributes.name}
                       </h2>
-                      <p className="mt-0.5 text-xs text-[#6b6f7e]">
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         {attributes.category} ·{" "}
                         {attributes.brand || "Tanpa merek"}
                       </p>
@@ -236,7 +236,7 @@ export function MyAssetsView() {
                     </Badge>
                   </div>
 
-                  <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-[#f7f8fa] p-3.5 text-xs">
+                  <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-background p-3.5 text-xs">
                     <div>
                       <dt className="text-[#8e91a0]">Jumlah</dt>
                       <dd className="mt-0.5 font-semibold">
@@ -255,7 +255,7 @@ export function MyAssetsView() {
                         {holderName}
                       </dd>
                     </div>
-                    <div className="col-span-2 border-t border-[#e0e2e8] pt-3">
+                    <div className="col-span-2 border-t border-border pt-3">
                       <dt className="text-[#8e91a0]">Status konfirmasi</dt>
                       <dd className="mt-1 flex flex-wrap items-center gap-2">
                         <Badge variant={isConfirmed ? "bagus" : "warning"}>
@@ -264,7 +264,7 @@ export function MyAssetsView() {
                             : "Belum dikonfirmasi"}
                         </Badge>
                         {attributes.holderConfirmedAt && (
-                          <span className="text-[11px] text-[#6b6f7e]">
+                          <span className="text-[11px] text-muted-foreground">
                             {formatDate(attributes.holderConfirmedAt, {
                               dateStyle: "medium",
                               timeStyle: "short",
@@ -318,7 +318,7 @@ export function MyAssetsView() {
           <DialogHeader>
             <DialogTitle>Konfirmasi pemegang aset</DialogTitle>
           </DialogHeader>
-          <DialogDescription className="text-sm leading-6 text-[#6b6f7e]">
+          <DialogDescription className="text-sm leading-6 text-muted-foreground">
             Pastikan Anda memang memegang aset
             {confirmationTarget
               ? ` “${confirmationTarget.attributes.name}”`

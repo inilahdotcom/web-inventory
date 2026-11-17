@@ -29,9 +29,9 @@ export function EmptyState({
     <div
       className={`rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center ${className}`}
     >
-      <p className="text-sm font-semibold text-[#1c1c1e]">{title}</p>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description && (
-        <p className="mt-1 text-xs text-[#6b6f7e]">{description}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       )}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
@@ -58,12 +58,12 @@ export function ErrorState({
       role="alert"
       className={`flex flex-col items-center gap-3 rounded-2xl border border-[#ffc6c6] bg-white px-5 py-10 text-center ${className}`}
     >
-      <p className="text-sm text-[#600000]">{message}</p>
+      <p className="text-sm text-destructive">{message}</p>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="h-9 cursor-pointer rounded-full bg-[#1c1c1e] px-4 text-xs font-semibold text-white transition hover:bg-[#333]"
+          className="h-9 cursor-pointer rounded-full bg-primary px-4 text-xs font-semibold text-white transition hover:bg-[#333]"
         >
           {retryLabel}
         </button>
@@ -87,7 +87,7 @@ export function LoadingState({
     <div
       role="status"
       aria-label={message}
-      className={`rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center text-sm text-[#6b6f7e] ${className}`}
+      className={`rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center text-sm text-muted-foreground ${className}`}
     >
       {message}
     </div>

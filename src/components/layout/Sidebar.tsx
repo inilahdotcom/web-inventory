@@ -41,7 +41,7 @@ export function Sidebar({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Buka menu"
-        className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-[#1c1c1e] text-lg text-white lg:hidden"
+        className="fixed top-3 left-4 z-30 grid size-10 place-items-center rounded-full bg-sidebar text-lg text-white lg:hidden"
       >
         <svg
           className="h-4 w-4"
@@ -58,7 +58,7 @@ export function Sidebar({
         </svg>
       </button>
       <aside
-        className={`fixed inset-y-0 left-0 z-20 hidden h-svh bg-[#1c1c1e] text-white transition-[width] duration-200 lg:flex ${collapsed ? "w-16" : "w-58"}`}
+        className={`fixed inset-y-0 left-0 z-20 hidden h-svh bg-sidebar text-white transition-[width] duration-200 lg:flex ${collapsed ? "w-16" : "w-58"}`}
       >
         {showDesktopContent ? (
           <SidebarContent onCollapse={collapseSidebar} />
@@ -81,7 +81,7 @@ export function Sidebar({
             aria-label="Tutup menu"
             className="absolute inset-0 bg-black/45"
           />
-          <aside className="relative h-svh w-58 bg-[#1c1c1e] text-white shadow-2xl">
+          <aside className="relative h-svh w-58 bg-sidebar text-white shadow-2xl">
             <SidebarContent
               onNavigate={() => setOpen(false)}
               onCollapse={() => setOpen(false)}
@@ -223,7 +223,7 @@ function SidebarContent({
           onClick={onNavigate}
           className="flex h-11.75 items-center gap-2.5 rounded-[11px] bg-[#343438] px-2.5 transition-colors hover:bg-[#3a3a3e]"
         >
-          <span className="grid size-6.75 place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-[#600000]">
+          <span className="grid size-6.75 place-items-center rounded-full bg-[#ffc6c6] text-[9px] font-bold text-destructive">
             {userInitials || "..."}
           </span>
           <span className="min-w-0 flex-1">
@@ -265,7 +265,7 @@ function NavItem({
       {({ isActive }) => (
         <>
           <span
-            className={`mr-2.75 size-3.5 rounded border ${isActive ? "border-[#ffd02f] bg-[#ffd02f]" : "border-[#858896]"}`}
+            className={`mr-2.75 size-3.5 rounded border ${isActive ? "border-brand-yellow bg-brand-yellow" : "border-[#858896]"}`}
           />
           <span>{label}</span>
         </>

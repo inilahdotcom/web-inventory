@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 
 function RootErrorComponent({ error }: { error: Error }) {
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-[#f7f8fa] p-4 text-[#1c1c1e]">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4 text-foreground">
       <div className="flex max-w-md flex-col items-center rounded-2xl border border-[#eef0f3] bg-white p-8 text-center shadow-xs">
         <div className="grid size-12 place-items-center rounded-full bg-rose-100 text-rose-600">
           <AlertTriangle size={24} />
@@ -14,7 +14,7 @@ function RootErrorComponent({ error }: { error: Error }) {
 
         <h1 className="mt-4 text-lg font-bold">Terjadi Kesalahan Sistem</h1>
 
-        <p className="mt-2 text-xs leading-relaxed text-[#6b6f7e]">
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
           Aplikasi mengalami kendala yang tidak terduga saat memuat halaman ini.
           Silakan muat ulang halaman atau hubungi tim pengembang jika masalah
           berlanjut.
@@ -29,7 +29,7 @@ function RootErrorComponent({ error }: { error: Error }) {
         <Button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-6 gap-2 bg-[#1c1c1e] text-white hover:bg-[#2c2c2e]"
+          className="mt-6 gap-2 bg-primary text-white hover:bg-[#2c2c2e]"
         >
           <RefreshCw size={14} />
           <span>Muat Ulang Halaman</span>

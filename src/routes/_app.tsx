@@ -19,7 +19,7 @@ function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="h-svh bg-[#f7f8fa]">
+    <div className="h-svh bg-background">
       {/* Container Toast Sonner */}
       <Toaster position="top-right" richColors closeButton />
 

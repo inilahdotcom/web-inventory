@@ -185,8 +185,7 @@ function toAsset(item: AssetListItem): Asset {
     unit: String(attr.unit || "Unit"),
     condition: (attr.condition as AssetCondition) || "Bagus",
     status: String(attr.status || "Tersedia"),
-    price:
-      priceValue > 0 ? `Rp. ${formatNumber(priceValue)}` : undefined,
+    price: priceValue > 0 ? `Rp. ${formatNumber(priceValue)}` : undefined,
     priceValue,
     attention: ((attr.condition as AssetCondition) || "Bagus") !== "Bagus",
     hasPhoto,
@@ -874,8 +873,8 @@ export function AssetListView() {
   const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
 
   return (
-    <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-2.5 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:gap-3.5 sm:pr-6 sm:pl-16 lg:pl-6">
+    <div className="min-h-svh min-w-0 bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-2.5 border-b border-border bg-white py-0 pr-4 pl-16 sm:gap-3.5 sm:pr-6 sm:pl-16 lg:pl-6">
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -887,7 +886,7 @@ export function AssetListView() {
               }),
             })
           }}
-          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25 sm:max-w-85"
+          className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3.25 sm:max-w-85"
         >
           <span className="text-[13px] text-[#a5a8b5]">&#8981;</span>
           <input
@@ -933,7 +932,7 @@ export function AssetListView() {
             <h1 className="text-3xl leading-none font-semibold tracking-tight">
               Daftar Aset
             </h1>
-            <span className="text-sm text-[#6b6f7e]">
+            <span className="text-sm text-muted-foreground">
               {visibleAssets.length} aset ditampilkan &middot;{" "}
               {pageSummary.units} unit &middot; nilai tercatat Rp{" "}
               {formatNumber(pageSummary.value)}
@@ -1023,20 +1022,20 @@ export function AssetListView() {
               <button
                 type="button"
                 onClick={handleSaveView}
-                className="h-8.5 cursor-pointer rounded-full px-3 text-xs font-semibold text-[#4262ff] transition hover:bg-[#f0efff]"
+                className="h-8.5 cursor-pointer rounded-full px-3 text-xs font-semibold text-brand-blue transition hover:bg-[#f0efff]"
               >
                 + Simpan tampilan ini
               </button>
             )}
 
             {hasSavedPreset && (
-              <div className="flex items-center gap-1.5 rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-[#4262ff]">
+              <div className="flex items-center gap-1.5 rounded-full bg-[#f0efff] px-3 py-1 text-xs font-semibold text-brand-blue">
                 <span>✓ Tampilan tersimpan</span>
                 <button
                   type="button"
                   onClick={handleClearSavedView}
                   title="Hapus tampilan tersimpan default"
-                  className="ml-1 cursor-pointer text-[11px] text-[#6b6f7e] hover:text-[#600000]"
+                  className="ml-1 cursor-pointer text-[11px] text-muted-foreground hover:text-destructive"
                 >
                   &times;
                 </button>
@@ -1134,7 +1133,7 @@ export function AssetListView() {
             <button
               type="button"
               onClick={resetFilters}
-              className="ml-1 h-8.5 cursor-pointer px-1 text-xs font-semibold text-[#4262ff] disabled:cursor-default disabled:text-[#a5a8b5]"
+              className="ml-1 h-8.5 cursor-pointer px-1 text-xs font-semibold text-brand-blue disabled:cursor-default disabled:text-[#a5a8b5]"
               disabled={!hasActiveFilters}
             >
               Reset Filter
@@ -1143,7 +1142,7 @@ export function AssetListView() {
         </section>
 
         {selectedCodes.size > 0 && (
-          <section className="flex flex-col gap-2 rounded-2xl bg-[#1c1c1e] px-4 py-3 text-white sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-4.5">
+          <section className="flex flex-col gap-2 rounded-2xl bg-primary px-4 py-3 text-white sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:py-2 sm:pr-2 sm:pl-4.5">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold">
                 {selectedCodes.size} aset terpilih
@@ -1160,7 +1159,7 @@ export function AssetListView() {
                   onClick={action}
                   key={label}
                   disabled={Boolean(exporting)}
-                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-[#1c1c1e] disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+                  className="flex h-8 flex-1 cursor-pointer items-center justify-center rounded-full bg-white px-3.5 text-xs font-semibold whitespace-nowrap text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                 >
                   {label}
                 </button>
@@ -1183,21 +1182,21 @@ export function AssetListView() {
           <button
             type="button"
             onClick={() => setNotice("")}
-            className="cursor-pointer rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-[#187574]"
+            className="cursor-pointer rounded-lg bg-[#c3faf5] px-4 py-3 text-left text-sm text-chart-5"
           >
             {notice} &times;
           </button>
         )}
 
         <div className="flex justify-start">
-          <div className="inline-flex h-10 rounded-full border border-[#c7cad5] bg-white p-1">
+          <div className="inline-flex h-10 rounded-full border border-input bg-white p-1">
             <button
               type="button"
               onClick={() => setViewMode("table")}
               aria-label="Tampilan tabel"
               title="Tampilan tabel"
               aria-pressed={tableIsActive}
-              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${tableIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${tableIsActive ? "bg-primary text-white" : "text-muted-foreground"}`}
             >
               <Table2 size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -1207,7 +1206,7 @@ export function AssetListView() {
               aria-label="Tampilan kartu"
               title="Tampilan kartu"
               aria-pressed={cardIsActive}
-              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${cardIsActive ? "bg-[#1c1c1e] text-white" : "text-[#6b6f7e]"}`}
+              className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition ${cardIsActive ? "bg-primary text-white" : "text-muted-foreground"}`}
             >
               <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -1272,10 +1271,10 @@ export function AssetListView() {
           <div className="overflow-x-auto">
             <div className="min-w-240">
               <div
-                className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-[#e0e2e8] bg-[#f7f8fa] px-4.5 text-[11px] font-semibold tracking-wide text-[#6b6f7e] uppercase`}
+                className={`grid h-10 ${tableColumns} items-center gap-2.25 border-b border-border bg-background px-4.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase`}
               >
                 <CheckBox selected={allSelected} onClick={selectAll} />
-                <span className="text-[#1c1c1e]">Kode &uarr;</span>
+                <span className="text-foreground">Kode &uarr;</span>
                 <span>Nama barang</span>
                 <span>Kategori</span>
                 <span>Merek</span>
@@ -1368,7 +1367,7 @@ function AssetRow({
         onClick={onOpen}
         className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
       >
-        <span className="truncate font-mono text-xs font-semibold text-[#4262ff]">
+        <span className="truncate font-mono text-xs font-semibold text-brand-blue">
           {asset.code}
         </span>
         {isNewImport && (
@@ -1421,7 +1420,7 @@ function AssetRow({
         {asset.location}
       </span>
       <span
-        className={`text-right font-mono text-xs whitespace-nowrap ${asset.price ? "text-[#1c1c1e]" : "font-sans text-[#a5a8b5]"}`}
+        className={`text-right font-mono text-xs whitespace-nowrap ${asset.price ? "text-foreground" : "font-sans text-[#a5a8b5]"}`}
       >
         {asset.price ?? "Belum diisi"}
       </span>
@@ -1540,7 +1539,7 @@ function ActionMenu({
             ref={menuRef}
             role="menu"
             style={menuPosition}
-            className="fixed z-100 min-w-40 overflow-hidden rounded-xl border border-[#e0e2e8] bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
+            className="fixed z-100 min-w-40 overflow-hidden rounded-xl border border-border bg-white py-1 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
           >
             <button
               type="button"
@@ -1717,7 +1716,7 @@ function AssetCard({
               onClick={onOpen}
               className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left hover:underline"
             >
-              <span className="font-mono text-xs font-semibold text-[#4262ff]">
+              <span className="font-mono text-xs font-semibold text-brand-blue">
                 {asset.code}
               </span>
               {isNewImport && (
@@ -1752,21 +1751,21 @@ function AssetCard({
             {asset.name}
           </button>
           <p className="mt-0.5 text-xs text-[#8e91a0]">{asset.detail}</p>
-          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[#e0e2e8] pt-3 text-xs text-[#6b6f7e]">
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
             <span>
-              <b className="block text-[#1c1c1e]">Kategori</b>
+              <b className="block text-foreground">Kategori</b>
               {asset.category}
             </span>
             <span>
-              <b className="block text-[#1c1c1e]">Lokasi</b>
+              <b className="block text-foreground">Lokasi</b>
               {asset.location}
             </span>
             <span>
-              <b className="block text-[#1c1c1e]">Jumlah</b>
+              <b className="block text-foreground">Jumlah</b>
               {asset.quantity} {asset.unit}
             </span>
             <span>
-              <b className="block text-[#1c1c1e]">Harga</b>
+              <b className="block text-foreground">Harga</b>
               {asset.price ?? "Belum diisi"}
             </span>
           </div>
@@ -1787,7 +1786,7 @@ function CheckBox({
     <button
       type="button"
       onClick={onClick}
-      className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-[#4262ff] bg-[#4262ff] text-white" : "border-[#c7cad5] bg-white"}`}
+      className={`grid size-4 cursor-pointer place-items-center rounded border text-[10px] ${selected ? "border-brand-blue bg-brand-blue text-white" : "border-input bg-white"}`}
     >
       {selected && "✓"}
     </button>
@@ -1823,7 +1822,7 @@ function FilterMenu<T extends string | number>({
   return (
     <div className="relative">
       <div
-        className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${isActive ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
+        className={`flex h-8.5 items-center rounded-full border text-xs font-semibold transition ${isActive ? "border-primary bg-primary text-white" : "border-border bg-white text-[#555a6a]"}`}
       >
         <button
           type="button"
@@ -1855,7 +1854,7 @@ function FilterMenu<T extends string | number>({
         <div
           role="listbox"
           aria-label={`Filter ${label}`}
-          className="absolute top-10 left-0 z-20 max-h-60 min-w-44 overflow-y-auto rounded-xl border border-[#e0e2e8] bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
+          className="absolute top-10 left-0 z-20 max-h-60 min-w-44 overflow-y-auto rounded-xl border border-border bg-white p-1.5 shadow-[0_10px_25px_rgba(32,35,45,0.12)]"
         >
           <button
             type="button"
@@ -1879,7 +1878,7 @@ function FilterMenu<T extends string | number>({
                 onChange(option.id)
                 onOpenChange(null)
               }}
-              className={`flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-[#4262ff]" : "text-[#555a6a]"}`}
+              className={`flex w-full cursor-pointer rounded-lg px-3 py-2 text-left text-xs font-medium hover:bg-[#f5f6f8] ${option.id === value ? "bg-[#f0efff] text-brand-blue" : "text-[#555a6a]"}`}
             >
               {option.name}
             </button>
@@ -1911,7 +1910,7 @@ function DateRangeFilter({
   return (
     <div className="relative w-full lg:w-auto">
       <div
-        className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
+        className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-primary bg-primary text-white" : "border-border bg-white text-[#555a6a]"}`}
       >
         <button
           type="button"
@@ -1937,24 +1936,24 @@ function DateRangeFilter({
         )}
       </div>
       {open && (
-        <div className="mt-2 grid w-64 max-w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0">
-          <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
+        <div className="mt-2 grid w-64 max-w-full gap-3 rounded-xl border border-border bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0">
+          <label className="grid gap-1 text-[11px] font-semibold text-muted-foreground">
             Dari tanggal
             <input
               type="date"
               value={from}
               onChange={(event) => onChange(event.target.value, to)}
-              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-border bg-white px-2.5 text-xs font-medium text-foreground outline-none focus:border-brand-blue"
             />
           </label>
-          <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
+          <label className="grid gap-1 text-[11px] font-semibold text-muted-foreground">
             Sampai tanggal
             <input
               type="date"
               value={to}
               min={from || undefined}
               onChange={(event) => onChange(from, event.target.value)}
-              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-border bg-white px-2.5 text-xs font-medium text-foreground outline-none focus:border-brand-blue"
             />
           </label>
         </div>
@@ -1985,7 +1984,7 @@ function PriceRangeFilter({
   return (
     <div className="relative w-full lg:w-auto">
       <div
-        className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-[#1c1c1e] bg-[#1c1c1e] text-white" : "border-[#e0e2e8] bg-white text-[#555a6a]"}`}
+        className={`flex h-8.5 w-fit max-w-full items-center rounded-full border text-xs font-semibold transition ${value ? "border-primary bg-primary text-white" : "border-border bg-white text-[#555a6a]"}`}
       >
         <button
           type="button"
@@ -2011,8 +2010,8 @@ function PriceRangeFilter({
         )}
       </div>
       {open && (
-        <div className="mt-2 grid w-64 max-w-full gap-3 rounded-xl border border-[#e0e2e8] bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0">
-          <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
+        <div className="mt-2 grid w-64 max-w-full gap-3 rounded-xl border border-border bg-white p-3 shadow-[0_10px_25px_rgba(32,35,45,0.12)] lg:absolute lg:top-10 lg:left-0 lg:z-20 lg:mt-0">
+          <label className="grid gap-1 text-[11px] font-semibold text-muted-foreground">
             Dari harga
             <input
               type="text"
@@ -2022,10 +2021,10 @@ function PriceRangeFilter({
                 onChange(numericInput(event.target.value), max)
               }
               placeholder="Rp 0"
-              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-border bg-white px-2.5 text-xs font-medium text-foreground outline-none focus:border-brand-blue"
             />
           </label>
-          <label className="grid gap-1 text-[11px] font-semibold text-[#6b6f7e]">
+          <label className="grid gap-1 text-[11px] font-semibold text-muted-foreground">
             Sampai harga
             <input
               type="text"
@@ -2035,7 +2034,7 @@ function PriceRangeFilter({
                 onChange(min, numericInput(event.target.value))
               }
               placeholder="Tanpa batas"
-              className="h-8 w-full min-w-0 rounded-lg border border-[#e0e2e8] bg-white px-2.5 text-xs font-medium text-[#1c1c1e] outline-none focus:border-[#4262ff]"
+              className="h-8 w-full min-w-0 rounded-lg border border-border bg-white px-2.5 text-xs font-medium text-foreground outline-none focus:border-brand-blue"
             />
           </label>
         </div>

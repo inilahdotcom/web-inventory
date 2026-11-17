@@ -50,15 +50,15 @@ export function CategoryBarChart({
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#1C1C1E",
+                backgroundColor: "var(--primary)",
                 borderRadius: "12px",
                 border: "none",
-                color: "#fff",
+                color: "var(--primary-foreground)",
                 fontSize: "11px",
               }}
-              itemStyle={{ color: "#fff" }}
+              itemStyle={{ color: "var(--primary-foreground)" }}
             />
-            <Bar dataKey="total" fill="#1C1C1E" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="total" fill="var(--primary)" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

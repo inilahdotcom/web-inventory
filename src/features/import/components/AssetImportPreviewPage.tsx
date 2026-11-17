@@ -434,7 +434,7 @@ export default function AssetImportPage() {
   }
 
   return (
-    <div className="w-full space-y-6 pb-12 text-[#1C1C1E]">
+    <div className="w-full space-y-6 pb-12 text-foreground">
       <input
         type="file"
         ref={fileInputRef}

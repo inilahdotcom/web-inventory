@@ -60,10 +60,10 @@ function WarrantyStatus({ expiresAt }: { expiresAt: string }) {
   const status = warrantyDueState(expiresAt)
   const styles =
     status === "expired"
-      ? "bg-[#ffc6c6] text-[#600000]"
+      ? "bg-[#ffc6c6] text-destructive"
       : status === "due"
         ? "bg-[#fff8e0] text-[#746019]"
-        : "bg-[#c3faf5] text-[#187574]"
+        : "bg-[#c3faf5] text-chart-5"
   const label =
     status === "expired"
       ? "Garansi berakhir"
@@ -329,7 +329,7 @@ export function AssetDocumentsCard({
                       aria-label={`Hapus ${document.fileName}`}
                       onClick={() => void deleteDocument(document)}
                     >
-                      <Trash2 aria-hidden="true" className="text-[#600000]" />
+                      <Trash2 aria-hidden="true" className="text-destructive" />
                     </Button>
                   )}
                 </div>

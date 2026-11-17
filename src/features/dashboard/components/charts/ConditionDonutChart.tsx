@@ -42,10 +42,10 @@ export function ConditionDonutChart({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1C1C1E",
+                  backgroundColor: "var(--primary)",
                   borderRadius: "12px",
                   border: "none",
-                  color: "#fff",
+                  color: "var(--primary-foreground)",
                   fontSize: "11px",
                 }}
               />
