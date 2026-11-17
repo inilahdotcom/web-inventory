@@ -1,97 +1,24 @@
 import { api } from "@/lib/axios"
 import type {
+  AssetAttr,
+  AssetDetailAttr,
+  AssetDocument,
+  AssetDocumentType,
   AssetListItem,
+  AssetListParams,
   AssetMasterItem,
   AssetPagination,
 } from "@/types/asset"
 
-// ===== PHOTO & DETAIL INTERFACES =====
-export interface AssetPhoto {
-  id: number
-  url: string
-  caption: string | null
-  isPrimary: boolean
-  sortOrder: number
-}
-
-export type AssetDocumentType = "invoice" | "warranty" | "condition_evidence"
-
-export interface AssetDocument {
-  id: number
-  type: AssetDocumentType
-  fileName: string
-  fileUrl: string
-  mimeType: string
-  fileSize: number
-  warrantyExpiresAt: string | null
-  createdAt: string
-}
-
-export interface AssetData {
-  code: string
-  slug: string
-  name: string
-  categoryId: number | null
-  category: string
-  brandId: number | null
-  brand: string | null
-  quantity: number
-  unit: string
-  acquisitionPrice: number | null
-  acquisitionDate: string | null
-  locationId: number | null
-  location: string
-  holder: string | null
-  condition: string
-  status: string
-  description: string | null
-  holderConfirmedAt?: string | null
-  photos: AssetPhoto[]
-  documents: AssetDocument[]
-  createdAt: string | null
-  updatedAt: string | null
-}
-
-export interface AssetAttr {
-  id: string
-  attributes: AssetData
-}
-
-export interface AssetMutation {
-  id: number
-  fromLocation: string
-  toLocation: string
-  fromHolder: string | null
-  toHolder: string | null
-  mutationDate: string
-  reason: string
-  actorName: string
-  createdAt: string | null
-}
-
-export interface AssetAuditLog {
-  id: number
-  actorName: string
-  action: string
-  fieldName: string | null
-  oldValue: string | null
-  newValue: string | null
-  createdAt: string | null
-}
-
-export interface AssetDetailAttr {
-  id: string
-  attributes: AssetData & {
-    mutationHistory: AssetMutation[]
-    auditLogs: AssetAuditLog[]
-    completeness: {
-      filled: number
-      total: number
-      percentage: number
-      missingFields: string[]
-    }
-  }
-}
+export type {
+  AssetAttr,
+  AssetAuditLog,
+  AssetData,
+  AssetDetailAttr,
+  AssetDocument,
+  AssetDocumentType,
+  AssetPhoto,
+} from "@/types/asset"
 
 // ===== PAYLOAD INTERFACES =====
 export interface CreateAssetPayload {
@@ -138,25 +65,7 @@ export interface BulkDeletePayload {
   reason: string
 }
 
-export interface AssetListParams {
-  pageSize?: number
-  sort?: string
-  search?: string
-  condition?: string
-  status?: string
-  brandId?: number
-  categoryId?: number
-  locationId?: number
-  purchaseDateFrom?: string
-  purchaseDateTo?: string
-  priceMin?: number
-  priceMax?: number
-  needsAttention?: boolean
-  withoutPrice?: boolean
-  withoutPhoto?: boolean
-  duplicateCondition?: boolean
-  cursor?: string
-}
+export type { AssetListParams } from "@/types/asset"
 
 export interface AssetListResult {
   assets: AssetListItem[]
@@ -172,9 +81,14 @@ export interface AssetWriteResult extends Record<string, unknown> {
 
 export interface MoveAssetPayload {
   to_location_id: number
-  to_holder?: string
+  to_holder_id: number
   movement_date: string
   reason: string
+}
+
+export interface HolderOption {
+  id: number
+  name: string
 }
 
 export interface MoveAssetResponse {
@@ -294,6 +208,17 @@ export const assetService = {
   ): Promise<MoveAssetResponse> => {
     const response = await api.post(`/assets/${id}/movements`, payload)
     return (response.data?.data || response.data) as MoveAssetResponse
+  },
+
+  holderOptions: async (
+    search: string,
+    signal?: AbortSignal
+  ): Promise<HolderOption[]> => {
+    const response = await api.get("/assets/holder-options", {
+      params: { search },
+      signal,
+    })
+    return response.data?.data || []
   },
 
   splitAsset: async (

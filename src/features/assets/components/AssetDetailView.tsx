@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { formatDate, formatDateOnly, formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Route } from "@/routes/_app/asset/$id/"
@@ -75,8 +76,6 @@ type SplitAssetDraft = {
   notes: string
 }
 
-const number = new Intl.NumberFormat("id-ID")
-
 function toDraft(detail: AssetDetailAttr): AssetDraft {
   const asset = detail.attributes
   return {
@@ -97,16 +96,12 @@ function toDraft(detail: AssetDetailAttr): AssetDraft {
 
 function displayDate(value: string) {
   if (!value) return "Belum diisi"
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("id-ID")
+  return formatDateOnly(value)
 }
 
 function displayTimestamp(value: string | null) {
   if (!value) return "Tanggal tidak tersedia"
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })
+  return formatDate(value, { dateStyle: "short", timeStyle: "short" })
 }
 
 function errorMessage(error: unknown) {
@@ -772,7 +767,7 @@ export function AssetDetailView() {
                     displayValue={
                       field.key === "price"
                         ? asset.price
-                          ? `Rp ${number.format(Number(asset.price))}`
+                          ? `Rp ${formatNumber(Number(asset.price))}`
                           : "Belum diisi"
                         : field.key === "date"
                           ? displayDate(asset.date)

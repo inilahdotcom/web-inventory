@@ -1,4 +1,5 @@
 import type { ReportData, ReportTab } from "@/types/report"
+import { formatDate, formatNumber } from "../../lib/formatters.ts"
 import type { jsPDF as JsPdf } from "jspdf"
 
 export interface ExportTable {
@@ -28,16 +29,13 @@ export interface AssetHandoverData {
   actorName: string
 }
 
-const number = (value: number) => new Intl.NumberFormat("id-ID").format(value)
+const number = formatNumber
 const date = (value: string) => {
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime())
-    ? value
-    : new Intl.DateTimeFormat("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }).format(parsed)
+  return formatDate(value, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
 }
 
 const displayValue = (value: string | null | undefined) => value?.trim() || "-"
