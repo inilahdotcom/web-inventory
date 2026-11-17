@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios"
-import { formatDate, formatNumber } from "@/lib/formatters"
+import { formatNumber } from "@/lib/formatters"
 
 export interface RawAuditLogFromGo {
   id: number
@@ -58,7 +58,9 @@ export interface AuditLogMappedUI {
   user: {
     name: string
   }
-  timestamp: string
+  // ISO 8601. Service tidak memformat waktu; komponen yang memformat
+  // (lihat formatDate di "@/lib/formatters") supaya data tetap bisa diurutkan dan difilter.
+  createdAt: string
   target: string
   oldValues?: Record<string, unknown>
   newValues?: Record<string, unknown>
@@ -337,14 +339,7 @@ export const auditLogService = {
         user: {
           name: resolvedUserName || `User #${changedBy}`,
         },
-        timestamp: formatDate(createdAt, {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
+        createdAt,
         target: targetLabel,
         oldValues,
         newValues,

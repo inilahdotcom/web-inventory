@@ -3,11 +3,11 @@ import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// ─── Context ──────────────────────────────────────────────────────────────────
-
 interface DialogContextValue {
   open: boolean
   onOpenChange: (open: boolean) => void
+  titleId: string
+  descriptionId: string
 }
 
 const DialogContext = React.createContext<DialogContextValue | null>(null)
@@ -19,7 +19,25 @@ function useDialog() {
   return ctx
 }
 
-// ─── Dialog Root ──────────────────────────────────────────────────────────────
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ")
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+  ).filter(
+    (el) =>
+      !el.hasAttribute("disabled") &&
+      el.getAttribute("aria-hidden") !== "true" &&
+      el.offsetParent !== null
+  )
+}
 
 interface DialogProps {
   open?: boolean
@@ -37,6 +55,8 @@ function Dialog({
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : uncontrolledOpen
+  const titleId = React.useId()
+  const descriptionId = React.useId()
 
   const handleOpenChange = React.useCallback(
     (next: boolean) => {
@@ -47,13 +67,13 @@ function Dialog({
   )
 
   return (
-    <DialogContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
+    <DialogContext.Provider
+      value={{ open, onOpenChange: handleOpenChange, titleId, descriptionId }}
+    >
       {children}
     </DialogContext.Provider>
   )
 }
-
-// ─── DialogTrigger ────────────────────────────────────────────────────────────
 
 interface DialogTriggerProps {
   children: React.ReactElement<{ onClick?: React.MouseEventHandler }>
@@ -70,15 +90,11 @@ function DialogTrigger({ children }: DialogTriggerProps) {
   })
 }
 
-// ─── DialogPortal ─────────────────────────────────────────────────────────────
-
 function DialogPortal({ children }: { children: React.ReactNode }) {
   const { open } = useDialog()
   if (!open) return null
   return createPortal(children, document.body)
 }
-
-// ─── DialogOverlay ────────────────────────────────────────────────────────────
 
 const DialogOverlay = React.forwardRef<
   HTMLDivElement,
@@ -102,21 +118,85 @@ const DialogOverlay = React.forwardRef<
 })
 DialogOverlay.displayName = "DialogOverlay"
 
-// ─── DialogContent ────────────────────────────────────────────────────────────
-
 const DialogContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { hideCloseButton?: boolean }
 >(({ className, children, hideCloseButton = false, ...props }, ref) => {
-  const { onOpenChange } = useDialog()
+  const { onOpenChange, titleId, descriptionId } = useDialog()
+  const contentRef = React.useRef<HTMLDivElement | null>(null)
 
-  // Close on Escape
+  const setRefs = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      contentRef.current = node
+      if (typeof ref === "function") ref(node)
+      else if (ref) ref.current = node
+    },
+    [ref]
+  )
+
   React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onOpenChange(false)
+    const previousActiveElement = document.activeElement as HTMLElement | null
+    const container = contentRef.current
+
+    if (container) {
+      const focusables = getFocusableElements(container)
+      if (focusables.length > 0) {
+        focusables[0].focus()
+      } else {
+        container.focus()
+      }
     }
-    document.addEventListener("keydown", handler)
-    return () => document.removeEventListener("keydown", handler)
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onOpenChange(false)
+        return
+      }
+
+      if (e.key !== "Tab" || !contentRef.current) return
+
+      const focusables = getFocusableElements(contentRef.current)
+      if (focusables.length === 0) {
+        e.preventDefault()
+        return
+      }
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (e.shiftKey) {
+        if (
+          !active ||
+          active === first ||
+          !contentRef.current.contains(active)
+        ) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (
+          !active ||
+          active === last ||
+          !contentRef.current.contains(active)
+        ) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+      if (
+        previousActiveElement &&
+        typeof previousActiveElement.focus === "function"
+      ) {
+        previousActiveElement.focus()
+      }
+    }
   }, [onOpenChange])
 
   return (
@@ -124,12 +204,15 @@ const DialogContent = React.forwardRef<
       <DialogOverlay />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          ref={ref}
+          ref={setRefs}
           role="dialog"
           aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          tabIndex={-1}
           data-slot="dialog-content"
           className={cn(
-            "relative w-full max-w-lg rounded-2xl bg-card p-5 text-card-foreground shadow-2xl sm:p-6",
+            "relative w-full max-w-lg rounded-2xl bg-card p-5 text-card-foreground shadow-2xl outline-none sm:p-6",
             "animate-in duration-200 fade-in-0 zoom-in-95",
             className
           )}
@@ -154,8 +237,6 @@ const DialogContent = React.forwardRef<
 })
 DialogContent.displayName = "DialogContent"
 
-// ─── DialogHeader ─────────────────────────────────────────────────────────────
-
 function DialogHeader({
   className,
   ...props
@@ -168,8 +249,6 @@ function DialogHeader({
     />
   )
 }
-
-// ─── DialogFooter ─────────────────────────────────────────────────────────────
 
 function DialogFooter({
   className,
@@ -187,40 +266,42 @@ function DialogFooter({
   )
 }
 
-// ─── DialogTitle ──────────────────────────────────────────────────────────────
-
 const DialogTitle = React.forwardRef<
   HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h2
-    ref={ref}
-    data-slot="dialog-title"
-    className={cn(
-      "text-xl leading-tight font-semibold text-foreground",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, id, ...props }, ref) => {
+  const { titleId } = useDialog()
+  return (
+    <h2
+      ref={ref}
+      id={id ?? titleId}
+      data-slot="dialog-title"
+      className={cn(
+        "text-xl leading-tight font-semibold text-foreground",
+        className
+      )}
+      {...props}
+    />
+  )
+})
 DialogTitle.displayName = "DialogTitle"
-
-// ─── DialogDescription ────────────────────────────────────────────────────────
 
 const DialogDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    data-slot="dialog-description"
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-))
+>(({ className, id, ...props }, ref) => {
+  const { descriptionId } = useDialog()
+  return (
+    <p
+      ref={ref}
+      id={id ?? descriptionId}
+      data-slot="dialog-description"
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+})
 DialogDescription.displayName = "DialogDescription"
-
-// ─── DialogClose ──────────────────────────────────────────────────────────────
 
 function DialogClose({
   children,

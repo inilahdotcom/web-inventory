@@ -422,7 +422,7 @@ export function AssetEditView() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex min-h-svh w-full flex-col justify-between text-[#1C1C1E]"
+      className="flex min-h-svh w-full flex-col justify-between text-foreground"
     >
       <div className="space-y-6 pb-28">
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -549,7 +549,7 @@ export function AssetEditView() {
                     name="namaBarang"
                     value={formData.namaBarang}
                     onChange={handleChange}
-                    className="text-[#1C1C1E]"
+                    className="text-foreground"
                   />
                 </div>
 
@@ -559,7 +559,7 @@ export function AssetEditView() {
                     name="categoryId"
                     value={formData.categoryId}
                     onChange={handleChange}
-                    className="bg-white text-[#1C1C1E]"
+                    className="bg-white text-foreground"
                     options={[
                       { label: "Lainnya", value: "" },
                       ...categories.map((cat) => ({
@@ -574,7 +574,7 @@ export function AssetEditView() {
                     name="locationId"
                     value={formData.locationId}
                     onChange={handleChange}
-                    className="bg-white text-[#1C1C1E]"
+                    className="bg-white text-foreground"
                     options={[
                       { label: "Lainnya", value: "" },
                       ...locations.map((loc) => ({
@@ -589,7 +589,7 @@ export function AssetEditView() {
                     name="brandId"
                     value={formData.brandId}
                     onChange={handleChange}
-                    className="bg-white text-[#1C1C1E]"
+                    className="bg-white text-foreground"
                     options={[
                       { label: "Lainnya", value: "" },
                       ...brands.map((b) => ({
@@ -606,7 +606,7 @@ export function AssetEditView() {
                     name="kondisi"
                     value={formData.kondisi}
                     onChange={handleChange}
-                    className="bg-white text-[#1C1C1E]"
+                    className="bg-white text-foreground"
                     options={[
                       { label: "Bagus", value: "Bagus" },
                       { label: "Rusak Ringan", value: "Rusak Ringan" },
@@ -620,7 +620,7 @@ export function AssetEditView() {
                     name="status"
                     value={formData.status}
                     onChange={handleChange}
-                    className="bg-white text-[#1C1C1E]"
+                    className="bg-white text-foreground"
                     options={[
                       { label: "Tersedia", value: "Tersedia" },
                       { label: "Digunakan", value: "Digunakan" },
@@ -636,7 +636,7 @@ export function AssetEditView() {
                     name="jumlah"
                     value={formData.jumlah}
                     onChange={handleChange}
-                    className="text-[#1C1C1E]"
+                    className="text-foreground"
                   />
 
                   <InputField
@@ -646,7 +646,7 @@ export function AssetEditView() {
                     value={hargaDisplay}
                     onChange={handleHargaChange}
                     placeholder="Rp 0"
-                    className="font-mono text-[#1C1C1E]"
+                    className="font-mono text-foreground"
                   />
                 </div>
 

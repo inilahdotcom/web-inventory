@@ -7,8 +7,8 @@ const SESSION_STATUS: Record<
   { label: string; className: string }
 > = {
   draft: { label: "Draft", className: "bg-[#eef0f3] text-[#555a6a]" },
-  open: { label: "Berjalan", className: "bg-[#c3faf5] text-[#187574]" },
-  closed: { label: "Selesai", className: "bg-[#f0efff] text-[#4262ff]" },
+  open: { label: "Berjalan", className: "bg-[#c3faf5] text-chart-5" },
+  closed: { label: "Selesai", className: "bg-[#f0efff] text-brand-blue" },
   cancelled: { label: "Dibatalkan", className: "bg-rose-100 text-rose-800" },
 }
 

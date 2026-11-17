@@ -156,7 +156,7 @@ export function MasterDataView({
   }
 
   return (
-    <div className="w-full text-[#1C1C1E]">
+    <div className="w-full text-foreground">
       {/* HEADER STICKY */}
       <header className="sticky top-0 z-10 w-full border-b border-neutral-200/80 bg-white/90 px-4 py-2.5 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between">

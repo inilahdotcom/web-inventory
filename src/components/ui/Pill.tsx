@@ -31,8 +31,8 @@ export function Pill({
       onClick={onClick}
       className={`flex h-8.5 cursor-pointer items-center gap-1.5 rounded-full border px-3.75 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
         active
-          ? "border-[#1c1c1e] bg-[#1c1c1e] text-white"
-          : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"
+          ? "border-primary bg-primary text-white"
+          : "border-border bg-white text-[#555a6a] hover:border-[#a5a8b5]"
       } ${className}`}
     >
       {children}
@@ -64,8 +64,8 @@ export function FilterChip({
       onClick={onClick}
       className={`flex h-8.5 cursor-pointer items-center rounded-full border px-3.75 text-xs font-semibold transition ${
         active
-          ? "border-[#1c1c1e] bg-[#1c1c1e] text-white"
-          : "border-[#e0e2e8] bg-white text-[#555a6a] hover:border-[#a5a8b5]"
+          ? "border-primary bg-primary text-white"
+          : "border-border bg-white text-[#555a6a] hover:border-[#a5a8b5]"
       } ${className}`}
     >
       {children}

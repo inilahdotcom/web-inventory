@@ -143,8 +143,8 @@ export function AssetReportView() {
   }
 
   return (
-    <div className="min-h-svh bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="sticky top-0 z-10 flex min-h-16 items-center gap-3 overflow-x-auto border-b border-[#e0e2e8] bg-white py-3 pr-4 pl-16 lg:px-6">
+    <div className="min-h-svh bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex min-h-16 items-center gap-3 overflow-x-auto border-b border-border bg-white py-3 pr-4 pl-16 lg:px-6">
         <div className="flex min-w-max gap-2">
           {tabs.map((tab) => (
             <button
@@ -154,7 +154,7 @@ export function AssetReportView() {
                 if (tab !== activeTab) setPeriod(allPeriod.value)
                 setActiveTab(tab)
               }}
-              className={`h-8 rounded-full px-3.5 text-xs font-semibold transition ${activeTab === tab ? "bg-[#1c1c1e] text-white" : "border border-[#e0e2e8] bg-white text-[#555a6a]"}`}
+              className={`h-8 rounded-full px-3.5 text-xs font-semibold transition ${activeTab === tab ? "bg-primary text-white" : "border border-border bg-white text-[#555a6a]"}`}
             >
               {tab}
             </button>
@@ -327,13 +327,13 @@ function TotalRow({
   completeness: number
 }) {
   return (
-    <div className="grid min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 bg-[#1c1c1e] px-5 py-4 text-white">
+    <div className="grid min-w-180 grid-cols-[1fr_5.625rem_6.875rem_9.375rem_8.125rem] items-center gap-3.5 bg-primary px-5 py-4 text-white">
       <span className="text-sm font-semibold">Total</span>
       <Mono>{number(totals.types)}</Mono>
       <Mono>{number(totals.units)}</Mono>
       <Mono yellow>{number(totals.value)}</Mono>
       <span className="text-right">
-        <Badge variant="warning" className="bg-[#ffd02f] text-[#1c1c1e]">
+        <Badge variant="warning" className="bg-brand-yellow text-foreground">
           {completeness}%
         </Badge>
       </span>
@@ -363,10 +363,10 @@ function TotalCard({
   completeness: number
 }) {
   return (
-    <Card className="border-transparent bg-[#1c1c1e] p-4 text-white">
+    <Card className="border-transparent bg-primary p-4 text-white">
       <div className="flex justify-between">
         <span className="font-semibold">Total</span>
-        <Badge variant="warning" className="bg-[#ffd02f] text-[#1c1c1e]">
+        <Badge variant="warning" className="bg-brand-yellow text-foreground">
           {completeness}%
         </Badge>
       </div>
@@ -457,7 +457,7 @@ function Metric({
         {label}
       </span>
       <span
-        className={`mt-1 block font-mono text-xs ${yellow ? "text-[#ffd02f]" : ""}`}
+        className={`mt-1 block font-mono text-xs ${yellow ? "text-brand-yellow" : ""}`}
       >
         {value}
       </span>
@@ -467,7 +467,7 @@ function Metric({
 function Mono({ children, yellow }: { children: ReactNode; yellow?: boolean }) {
   return (
     <span
-      className={`text-right font-mono text-sm ${yellow ? "text-[#ffd02f]" : ""}`}
+      className={`text-right font-mono text-sm ${yellow ? "text-brand-yellow" : ""}`}
     >
       {children}
     </span>
@@ -489,7 +489,7 @@ function PdfPreview() {
       <h2 className="text-base font-semibold">Pratinjau PDF</h2>
       <div className="flex flex-col gap-3 rounded-lg border border-hairline bg-muted/30 p-3.5">
         <div className="flex items-center gap-2.5 border-b border-hairline pb-2.5">
-          <span className="grid size-6 place-items-center rounded-md bg-[#ffd02f] text-[10px] font-bold text-[#1c1c1e]">
+          <span className="grid size-6 place-items-center rounded-md bg-brand-yellow text-[10px] font-bold text-foreground">
             GA
           </span>
           <span>
@@ -536,10 +536,10 @@ function Signature({ label, value }: { label: string; value: string }) {
 function CompletenessNote({ table }: { table: ExportTable }) {
   return (
     <Card className="flex flex-col gap-2 border-rose-200 bg-rose-50/70 p-5">
-      <h2 className="text-base font-semibold text-[#600000]">
+      <h2 className="text-base font-semibold text-destructive">
         Catatan kelengkapan data
       </h2>
-      <p className="text-xs leading-relaxed text-[#600000]">
+      <p className="text-xs leading-relaxed text-destructive">
         {table.assetCount === undefined
           ? "Laporan mutasi tidak memuat nilai aset. Data disajikan sesuai periode dan lokasi yang dipilih."
           : `Total nilai hanya menghitung ${number(table.pricedCount ?? 0)} aset yang punya harga. Setiap laporan nilai aset menyertakan persentase kelengkapan agar angka tidak dibaca sebagai nilai penuh inventaris.`}
@@ -583,7 +583,7 @@ function FilterSelect({
                 onChange(option.value)
                 setOpen(false)
               }}
-              className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option.value === value ? "bg-[#1c1c1e] text-white" : "hover:bg-muted"}`}
+              className={`block w-full rounded-lg px-3 py-2 text-left text-xs ${option.value === value ? "bg-primary text-white" : "hover:bg-muted"}`}
             >
               {option.label}
             </button>

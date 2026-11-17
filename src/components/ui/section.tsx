@@ -34,7 +34,7 @@ export function SectionHeading({
         <button
           type="button"
           onClick={onAction}
-          className="ml-auto text-[12.5px] font-semibold text-[#4262ff] hover:underline"
+          className="ml-auto text-[12.5px] font-semibold text-brand-blue hover:underline"
         >
           {action}
         </button>
