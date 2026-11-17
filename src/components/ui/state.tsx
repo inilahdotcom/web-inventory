@@ -87,9 +87,65 @@ export function LoadingState({
     <div
       role="status"
       aria-label={message}
-      className={`rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center text-sm text-muted-foreground ${className}`}
+      className={`flex flex-col items-center justify-center gap-3 rounded-2xl border border-[#eef0f3] bg-white px-5 py-12 text-center ${className}`}
     >
-      {message}
+      <svg
+        className="h-8 w-8 animate-spin text-[#1c1c1e]"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+      <span className="text-sm text-muted-foreground">{message}</span>
+    </div>
+  )
+}
+
+// ─── FullPageLoading ────────────────────────────────────────────────────────────
+
+interface FullPageLoadingProps {
+  message?: string
+}
+
+export function FullPageLoading({
+  message = "Memuat data...",
+}: FullPageLoadingProps) {
+  return (
+    <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-4">
+      <svg
+        className="h-10 w-10 animate-spin text-[#1c1c1e]"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+      <p className="text-sm font-medium text-muted-foreground">{message}</p>
     </div>
   )
 }
