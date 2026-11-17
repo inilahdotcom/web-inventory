@@ -36,6 +36,15 @@ import { TimelineItem } from "@/components/ui/timeline"
 import { LogOut, User } from "lucide-react"
 import { AssetDocumentsCard } from "@/features/assets/components/AssetDocumentsCard"
 import { getConfirmedMutationHistory } from "../my-assets-rules"
+import {
+  ASSET_CONDITIONS,
+  STATUS_TRANSITION_DESCRIPTIONS,
+  defaultSplitStatus,
+  getAllowedNextStatuses,
+  getAllowedSplitStatuses,
+  resolveStatusForCondition,
+  validateStatusTransition,
+} from "../asset-status-rules"
 
 type AssetDraft = Record<
   | "name"
@@ -64,10 +73,6 @@ const fields: Array<{ key: keyof AssetDraft; label: string; mono?: boolean }> =
     { key: "holder", label: "Pemegang" },
     { key: "status", label: "Status" },
   ]
-
-const conditionOptions = ["Bagus", "Rusak Ringan", "Rusak Berat", "Hilang"]
-const statusOptions = ["Digunakan", "Tersedia", "Diperbaiki", "Dihapuskan"]
-const splitStatusOptions = [...statusOptions, "Tidak Tersedia"]
 
 type SplitAssetDraft = {
   quantity: string
@@ -118,16 +123,6 @@ function errorMessage(error: unknown) {
 
 function defaultSplitCondition(currentCondition: string) {
   return currentCondition === "Rusak Ringan" ? "Bagus" : "Rusak Ringan"
-}
-
-function defaultSplitStatus(condition: string, currentStatus: string) {
-  if (condition === "Rusak Ringan" || condition === "Rusak Berat") {
-    return "Diperbaiki"
-  }
-  if (condition === "Hilang") return "Tidak Tersedia"
-  return currentStatus === "Diperbaiki" || currentStatus === "Dihapuskan"
-    ? "Tersedia"
-    : currentStatus
 }
 
 export function AssetDetailView() {
@@ -230,7 +225,18 @@ export function AssetDetailView() {
   }, [id])
 
   const updateAsset = (key: keyof AssetDraft, value: string) =>
-    setAsset((current) => (current ? { ...current, [key]: value } : current))
+    setAsset((current) => {
+      if (!current) return current
+      if (key === "condition" && detail) {
+        const nextStatus = resolveStatusForCondition(
+          value,
+          current.status,
+          detail.attributes.status
+        )
+        return { ...current, condition: value, status: nextStatus }
+      }
+      return { ...current, [key]: value }
+    })
 
   const loadMasters = async () => {
     const [categories, brands, locations] = await Promise.all([
@@ -279,6 +285,15 @@ export function AssetDetailView() {
       throw new Error("Kategori dan lokasi wajib dipilih dari daftar.")
     if (draft.brand && !brandId)
       throw new Error("Merek wajib dipilih dari daftar.")
+
+    const transitionError = validateStatusTransition({
+      fromStatus: data.status,
+      toStatus: draft.status,
+      condition: draft.condition,
+    })
+    if (transitionError) {
+      throw new Error(transitionError)
+    }
 
     return {
       name: draft.name.trim(),
@@ -457,6 +472,11 @@ export function AssetDetailView() {
       </div>
     )
   }
+
+  const allowedStatuses = getAllowedNextStatuses(
+    detail.attributes.status,
+    asset.condition
+  )
 
   const photos = detail.attributes.photos.map((photo) => photo.url)
   const mutationHistory = getConfirmedMutationHistory(
@@ -792,7 +812,7 @@ export function AssetDetailView() {
                           : field.key === "location"
                             ? masters.locations.map((item) => item.name)
                             : field.key === "status"
-                              ? statusOptions
+                              ? allowedStatuses
                               : undefined
                     }
                     onChange={(value) => updateAsset(field.key, value)}
@@ -803,9 +823,30 @@ export function AssetDetailView() {
                     label="Kondisi"
                     value={asset.condition}
                     editing
-                    options={conditionOptions}
+                    options={[...ASSET_CONDITIONS]}
                     onChange={(value) => updateAsset("condition", value)}
                   />
+                )}
+                {editing && (
+                  <div className="rounded-xl border border-border bg-muted/60 px-3.5 py-2.5 text-xs text-muted-foreground sm:col-span-2">
+                    <p className="font-semibold text-foreground">
+                      Aturan Transisi Status ({detail.attributes.status})
+                    </p>
+                    <p className="mt-0.5 leading-relaxed">
+                      {STATUS_TRANSITION_DESCRIPTIONS[
+                        detail.attributes.status
+                      ] ??
+                        "Pilih status tujuan yang sesuai dengan kondisi aset."}
+                    </p>
+                    <p className="mt-1 text-[11px]">
+                      Opsi status sah saat ini:{" "}
+                      <span className="font-semibold text-foreground">
+                        {allowedStatuses.join(", ")}
+                      </span>
+                      . Kondisi Rusak Berat tidak dapat berstatus Digunakan, dan
+                      kondisi Hilang wajib berstatus Dihapuskan (BR-07).
+                    </p>
+                  </div>
                 )}
                 <InfoField
                   label="Konfirmasi pemegang"
@@ -982,18 +1023,10 @@ function SplitAssetDialog({
   onClose: () => void
   onSubmit: () => void
 }) {
-  const availableConditions = conditionOptions.filter(
+  const availableConditions = ASSET_CONDITIONS.filter(
     (condition) => condition !== currentCondition
   )
-  const availableStatuses =
-    draft.condition === "Hilang"
-      ? ["Tidak Tersedia"]
-      : splitStatusOptions.filter(
-          (status) =>
-            status !== "Dihapuskan" &&
-            status !== "Tidak Tersedia" &&
-            (draft.condition === "Bagus" || status !== "Digunakan")
-        )
+  const availableStatuses = getAllowedSplitStatuses(draft.condition)
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>

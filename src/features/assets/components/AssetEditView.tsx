@@ -29,6 +29,13 @@ import {
 import { profileService } from "@/services/profileService"
 import { authService } from "@/services/authServices"
 import { toast } from "sonner"
+import {
+  ASSET_CONDITIONS,
+  STATUS_TRANSITION_DESCRIPTIONS,
+  getAllowedNextStatuses,
+  resolveStatusForCondition,
+  validateStatusTransition,
+} from "../asset-status-rules"
 
 const MAX_PHOTOS = 5
 
@@ -70,7 +77,6 @@ export function AssetEditView() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  // Handler Logout Aktif
   // Handler Logout
   // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
@@ -195,7 +201,17 @@ export function AssetEditView() {
     >
   ) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => {
+      if (name === "kondisi" && asset) {
+        const nextStatus = resolveStatusForCondition(
+          value,
+          prev.status,
+          asset.attributes.status
+        )
+        return { ...prev, kondisi: value, status: nextStatus }
+      }
+      return { ...prev, [name]: value }
+    })
   }
 
   const handleHargaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -297,6 +313,17 @@ export function AssetEditView() {
       return
     }
 
+    const transitionError = validateStatusTransition({
+      fromStatus: asset.attributes.status,
+      toStatus: formData.status,
+      condition: formData.kondisi,
+    })
+    if (transitionError) {
+      setError(transitionError)
+      toast.error(transitionError)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -384,6 +411,7 @@ export function AssetEditView() {
   }
 
   const attrs = asset.attributes
+  const allowedStatuses = getAllowedNextStatuses(attrs.status, formData.kondisi)
 
   const getCategoryName = (catId?: number | string | null) => {
     if (!catId) return "-"
@@ -607,12 +635,10 @@ export function AssetEditView() {
                     value={formData.kondisi}
                     onChange={handleChange}
                     className="bg-white text-foreground"
-                    options={[
-                      { label: "Bagus", value: "Bagus" },
-                      { label: "Rusak Ringan", value: "Rusak Ringan" },
-                      { label: "Rusak Berat", value: "Rusak Berat" },
-                      { label: "Hilang", value: "Hilang" },
-                    ]}
+                    options={ASSET_CONDITIONS.map((condition) => ({
+                      label: condition,
+                      value: condition,
+                    }))}
                   />
 
                   <SelectedField
@@ -621,12 +647,29 @@ export function AssetEditView() {
                     value={formData.status}
                     onChange={handleChange}
                     className="bg-white text-foreground"
-                    options={[
-                      { label: "Tersedia", value: "Tersedia" },
-                      { label: "Digunakan", value: "Digunakan" },
-                      { label: "Diperbaiki", value: "Diperbaiki" },
-                    ]}
+                    options={allowedStatuses.map((status) => ({
+                      label: status,
+                      value: status,
+                    }))}
                   />
+                </div>
+
+                <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs text-neutral-600">
+                  <p className="font-semibold text-neutral-900">
+                    Aturan Transisi Status ({attrs.status})
+                  </p>
+                  <p className="mt-0.5 leading-relaxed">
+                    {STATUS_TRANSITION_DESCRIPTIONS[attrs.status] ??
+                      "Pilih status tujuan yang sesuai dengan kondisi aset."}
+                  </p>
+                  <p className="mt-1 text-[11px]">
+                    Opsi status sah saat ini:{" "}
+                    <span className="font-semibold text-neutral-900">
+                      {allowedStatuses.join(", ")}
+                    </span>
+                    . Kondisi Rusak Berat tidak dapat berstatus Digunakan, dan
+                    kondisi Hilang wajib berstatus Dihapuskan (BR-07).
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
