@@ -148,6 +148,7 @@ function SidebarContent({
   const adminItems: SidebarMenuItem[] = [
     { to: "/master-data", label: "Master Data" },
     { to: "/user-management", label: "Pengguna" },
+    { to: "/reminder-setting", label: "Pengingat" },
     { to: "/audit-log", label: "Audit Log" },
   ]
 

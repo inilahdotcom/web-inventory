@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios"
-import { authStorage } from "@/lib/auth-storage"
+import { authStorage, markLogoutSuccess } from "@/lib/auth-storage"
 import type { ApiResponse, LoginRequest, LoginResponse } from "@/types/auth"
 
 export interface PublicDashboardStats {
@@ -93,6 +93,7 @@ export const authService = {
       console.error("Gagal mencatat logout di server:", err)
     } finally {
       authStorage.clear()
+      markLogoutSuccess()
       window.location.href = "/auth/login"
     }
   },

@@ -3,14 +3,24 @@ import { formatDate, formatNumber } from "@/lib/formatters"
 
 export interface RawAuditLogFromGo {
   id: number
-  entityType: string
-  entityId: string
+  // Go backend bisa kirim camelCase atau snake_case tergantung json tag
+  entityType?: string
+  entity_type?: string
+  entityId?: string
+  entity_id?: string
   action: string
-  changedBy: number
+  changedBy?: number
+  changed_by?: number
+  // nama user: backend mungkin kirim sebagai userName, user_name, atau di dalam object user
   userName?: string
+  user_name?: string
+  user?: { name?: string; id?: number }
   oldData?: string | null
+  old_data?: string | null
   newData?: string | null
-  createdAt: string
+  new_data?: string | null
+  createdAt?: string
+  created_at?: string
 }
 
 export interface AuditLogQueryParams {
@@ -248,9 +258,24 @@ export const auditLogService = {
     }
 
     const mappedLogs: AuditLogMappedUI[] = rawList.map((item) => {
+      // Normalize field names (backend Go bisa kirim camelCase atau snake_case)
+      const entityType = item.entityType || item.entity_type || "unknown"
+      const entityId = item.entityId || item.entity_id || String(item.id)
+      const changedBy = item.changedBy ?? item.changed_by ?? 0
+      const oldData = item.oldData ?? item.old_data
+      const newData = item.newData ?? item.new_data
+      const createdAt =
+        item.createdAt || item.created_at || new Date().toISOString()
+      // Resolve nama user: coba semua kemungkinan field
+      const resolvedUserName =
+        item.userName?.trim() ||
+        item.user_name?.trim() ||
+        item.user?.name?.trim() ||
+        undefined
+
       const actionUpper = item.action.toUpperCase()
-      const oldParsed = safeParseJSON(item.oldData)
-      const newParsed = safeParseJSON(item.newData)
+      const oldParsed = safeParseJSON(oldData)
+      const newParsed = safeParseJSON(newData)
 
       let oldValues: Record<string, unknown> | undefined = undefined
       let newValues: Record<string, unknown> | undefined = undefined
@@ -259,11 +284,11 @@ export const auditLogService = {
       const describe = () =>
         formatDescription(
           item.action,
-          item.entityType,
+          entityType,
           oldParsed,
           newParsed,
-          item.entityId,
-          item.userName
+          entityId,
+          resolvedUserName
         )
 
       const isObjOld = oldParsed && typeof oldParsed === "object"
@@ -285,35 +310,34 @@ export const auditLogService = {
 
       const uiType: AuditLogMappedUI["type"] = actionUpper
 
-      let targetLabel = `${item.entityType.toLowerCase()} · ${item.entityId}`
+      let targetLabel = `${entityType.toLowerCase()} · ${entityId}`
       const isAuthOrUser =
-        item.entityType.toLowerCase() === "auth" ||
-        item.entityType.toLowerCase() === "users" ||
+        entityType.toLowerCase() === "auth" ||
+        entityType.toLowerCase() === "users" ||
         actionUpper === "LOGIN" ||
         actionUpper === "LOGOUT"
 
       if (isAuthOrUser) {
-        const actorName = item.userName?.trim()
-        if (actorName) {
-          targetLabel = `${item.entityType.toLowerCase()} · ${actorName}`
+        if (resolvedUserName) {
+          targetLabel = `${entityType.toLowerCase()} · ${resolvedUserName}`
         }
       } else if (isObjNew || isObjOld) {
         const parsedObj = (newParsed || oldParsed) as Record<string, unknown>
         const assetCode = String(
           parsedObj?.asset_code ||
             parsedObj?.AssetCode ||
-            item.entityId.substring(0, 8)
+            entityId.substring(0, 8)
         )
-        targetLabel = `${item.entityType.toLowerCase()} · ${assetCode}`
+        targetLabel = `${entityType.toLowerCase()} · ${assetCode}`
       }
 
       return {
         id: item.id,
         type: uiType,
         user: {
-          name: item.userName || `User #${item.changedBy}`,
+          name: resolvedUserName || `User #${changedBy}`,
         },
-        timestamp: formatDate(item.createdAt, {
+        timestamp: formatDate(createdAt, {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
