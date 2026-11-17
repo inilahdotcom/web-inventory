@@ -10,17 +10,17 @@ const badgeVariants = cva(
       variant: {
         default: "border-transparent bg-primary text-primary-foreground",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
-        destructive: "border-transparent bg-[#ffc6c6] text-[#600000]",
+        destructive: "border-transparent bg-[#ffc6c6] text-destructive",
         outline: "border-hairline text-foreground",
         // Status kondisi aset
-        bagus: "border-transparent bg-[#c3faf5] text-[#187574]",
+        bagus: "border-transparent bg-[#c3faf5] text-chart-5",
         "rusak-ringan": "border-transparent bg-[#fff8e0] text-[#746019]",
-        "rusak-berat": "border-transparent bg-[#ffc6c6] text-[#600000]",
-        hilang: "border-transparent bg-[#e0e2e8] text-[#555a6a]",
+        "rusak-berat": "border-transparent bg-[#ffc6c6] text-destructive",
+        hilang: "border-transparent bg-border text-[#555a6a]",
         diperbaiki: "border-transparent bg-[#fde0f0] text-[#7c1752]",
         // Status pengguna
-        active: "border-transparent bg-[#c3faf5] text-[#187574]",
-        inactive: "border-transparent bg-[#e0e2e8] text-[#555a6a]",
+        active: "border-transparent bg-[#c3faf5] text-chart-5",
+        inactive: "border-transparent bg-border text-[#555a6a]",
         // Warning
         warning: "border-transparent bg-[#fff8e0] text-[#746019]",
       },

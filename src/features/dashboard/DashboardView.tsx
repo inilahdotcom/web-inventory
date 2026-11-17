@@ -127,7 +127,7 @@ export function DashboardView() {
     )
 
     try {
-      const params = { sort: "code:asc" }
+      const params = { sort: "code:asc" } as const
       const response = isExcel
         ? await assetService.exportExcel(params)
         : await assetService.exportPdf(params)
@@ -226,7 +226,7 @@ export function DashboardView() {
   }
 
   return (
-    <div className="w-full text-[#1C1C1E]">
+    <div className="w-full text-foreground">
       <header className="sticky top-0 z-10 w-full border-b border-neutral-200/80 bg-white/90 px-3 py-3 backdrop-blur-md sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 sm:gap-4">
           <div className="flex max-w-md flex-1 items-center pl-14 lg:pl-0">

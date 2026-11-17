@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { formatDateOnly } from "@/lib/formatters"
 import { FileText, Plus, Trash2, Upload } from "lucide-react"
 import {
   assetService,
@@ -37,14 +38,11 @@ function formatSize(size: number) {
 }
 
 function formatDate(value: string) {
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+  return formatDateOnly(value, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
 }
 
 function requestError(error: unknown) {
@@ -62,10 +60,10 @@ function WarrantyStatus({ expiresAt }: { expiresAt: string }) {
   const status = warrantyDueState(expiresAt)
   const styles =
     status === "expired"
-      ? "bg-[#ffc6c6] text-[#600000]"
+      ? "bg-[#ffc6c6] text-destructive"
       : status === "due"
         ? "bg-[#fff8e0] text-[#746019]"
-        : "bg-[#c3faf5] text-[#187574]"
+        : "bg-[#c3faf5] text-chart-5"
   const label =
     status === "expired"
       ? "Garansi berakhir"
@@ -331,7 +329,7 @@ export function AssetDocumentsCard({
                       aria-label={`Hapus ${document.fileName}`}
                       onClick={() => void deleteDocument(document)}
                     >
-                      <Trash2 aria-hidden="true" className="text-[#600000]" />
+                      <Trash2 aria-hidden="true" className="text-destructive" />
                     </Button>
                   )}
                 </div>

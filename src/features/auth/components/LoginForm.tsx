@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { Eye, EyeOff } from "lucide-react"
@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { markLoginSuccess } from "@/lib/auth-storage"
+import { consumeLogoutSuccess, markLoginSuccess } from "@/lib/auth-storage"
 import { authService } from "@/services/authServices"
 
 export function LoginForm() {
@@ -31,6 +31,14 @@ export function LoginForm() {
   const [forgotLoading, setForgotLoading] = useState(false)
 
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (consumeLogoutSuccess()) {
+      toast.success("Berhasil keluar dari akun", {
+        description: "Sesi Anda telah diakhiri dengan aman.",
+      })
+    }
+  }, [])
 
   // Helper untuk membersihkan dan menerjemahkan pesan error backend Go
   const parseErrorMessage = (

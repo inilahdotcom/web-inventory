@@ -1,4 +1,5 @@
 import { useState, useRef } from "react"
+import { formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { AssetImportPreviewView } from "./AssetImportPreviewView"
@@ -160,7 +161,7 @@ export default function AssetImportPage() {
         baris: rowNum,
         kode: assetCode,
         item: name,
-        hargaFile: price ? `Rp ${Number(price).toLocaleString("id-ID")}` : "–",
+        hargaFile: price ? `Rp ${formatNumber(Number(price))}` : "–",
         dibacaJadi: String(price || 0),
         alasanGagal: isDup
           ? "Kode aset sudah terdaftar — Silakan gunakan kode unik yang belum dipakai, atau kosongkan kolom kode agar sistem membuatkan kode otomatis."
@@ -433,7 +434,7 @@ export default function AssetImportPage() {
   }
 
   return (
-    <div className="w-full space-y-6 pb-12 text-[#1C1C1E]">
+    <div className="w-full space-y-6 pb-12 text-foreground">
       <input
         type="file"
         ref={fileInputRef}

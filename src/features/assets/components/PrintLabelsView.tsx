@@ -63,7 +63,7 @@ export function PrintLabelsView() {
 
   if (loading) {
     return (
-      <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-[#f7f8fa] p-4 sm:p-8">
+      <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-background p-4 sm:p-8">
         <Skeleton className="h-8 w-48 sm:w-64" />
         <Skeleton className="h-64 w-64 rounded-2xl sm:h-72 sm:w-72" />
       </div>
@@ -71,15 +71,15 @@ export function PrintLabelsView() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col bg-[#f7f8fa] text-[#1c1c1e] print:bg-white print:p-0">
+    <div className="flex min-h-svh flex-col bg-background text-foreground print:bg-white print:p-0">
       {/* Header Responsif: Ditambahkan pl-16 untuk memberikan ruang bagi Hamburger Menu Mobile */}
-      <header className="sticky top-0 z-10 border-b border-[#e0e2e8] bg-white py-3 pr-4 pl-16 shadow-xs sm:px-6 print:hidden">
+      <header className="sticky top-0 z-10 border-b border-border bg-white py-3 pr-4 pl-16 shadow-xs sm:px-6 print:hidden">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-base font-semibold tracking-tight sm:text-lg">
               Cetak Label QR Aset
             </h1>
-            <p className="hidden text-xs text-[#6b6f7e] sm:block">
+            <p className="hidden text-xs text-muted-foreground sm:block">
               Pratinjau posisi & ukuran label sebelum dikirim ke printer fisik.
             </p>
           </div>
@@ -108,8 +108,8 @@ export function PrintLabelsView() {
       {/* Container Utamny: Flex Center Responsif */}
       <main className="flex flex-1 items-center justify-center p-4 sm:p-6 print:block print:p-0">
         {!asset ? (
-          <div className="w-full max-w-sm rounded-2xl border border-[#e0e2e8] bg-white p-6 text-center shadow-xs">
-            <p className="text-xs font-medium text-[#6b6f7e] sm:text-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-6 text-center shadow-xs">
+            <p className="text-xs font-medium text-muted-foreground sm:text-sm">
               Data aset tidak ditemukan untuk ID ini.
             </p>
             <Button
@@ -123,7 +123,7 @@ export function PrintLabelsView() {
         ) : (
           <div className="flex w-full flex-col items-center">
             {/* Box Preview Kertas Cetak */}
-            <div className="w-full max-w-[320px] rounded-2xl border border-[#e0e2e8] bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:w-auto sm:max-w-none sm:p-8 print:border-none print:bg-transparent print:p-0 print:shadow-none">
+            <div className="w-full max-w-[320px] rounded-2xl border border-border bg-white p-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sm:w-auto sm:max-w-none sm:p-8 print:border-none print:bg-transparent print:p-0 print:shadow-none">
               <Card
                 className="flex w-full flex-col items-center justify-center border border-neutral-300 bg-white p-4 text-black shadow-none sm:w-72 sm:p-6 print:w-auto print:border-none print:p-0"
                 style={{ pageBreakInside: "avoid" }}

@@ -128,7 +128,7 @@ export function SessionCheckDialog({
           <div className="space-y-4">
             <SelectedField
               label="Kondisi aset"
-              labelClassName="text-sm font-semibold text-[#1c1c1e]"
+              labelClassName="text-sm font-semibold text-foreground"
               value={condition}
               onChange={(event) => setCondition(event.target.value)}
               options={CONDITIONS.map((opt) => ({ label: opt, value: opt }))}
@@ -143,7 +143,7 @@ export function SessionCheckDialog({
 
             <InputField
               label="Jumlah terhitung (opsional)"
-              labelClassName="text-sm font-semibold text-[#1c1c1e]"
+              labelClassName="text-sm font-semibold text-foreground"
               inputMode="numeric"
               value={quantity}
               onChange={(event) => setQuantity(event.target.value)}
@@ -157,7 +157,7 @@ export function SessionCheckDialog({
 
             <InputField
               label="Catatan (opsional)"
-              labelClassName="text-sm font-semibold text-[#1c1c1e]"
+              labelClassName="text-sm font-semibold text-foreground"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="Contoh: Dicek langsung di ruangan"

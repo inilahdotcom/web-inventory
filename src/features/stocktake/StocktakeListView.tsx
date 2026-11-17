@@ -342,7 +342,7 @@ function CreateSessionDialog({
         <div className="space-y-4">
           <InputField
             label="Nama sesi"
-            labelClassName="text-sm font-semibold text-[#1c1c1e]"
+            labelClassName="text-sm font-semibold text-foreground"
             autoFocus
             value={name}
             disabled={createMutation.isPending}
@@ -353,7 +353,7 @@ function CreateSessionDialog({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <InputField
               label="Periode mulai"
-              labelClassName="text-sm font-semibold text-[#1c1c1e]"
+              labelClassName="text-sm font-semibold text-foreground"
               type="date"
               value={periodStart}
               disabled={createMutation.isPending}
@@ -361,7 +361,7 @@ function CreateSessionDialog({
             />
             <InputField
               label="Periode selesai"
-              labelClassName="text-sm font-semibold text-[#1c1c1e]"
+              labelClassName="text-sm font-semibold text-foreground"
               type="date"
               value={periodEnd}
               min={periodStart || undefined}

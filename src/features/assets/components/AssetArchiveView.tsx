@@ -1,4 +1,5 @@
 import { LayoutGrid, Table2 } from "lucide-react"
+import { formatDate } from "@/lib/formatters"
 import { useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
@@ -67,9 +68,7 @@ export function AssetArchiveView() {
               attr.reason ||
               "Dihapus dari inventaris"
           ),
-          deletedAt: deletedAtVal
-            ? new Date(deletedAtVal).toLocaleDateString("id-ID")
-            : "-",
+          deletedAt: deletedAtVal ? formatDate(deletedAtVal) : "-",
           deletedBy: String(attr.deletedBy || attr.deleted_by || "Admin"),
           hasMovementHistory: Boolean(attr.has_movement_history),
         }
@@ -193,9 +192,9 @@ export function AssetArchiveView() {
   const cardIsActive = viewMode === "card"
 
   return (
-    <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 sm:pr-6 lg:px-6">
-        <label className="flex h-10 w-full max-w-75 min-w-0 items-center gap-2.25 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3.25">
+    <div className="min-h-svh min-w-0 bg-background text-foreground">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-white py-0 pr-4 pl-16 sm:pr-6 lg:px-6">
+        <label className="flex h-10 w-full max-w-75 min-w-0 items-center gap-2.25 rounded-lg border border-border bg-background px-3.25">
           <span className="text-[13px] text-[#a5a8b5]">⌕</span>
           <input
             value={query}
@@ -205,7 +204,7 @@ export function AssetArchiveView() {
             className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[#a5a8b5]"
           />
         </label>
-        <span className="ml-auto hidden rounded-full bg-[#1c1c1e] px-3.25 py-1.5 text-[12px] font-semibold text-white sm:block">
+        <span className="ml-auto hidden rounded-full bg-primary px-3.25 py-1.5 text-[12px] font-semibold text-white sm:block">
           Halaman khusus Admin
         </span>
       </header>
@@ -377,8 +376,8 @@ function ViewToggle({
         aria-pressed={tableIsActive}
         className={`size-8 rounded-full transition-colors ${
           tableIsActive
-            ? "bg-[#1c1c1e] text-white shadow-sm hover:bg-black"
-            : "text-[#6b6f7e] hover:bg-[#f0f1f3]"
+            ? "bg-primary text-white shadow-sm hover:bg-black"
+            : "text-muted-foreground hover:bg-[#f0f1f3]"
         }`}
       >
         <Table2 size={16} strokeWidth={2} aria-hidden="true" />
@@ -392,8 +391,8 @@ function ViewToggle({
         aria-pressed={cardIsActive}
         className={`size-8 rounded-full transition-colors ${
           cardIsActive
-            ? "bg-[#1c1c1e] text-white shadow-sm hover:bg-black"
-            : "text-[#6b6f7e] hover:bg-[#f0f1f3]"
+            ? "bg-primary text-white shadow-sm hover:bg-black"
+            : "text-muted-foreground hover:bg-[#f0f1f3]"
         }`}
       >
         <LayoutGrid size={16} strokeWidth={2} aria-hidden="true" />
@@ -551,7 +550,7 @@ function ArchiveActions({
           size="sm"
           disabled={isRestoring}
           onClick={() => onDelete(asset)}
-          className="h-8 rounded-full bg-[#ffc6c6] text-xs text-[#600000] hover:bg-[#ffb0b0]"
+          className="h-8 rounded-full bg-[#ffc6c6] text-xs text-destructive hover:bg-[#ffb0b0]"
         >
           Hapus permanen
         </Button>

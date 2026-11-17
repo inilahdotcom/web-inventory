@@ -69,7 +69,7 @@ export function AssetImportPreviewView({
     filterTab === "gagal" ? data.filter((item) => item.isGagal) : data
 
   return (
-    <div className="w-full space-y-6 pb-12 text-[#1C1C1E]">
+    <div className="w-full space-y-6 pb-12 text-foreground">
       <div className="sticky top-0 z-10 mb-6 flex w-full flex-col justify-between gap-4 border-b border-neutral-200 bg-white px-4 py-3 shadow-2xs sm:flex-row sm:items-center sm:px-6 lg:px-8">
         <div className="no-scrollbar flex items-center gap-3 overflow-x-auto py-1 pl-14 text-xs font-medium lg:pl-0">
           {STEPS.map((step, index) => {

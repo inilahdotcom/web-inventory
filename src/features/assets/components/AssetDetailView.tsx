@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { formatDate, formatDateOnly, formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Route } from "@/routes/_app/asset/$id/"
@@ -75,8 +76,6 @@ type SplitAssetDraft = {
   notes: string
 }
 
-const number = new Intl.NumberFormat("id-ID")
-
 function toDraft(detail: AssetDetailAttr): AssetDraft {
   const asset = detail.attributes
   return {
@@ -97,16 +96,12 @@ function toDraft(detail: AssetDetailAttr): AssetDraft {
 
 function displayDate(value: string) {
   if (!value) return "Belum diisi"
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("id-ID")
+  return formatDateOnly(value)
 }
 
 function displayTimestamp(value: string | null) {
   if (!value) return "Tanggal tidak tersedia"
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })
+  return formatDate(value, { dateStyle: "short", timeStyle: "short" })
 }
 
 function errorMessage(error: unknown) {
@@ -772,7 +767,7 @@ export function AssetDetailView() {
                     displayValue={
                       field.key === "price"
                         ? asset.price
-                          ? `Rp ${number.format(Number(asset.price))}`
+                          ? `Rp ${formatNumber(Number(asset.price))}`
                           : "Belum diisi"
                         : field.key === "date"
                           ? displayDate(asset.date)
@@ -1128,7 +1123,7 @@ function PhotoSlot({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex ${main ? "h-55 rounded-[14px]" : "min-h-26 flex-1 rounded-xl"} items-center justify-center overflow-hidden border border-dashed border-[#c7cad5] bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)] text-[#8e91a0]`}
+      className={`relative flex ${main ? "h-55 rounded-[14px]" : "min-h-26 flex-1 rounded-xl"} items-center justify-center overflow-hidden border border-dashed border-input bg-[repeating-linear-gradient(135deg,#f7f8fa_0_8px,#eef0f3_8px_16px)] text-[#8e91a0]`}
     >
       {image ? (
         <img src={image} alt={label} className="size-full object-cover" />
@@ -1136,7 +1131,11 @@ function PhotoSlot({
         <span
           className={`px-2 text-center ${main ? "flex flex-col gap-2" : "font-mono text-[10.5px]"}`}
         >
-          <span className={main ? "font-mono text-[11px] text-[#6b6f7e]" : ""}>
+          <span
+            className={
+              main ? "font-mono text-[11px] text-muted-foreground" : ""
+            }
+          >
             {label}
           </span>
           {main && (
@@ -1177,7 +1176,7 @@ function InfoField({
     <label
       className={`flex flex-col gap-0.75 border-b border-[#eef0f3] pb-3 ${wide ? "sm:col-span-2 sm:border-b-0 sm:pb-0" : ""}`}
     >
-      <span className="text-[11.5px] text-[#6b6f7e]">{label}</span>
+      <span className="text-[11.5px] text-muted-foreground">{label}</span>
       {editing && onChange && options ? (
         <select
           value={value}
@@ -1253,18 +1252,18 @@ function CompletenessCard({
 }) {
   return (
     <section className="flex flex-col gap-3 rounded-[20px] bg-[#c3faf5] p-5">
-      <h2 className="text-[15px] font-semibold text-[#187574]">
+      <h2 className="text-[15px] font-semibold text-chart-5">
         Kelengkapan data
       </h2>
       <div className="flex items-baseline gap-2">
         <span className="text-[36px] leading-none font-semibold tracking-[-1px]">
           {completeness.filled}
         </span>
-        <span className="text-[13px] text-[#187574]">
+        <span className="text-[13px] text-chart-5">
           dari {completeness.total} field terisi
         </span>
       </div>
-      <span className="h-1.75 overflow-hidden rounded-full bg-[#187574]/20">
+      <span className="h-1.75 overflow-hidden rounded-full bg-chart-5/20">
         <span
           className="block h-full rounded-full bg-[#187574]"
           style={{ width: `${completeness.percentage}%` }}
@@ -1278,7 +1277,7 @@ function CompletenessCard({
             </Badge>
           ))
         ) : (
-          <span className="text-[12px] text-[#187574]">Data sudah lengkap</span>
+          <span className="text-[12px] text-chart-5">Data sudah lengkap</span>
         )}
       </div>
     </section>

@@ -143,23 +143,23 @@ export function ProfileView() {
   }
 
   return (
-    <div className="min-h-svh min-w-0 bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="flex h-16 items-center border-b border-[#e0e2e8] bg-white py-0 pr-4 pl-16 text-xs text-[#6b6f7e] sm:pr-6 sm:pl-16 lg:pl-6">
+    <div className="min-h-svh min-w-0 bg-background text-foreground">
+      <header className="flex h-16 items-center border-b border-border bg-white py-0 pr-4 pl-16 text-xs text-muted-foreground sm:pr-6 sm:pl-16 lg:pl-6">
         Profil saya
       </header>
-      <div className="flex min-h-[calc(100svh-4rem)] justify-center bg-[#f7f8fa] p-4 sm:p-7">
+      <div className="flex min-h-[calc(100svh-4rem)] justify-center bg-background p-4 sm:p-7">
         <div className="flex w-full max-w-205 flex-col gap-4.5">
           <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-4.5 sm:p-5.5">
-            <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-[#ffc6c6] text-xl font-semibold text-[#600000]">
+            <span className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-[#ffc6c6] text-xl font-semibold text-destructive">
               {initials}
             </span>
             <div className="flex flex-col gap-1">
-              <span className="text-2xl font-semibold tracking-tight">
+              <span className="text-2xl font-semibold tracking-tight text-foreground">
                 {isLoading
                   ? "Memuat profil..."
                   : profile?.attributes.name || "-"}
               </span>
-              <div className="flex items-center gap-2 text-xs text-[#6b6f7e]">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{profile ? profile.attributes.email : "-"}</span>
                 {profile?.attributes.role && (
                   <Badge
@@ -203,10 +203,17 @@ export function ProfileView() {
           )}
 
           <Card className="flex flex-col gap-4.5 p-5.5">
-            <span className="text-base font-semibold">Data akun</span>
+            <span className="text-base font-semibold text-foreground">
+              Data akun
+            </span>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="profile-name">Nama lengkap</Label>
+                <Label
+                  htmlFor="profile-name"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Nama lengkap
+                </Label>
                 <Input
                   id="profile-name"
                   value={name}
@@ -215,27 +222,42 @@ export function ProfileView() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="profile-email">Email</Label>
+                <Label
+                  htmlFor="profile-email"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Email
+                </Label>
                 <Input
                   id="profile-email"
                   value={profile?.attributes.email ?? ""}
                   disabled
                   readOnly
-                  className="bg-muted text-muted-foreground"
+                  className="bg-background text-[#555a6a]"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="profile-role">Peran</Label>
+                <Label
+                  htmlFor="profile-role"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Peran
+                </Label>
                 <Input
                   id="profile-role"
                   value={profile?.attributes.role ?? ""}
                   disabled
                   readOnly
-                  className="bg-muted text-muted-foreground"
+                  className="bg-background text-[#555a6a]"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="profile-phone">Nomor telepon</Label>
+                <Label
+                  htmlFor="profile-phone"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Nomor telepon
+                </Label>
                 <Input
                   id="profile-phone"
                   value={phone}
@@ -258,10 +280,17 @@ export function ProfileView() {
           </Card>
 
           <Card className="flex flex-col gap-4.5 p-5.5">
-            <span className="text-base font-semibold">Ganti password</span>
+            <span className="text-base font-semibold text-foreground">
+              Ganti password
+            </span>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label htmlFor="pass-current">Password lama</Label>
+                <Label
+                  htmlFor="pass-current"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Password lama
+                </Label>
                 <Input
                   id="pass-current"
                   type="password"
@@ -271,7 +300,12 @@ export function ProfileView() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="pass-next">Password baru</Label>
+                <Label
+                  htmlFor="pass-next"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Password baru
+                </Label>
                 <Input
                   id="pass-next"
                   type="password"
@@ -281,7 +315,12 @@ export function ProfileView() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="pass-confirmation">Ulangi password baru</Label>
+                <Label
+                  htmlFor="pass-confirmation"
+                  className="text-xs font-semibold text-foreground"
+                >
+                  Ulangi password baru
+                </Label>
                 <Input
                   id="pass-confirmation"
                   type="password"
@@ -294,7 +333,7 @@ export function ProfileView() {
               </div>
             </div>
             <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center">
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 Minimal 8 karakter, kombinasi huruf dan angka.
               </span>
               <Button

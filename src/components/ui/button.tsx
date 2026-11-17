@@ -22,7 +22,7 @@ export const buttonVariants = cva(
           "rounded-md bg-transparent text-foreground hover:bg-muted active:bg-[color-mix(in_oklab,var(--muted)_80%,black_20%)] disabled:text-muted-foreground",
         link: "h-auto rounded-none bg-transparent p-0 text-brand-blue underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline",
         destructive:
-          "rounded-full bg-[#600000] text-white hover:bg-[color-mix(in_oklab,#600000_90%,white_10%)] active:bg-[color-mix(in_oklab,#600000_80%,black_20%)] disabled:bg-hairline disabled:text-muted-foreground",
+          "rounded-full bg-destructive text-white hover:bg-[color-mix(in_oklab,#600000_90%,white_10%)] active:bg-[color-mix(in_oklab,#600000_80%,black_20%)] disabled:bg-hairline disabled:text-muted-foreground",
       },
       size: {
         sm: "h-9 px-4 text-sm",

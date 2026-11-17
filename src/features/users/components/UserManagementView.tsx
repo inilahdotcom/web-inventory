@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { formatDate } from "@/lib/formatters"
 import axios from "axios"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -65,14 +66,14 @@ function formatLastLogin(value: string | null): string {
   if (!value) return "Belum pernah"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
-  return new Intl.DateTimeFormat("id-ID", {
+  return formatDate(date, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(date)
+  })
 }
 
 function UserRow({
@@ -102,9 +103,9 @@ function UserRow({
   const avatarClass = inactive
     ? "bg-[#eef0f3] text-[#8e91a0]"
     : role === "admin"
-      ? "bg-[#ffc6c6] text-[#600000]"
+      ? "bg-[#ffc6c6] text-destructive"
       : role === "staff_ga"
-        ? "bg-[#c3faf5] text-[#187574]"
+        ? "bg-[#c3faf5] text-chart-5"
         : "bg-[#fff8e0] text-[#746019]"
 
   // Semua role badge dibuat polos (outline) tanpa background warna
@@ -152,7 +153,7 @@ function UserRow({
             type="button"
             onClick={() => onEdit(user)}
             disabled={busy}
-            className="text-[#4262ff] hover:text-[#2a41b6] disabled:opacity-50"
+            className="text-brand-blue hover:text-[#2a41b6] disabled:opacity-50"
           >
             Ubah
           </button>
@@ -160,7 +161,7 @@ function UserRow({
             type="button"
             onClick={() => (inactive ? onActivate(user) : onDeactivate(user))}
             disabled={busy}
-            className={`disabled:opacity-50 ${inactive ? "text-[#4262ff] hover:text-[#2a41b6]" : "text-[#a33d3d] hover:text-[#600000]"}`}
+            className={`disabled:opacity-50 ${inactive ? "text-brand-blue hover:text-[#2a41b6]" : "text-[#a33d3d] hover:text-destructive"}`}
           >
             {busy ? "…" : inactive ? "Aktifkan" : "Nonaktifkan"}
           </button>
@@ -175,11 +176,11 @@ function AccessMatrix() {
     <section className="flex flex-col gap-3.5 rounded-2xl border border-[#eef0f3] bg-white p-5">
       <h2 className="text-base font-semibold">Matriks hak akses</h2>
       <div className="overflow-x-auto">
-        <div className="grid min-w-150 grid-cols-[1fr_7rem_7rem_7rem] text-sm text-[#1c1c1e]">
+        <div className="grid min-w-150 grid-cols-[1fr_7rem_7rem_7rem] text-sm text-foreground">
           {["Fitur", "Admin", "Staff GA", "Viewer"].map((label) => (
             <span
               key={label}
-              className={`border-b border-[#e0e2e8] py-2 text-xs font-semibold tracking-wider text-[#6b6f7e] uppercase ${label === "Fitur" ? "" : "text-center"}`}
+              className={`border-b border-border py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase ${label === "Fitur" ? "" : "text-center"}`}
             >
               {label}
             </span>
@@ -328,13 +329,13 @@ export function UserManagementView() {
   // Tampilan jika pengguna BUKAN Admin (Staff GA / Viewer)
   if (!canManageAdminData) {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-[#f7f8fa] p-4 text-[#1c1c1e]">
+      <div className="flex min-h-svh items-center justify-center bg-background p-4 text-foreground">
         <div className="flex max-w-md flex-col items-center rounded-2xl border border-[#eef0f3] bg-white p-8 text-center shadow-sm">
           <div className="grid size-12 place-items-center rounded-full bg-rose-100 text-rose-600">
             <ShieldAlert size={24} />
           </div>
           <h1 className="mt-4 text-lg font-semibold">Akses Terbatas</h1>
-          <p className="mt-2 text-xs leading-relaxed text-[#6b6f7e]">
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             Halaman Kelola Pengguna hanya dapat diakses oleh Admin sistem. Anda
             tidak memiliki izin yang cukup untuk mengelola akun pengguna.
           </p>
@@ -352,9 +353,9 @@ export function UserManagementView() {
     usersQuery.error.response?.status === 403
 
   return (
-    <div className="flex min-h-svh min-w-0 flex-col bg-[#f7f8fa] text-[#1c1c1e]">
-      <header className="flex h-16 flex-none items-center gap-3.5 border-b border-[#e0e2e8] bg-white pr-4 pl-16 sm:pr-6 lg:px-6">
-        <label className="flex h-10 w-full max-w-72 min-w-0 items-center gap-2 rounded-lg border border-[#e0e2e8] bg-[#f7f8fa] px-3">
+    <div className="flex min-h-svh min-w-0 flex-col bg-background text-foreground">
+      <header className="flex h-16 flex-none items-center gap-3.5 border-b border-border bg-white pr-4 pl-16 sm:pr-6 lg:px-6">
+        <label className="flex h-10 w-full max-w-72 min-w-0 items-center gap-2 rounded-lg border border-border bg-background px-3">
           <span className="shrink-0 text-sm text-[#a5a8b5]" aria-hidden="true">
             ⌕
           </span>
@@ -378,7 +379,7 @@ export function UserManagementView() {
             setFormError("")
             setCreateOpen(true)
           }}
-          className="ml-auto h-10 shrink-0 bg-[#1c1c1e] px-4 text-white transition-none hover:bg-[#1c1c1e] active:bg-[#1c1c1e] sm:px-5"
+          className="ml-auto h-10 shrink-0 bg-primary px-4 text-white transition-none hover:bg-primary active:bg-primary sm:px-5"
         >
           <span className="sm:hidden">+</span>
           <span className="hidden sm:inline">+ Tambah pengguna</span>
@@ -388,7 +389,7 @@ export function UserManagementView() {
       <div className="flex flex-1 flex-col gap-5 p-4 sm:px-7 sm:py-6">
         <div className="flex flex-col gap-1.5">
           <h1 className="text-3xl font-semibold tracking-tight">Pengguna</h1>
-          <p className="text-sm text-[#6b6f7e]">
+          <p className="text-sm text-muted-foreground">
             {usersQuery.isPending
               ? "Memuat pengguna…"
               : `${activeCount} akun aktif di halaman ini`}{" "}
@@ -416,7 +417,7 @@ export function UserManagementView() {
                 variant="link"
                 size="sm"
                 onClick={() => void usersQuery.refetch()}
-                className="h-auto p-0 text-[#600000]"
+                className="h-auto p-0 text-destructive"
               >
                 Coba lagi
               </Button>
@@ -507,7 +508,7 @@ export function UserManagementView() {
               >
                 Sebelumnya
               </Button>
-              <span className="text-[#6b6f7e]">
+              <span className="text-muted-foreground">
                 Halaman {previousCursors.length + 1}
               </span>
               <Button

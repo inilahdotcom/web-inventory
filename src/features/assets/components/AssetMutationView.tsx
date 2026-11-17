@@ -586,7 +586,7 @@ function LocationCard({
       <span
         className={
           "text-[11px] font-semibold tracking-[.5px] uppercase " +
-          (tone === "target" ? "text-[#187574]" : "text-muted-foreground")
+          (tone === "target" ? "text-chart-5" : "text-muted-foreground")
         }
       >
         {title}

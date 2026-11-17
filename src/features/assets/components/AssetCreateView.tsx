@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
+import { formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
@@ -117,11 +118,10 @@ export function AssetCreateView() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const formatNumber = new Intl.NumberFormat("id-ID")
   const rupiahInput = (value: string) => {
     if (!value) return ""
     const cleanNumber = value.replace(/\D/g, "")
-    return cleanNumber ? `Rp. ${formatNumber.format(Number(cleanNumber))}` : ""
+    return cleanNumber ? `Rp. ${formatNumber(Number(cleanNumber))}` : ""
   }
   const numericValue = (value: string) => value.replace(/\D/g, "")
 
@@ -361,7 +361,7 @@ export function AssetCreateView() {
   return (
     <form
       onSubmit={(e) => handleSubmit(e, false)}
-      className="relative flex min-h-svh flex-col justify-between text-[#1C1C1E]"
+      className="relative flex min-h-svh flex-col justify-between text-foreground"
     >
       <div>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-neutral-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6 lg:px-8">

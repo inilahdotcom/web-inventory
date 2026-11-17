@@ -33,13 +33,13 @@ export function TimelineItem({
     >
       <span
         className={`absolute top-0.5 -left-1.5 size-2.5 rounded-full ${
-          active ? "bg-[#1c1c1e]" : "bg-[#c7cad5]"
+          active ? "bg-primary" : "bg-input"
         }`}
       />
       <div className="flex flex-col gap-0.5">
         <span className="text-[13px] font-semibold">{title}</span>
         {subtitle && (
-          <span className="text-[12px] text-[#6b6f7e]">{subtitle}</span>
+          <span className="text-[12px] text-muted-foreground">{subtitle}</span>
         )}
         <span className="text-[11.5px] text-[#8e91a0]">{meta}</span>
       </div>
@@ -64,7 +64,7 @@ export function AuditItem({ title, detail, meta }: AuditItemProps) {
   return (
     <div className="flex flex-col gap-0.75 border-b border-[#eef0f3] pb-2.75 last:border-0 last:pb-0">
       <span className="text-[12.5px] font-semibold">{title}</span>
-      <span className="wrap-break-words line-clamp-2 text-[12px] text-[#6b6f7e]">
+      <span className="wrap-break-words line-clamp-2 text-[12px] text-muted-foreground">
         {detail}
       </span>
       <span className="text-[11px] text-[#8e91a0]">{meta}</span>

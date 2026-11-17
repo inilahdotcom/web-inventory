@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { useState } from "react"
-import { Toaster } from "sonner"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { authStorage } from "@/lib/auth-storage"
 import { useAutoLogout } from "@/hooks/useAutoLogout"
@@ -19,10 +18,7 @@ function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
-    <div className="h-svh bg-[#f7f8fa]">
-      {/* Container Toast Sonner */}
-      <Toaster position="top-right" richColors closeButton />
-
+    <div className="h-svh bg-background">
       <Sidebar
         collapsed={sidebarCollapsed}
         onCollapsedChange={setSidebarCollapsed}

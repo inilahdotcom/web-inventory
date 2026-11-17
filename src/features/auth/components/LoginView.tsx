@@ -27,7 +27,7 @@ export function LoginView() {
   return (
     <div className="flex min-h-screen w-full bg-white text-neutral-900">
       {/* Panel Kiri - Deskripsi & Ringkasan Statistik */}
-      <div className="hidden w-4/12 flex-col justify-between bg-[#1c1c1e] p-12 text-white lg:flex">
+      <div className="hidden w-4/12 flex-col justify-between bg-sidebar p-12 text-white lg:flex">
         {/* Brand Header - Samakan Persis dengan Sidebar */}
         <div className="flex items-center">
           <img
