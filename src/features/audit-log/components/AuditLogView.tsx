@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query"
 import { ShieldAlert, RefreshCw, Loader2, Download } from "lucide-react"
 import { usePermission } from "@/hooks/usePermission"
+import { formatDate } from "@/lib/formatters"
 import { auditLogService } from "@/services/auditLogServices"
 import {
   masterDataService,
@@ -35,7 +36,8 @@ export interface AuditLogItem {
   user: {
     name: string
   }
-  timestamp: string
+  // ISO 8601 dari service. Diformat di komponen supaya data tetap bisa diurutkan dan difilter.
+  createdAt: string
   target: string
   oldValues?: Record<string, unknown>
   newValues?: Record<string, unknown>
@@ -44,6 +46,16 @@ export interface AuditLogItem {
 
 interface AuditLogViewProps {
   onExport?: () => void
+}
+
+// Opsi ini sama dengan yang dulu dipakai di service, jadi tampilan tidak berubah.
+const logTimeOptions: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
 }
 
 export function AuditLogView({ onExport }: AuditLogViewProps) {
@@ -418,7 +430,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                         {log.user.name}
                       </h4>
                       <p className="mt-1 font-mono text-[11px] text-neutral-400">
-                        {log.timestamp}
+                        {formatDate(log.createdAt, logTimeOptions, "—")}
                       </p>
                     </div>
                     <div className="mt-4 hidden min-h-24 flex-1 md:block">
