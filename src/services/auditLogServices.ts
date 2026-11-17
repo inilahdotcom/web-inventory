@@ -1,4 +1,5 @@
 import { api } from "@/lib/axios"
+import { formatDate, formatNumber } from "@/lib/formatters"
 
 export interface RawAuditLogFromGo {
   id: number
@@ -196,7 +197,7 @@ const formatDescription = (
   if (upperAction === "CREATE") {
     let desc = `${name || entityType}`
     if (qty) desc += ` · ${qty} ${unit}`
-    if (price) desc += ` · harga Rp ${Number(price).toLocaleString("id-ID")}`
+    if (price) desc += ` · harga Rp ${formatNumber(Number(price))}`
     if (notes) desc += ` · ${notes}`
     return desc
   }
@@ -312,7 +313,7 @@ export const auditLogService = {
         user: {
           name: item.userName || `User #${item.changedBy}`,
         },
-        timestamp: new Date(item.createdAt).toLocaleString("id-ID", {
+        timestamp: formatDate(item.createdAt, {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { formatNumber } from "@/lib/formatters"
 import { createPortal } from "react-dom"
 import { useNavigate, useSearch } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -54,9 +55,8 @@ type SavedView = {
   pageSize?: number
 }
 
-const formatNumber = new Intl.NumberFormat("id-ID")
 const rupiahInput = (value: string) =>
-  value ? `Rp. ${formatNumber.format(Number(value))}` : ""
+  value ? `Rp. ${formatNumber(Number(value))}` : ""
 const numericInput = (value: string) => value.replace(/\D/g, "")
 
 type Asset = {
@@ -186,7 +186,7 @@ function toAsset(item: AssetListItem): Asset {
     condition: (attr.condition as AssetCondition) || "Bagus",
     status: String(attr.status || "Tersedia"),
     price:
-      priceValue > 0 ? `Rp. ${formatNumber.format(priceValue)}` : undefined,
+      priceValue > 0 ? `Rp. ${formatNumber(priceValue)}` : undefined,
     priceValue,
     attention: ((attr.condition as AssetCondition) || "Bagus") !== "Bagus",
     hasPhoto,
@@ -936,7 +936,7 @@ export function AssetListView() {
             <span className="text-sm text-[#6b6f7e]">
               {visibleAssets.length} aset ditampilkan &middot;{" "}
               {pageSummary.units} unit &middot; nilai tercatat Rp{" "}
-              {formatNumber.format(pageSummary.value)}
+              {formatNumber(pageSummary.value)}
             </span>
           </div>
           <div className="sm:ml-auto">
@@ -1150,7 +1150,7 @@ export function AssetListView() {
               </span>
               <span className="text-xs text-[#a5a8b5]">
                 {selectedSummary.units} unit &middot; Rp{" "}
-                {formatNumber.format(selectedSummary.value)}
+                {formatNumber(selectedSummary.value)}
               </span>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">

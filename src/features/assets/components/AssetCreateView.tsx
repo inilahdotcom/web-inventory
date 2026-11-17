@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react"
+import { formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
@@ -117,11 +118,10 @@ export function AssetCreateView() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const formatNumber = new Intl.NumberFormat("id-ID")
   const rupiahInput = (value: string) => {
     if (!value) return ""
     const cleanNumber = value.replace(/\D/g, "")
-    return cleanNumber ? `Rp. ${formatNumber.format(Number(cleanNumber))}` : ""
+    return cleanNumber ? `Rp. ${formatNumber(Number(cleanNumber))}` : ""
   }
   const numericValue = (value: string) => value.replace(/\D/g, "")
 

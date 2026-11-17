@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
+import { formatDate, formatRupiah } from "@/lib/formatters"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -85,13 +86,13 @@ export function DashboardStats({
 
   const formattedLastUpdated =
     lastUpdated ||
-    new Intl.DateTimeFormat("id-ID", {
+    formatDate(new Date(), {
       day: "numeric",
       month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date())
+    })
 
   // Data Metrik Kualitas / Kelengkapan (Task B2)
   const missingPrice = summary?.missing_price_count ?? remainingCount
@@ -163,16 +164,6 @@ export function DashboardStats({
       name: a.name || "Aset Tanpa Nama",
       qty: a.condition,
     })),
-  }
-
-  const formatRupiah = (val: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    })
-      .format(val)
-      .replace("IDR", "Rp")
   }
 
   const handleCompletenessCardClick = (filterType: string) => {
