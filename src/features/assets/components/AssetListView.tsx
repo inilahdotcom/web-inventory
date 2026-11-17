@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { assetService } from "@/services/assetServices"
 import { usePermission } from "@/hooks/usePermission"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { toast } from "sonner"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import { Badge } from "@/components/ui/badge"
@@ -457,6 +458,9 @@ export function AssetListView() {
       return result
     },
   })
+
+  // Sembunyikan sidebar saat loading
+  usePageLoading(loading)
 
   const assets = useMemo(
     () => (assetData?.assets ? assetData.assets.map(toAsset) : []),

@@ -6,6 +6,7 @@ import { profileService } from "@/services/profileService"
 import { assetService } from "@/services/assetServices"
 import { authService } from "@/services/authServices"
 import { usePermission } from "@/hooks/usePermission"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { downloadBlob } from "@/lib/DownloadBlob"
 import { DashboardStats } from "./components/DashboardStats"
 import { RecentActivityTable } from "./components/RecentActivityTable"
@@ -16,7 +17,6 @@ import { HeaderSearchDropdown } from "./components/HeaderSearchDropdown"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
 import { LogOut, User, Inbox, Plus, FileSpreadsheet } from "lucide-react"
 import { toast } from "sonner"
 
@@ -72,6 +72,9 @@ export function DashboardView() {
       return response.data.data
     },
   })
+
+  // Sembunyikan sidebar saat loading
+  usePageLoading(loading)
 
   // Profil user
   const { data: profile } = useQuery({
@@ -181,22 +184,31 @@ export function DashboardView() {
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-64 rounded-md" />
-            <Skeleton className="h-4 w-48 rounded-md" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-28 rounded-2xl" />
-            <Skeleton className="h-10 w-32 rounded-2xl" />
-          </div>
-        </div>
-        <Skeleton className="h-48 w-full rounded-3xl" />
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Skeleton className="h-64 rounded-3xl" />
-          <Skeleton className="h-64 rounded-3xl" />
-          <Skeleton className="h-64 rounded-3xl" />
+      <div className="flex min-h-svh w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <svg
+            className="h-12 w-12 animate-spin text-[#1c1c1e]"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          <p className="text-sm font-medium text-muted-foreground">
+            Memuat dashboard...
+          </p>
         </div>
       </div>
     )
