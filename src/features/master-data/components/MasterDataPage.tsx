@@ -5,6 +5,8 @@ import {
   masterDataService,
   type MasterDataItem as ServiceItem,
 } from "@/services/masterDataService"
+import { FullPageLoading } from "@/components/ui/state"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { toast } from "sonner"
 
 // Helper function untuk mengambil pesan apa adanya dari backend
@@ -182,12 +184,11 @@ export default function MasterDataPage() {
     }
   }
 
+  // Sembunyikan sidebar saat loading
+  usePageLoading(loading)
+
   if (loading) {
-    return (
-      <div className="flex h-64 w-full items-center justify-center text-xs font-medium text-neutral-500">
-        Memuat data master...
-      </div>
-    )
+    return <FullPageLoading message="Memuat data master..." />
   }
 
   return (

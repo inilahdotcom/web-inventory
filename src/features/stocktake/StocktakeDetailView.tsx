@@ -25,7 +25,13 @@ import {
 } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FilterChip } from "@/components/ui/Pill"
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  FullPageLoading,
+} from "@/components/ui/state"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
 import {
   Dialog,
@@ -53,6 +59,10 @@ export function StocktakeDetailView({ id }: { id: string }) {
   const { canManage, canCheck } = useStocktakePermission()
 
   const detailQuery = useSessionDetail(id)
+
+  // Sembunyikan sidebar saat loading awal sesi
+  usePageLoading(detailQuery.isLoading)
+
   const detail = detailQuery.data
   const session = detail?.session
   const progress = detail?.progress
@@ -143,6 +153,10 @@ export function StocktakeDetailView({ id }: { id: string }) {
   const examined = progress
     ? (progress.checked ?? 0) + (progress.missing ?? 0)
     : 0
+
+  if (detailQuery.isLoading) {
+    return <FullPageLoading message="Memuat detail sesi stok opname..." />
+  }
 
   return (
     <div className="min-h-screen w-full bg-neutral-50/50 text-neutral-900">
