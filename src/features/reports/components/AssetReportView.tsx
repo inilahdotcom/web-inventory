@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { FullPageLoading } from "@/components/ui/state"
 import { Skeleton } from "@/components/ui/skeleton"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import {
   Table,
   TableHeader,
@@ -124,6 +126,14 @@ export function AssetReportView() {
     ],
     queryFn: ({ signal }) => reportService.get(activeTab, filters, signal),
   })
+
+  // Sembunyikan sidebar saat loading awal
+  usePageLoading(reportQuery.isLoading)
+
+  if (reportQuery.isLoading) {
+    return <FullPageLoading message="Memuat laporan inventaris..." />
+  }
+
   const data = reportQuery.data ?? []
   const table = createExportTable(activeTab, data)
 

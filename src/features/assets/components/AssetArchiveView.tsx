@@ -18,6 +18,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { FullPageLoading } from "@/components/ui/state"
+import { usePageLoading } from "@/hooks/usePageLoading"
 
 export type ArchivedAsset = {
   id: string
@@ -76,6 +78,9 @@ export function AssetArchiveView() {
       return formattedAssets
     },
   })
+
+  // Sembunyikan sidebar saat loading awal
+  usePageLoading(loading)
 
   // State ID aset yang baru dihapus/dipulihkan oleh aksi user (optimistic filtering)
   const [removedIds, setRemovedIds] = useState<string[]>([])
@@ -238,9 +243,7 @@ export function AssetArchiveView() {
         )}
 
         {loading ? (
-          <Card className="p-12 text-center text-[13px] text-muted-foreground">
-            Memuat data arsip...
-          </Card>
+          <FullPageLoading message="Memuat data arsip..." />
         ) : (
           <ArchiveTable
             assets={filteredAssets}

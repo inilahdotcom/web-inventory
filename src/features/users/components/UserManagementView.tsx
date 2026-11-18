@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/Modal"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { FullPageLoading } from "@/components/ui/state"
 import { Skeleton } from "@/components/ui/skeleton"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { Card } from "@/components/ui/card"
 import { UserFormDialog, type UserFormValues } from "./UserFormDialog"
 import { authStorage } from "@/lib/auth-storage"
@@ -243,6 +245,13 @@ export function UserManagementView() {
     retry: false,
     enabled: canManageAdminData,
   })
+
+  // Sembunyikan sidebar saat loading awal
+  usePageLoading(usersQuery.isLoading)
+
+  if (usersQuery.isLoading) {
+    return <FullPageLoading message="Memuat daftar pengguna..." />
+  }
 
   const resetPage = () => {
     setCursor("")

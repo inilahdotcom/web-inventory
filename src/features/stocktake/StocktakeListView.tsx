@@ -25,7 +25,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { InputField } from "@/components/ui/InputField"
 import { Label } from "@/components/ui/label"
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  FullPageLoading,
+} from "@/components/ui/state"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
 import {
   Dialog,
@@ -45,6 +51,10 @@ export function StocktakeListView() {
   const navigate = useNavigate()
   const { canManage } = useStocktakePermission()
   const { data: rawSessions, isLoading, error, refetch } = useSessions()
+
+  // Sembunyikan sidebar saat loading awal
+  usePageLoading(isLoading)
+
   const sessions = useMemo(
     () => (Array.isArray(rawSessions) ? rawSessions : []),
     [rawSessions]
@@ -55,6 +65,10 @@ export function StocktakeListView() {
     name: string
   } | null>(null)
   const startMutation = useStartSession()
+
+  if (isLoading) {
+    return <FullPageLoading message="Memuat daftar sesi stok opname..." />
+  }
 
   return (
     <div className="min-h-screen w-full bg-neutral-50/50 text-neutral-900">

@@ -20,7 +20,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Pill, FilterChip } from "@/components/ui/Pill"
 import { PagePagination } from "@/components/ui/pagination"
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  FullPageLoading,
+} from "@/components/ui/state"
 import { ProfileDropdown } from "@/components/ui/ProfileDropdown"
 import {
   Dialog,
@@ -875,6 +880,10 @@ export function AssetListView() {
   const tableIsActive =
     viewMode === "table" || (viewMode === "auto" && !isMobile)
   const cardIsActive = viewMode === "card" || (viewMode === "auto" && isMobile)
+
+  if (loading) {
+    return <FullPageLoading message="Memuat daftar aset..." />
+  }
 
   return (
     <div className="min-h-svh min-w-0 bg-background text-foreground">

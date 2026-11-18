@@ -15,7 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state"
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  FullPageLoading,
+} from "@/components/ui/state"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { assetService } from "@/services/assetServices"
 import { profileService } from "@/services/profileService"
 import type { AssetCondition, AssetListItem } from "@/types/asset"
@@ -135,6 +141,13 @@ export function MyAssetsView() {
 
   const loading = profileQuery.isLoading || assetsQuery.isLoading
   const error = profileQuery.error || assetsQuery.error
+
+  // Sembunyikan sidebar saat loading awal
+  usePageLoading(loading)
+
+  if (loading) {
+    return <FullPageLoading message="Memuat aset yang Anda pegang..." />
+  }
 
   return (
     <div className="min-h-svh bg-background text-foreground">
