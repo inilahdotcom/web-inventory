@@ -21,6 +21,33 @@ export interface ActivityItem {
   user_name?: string
 }
 
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: "Tambah Data",
+  UPDATE: "Ubah Data",
+  DELETE: "Hapus",
+  PERMANENT_DELETE: "Hapus Permanen",
+  BULK_DELETE: "Hapus Masal",
+  LOGIN: "Masuk Akun",
+  LOGOUT: "Keluar Akun",
+  EXPORT_EXCEL: "Ekspor Excel",
+  EXPORT_PDF: "Ekspor PDF",
+  RESTORE: "Pulihkan",
+  IMPORT: "Impor Data",
+  IMPORT_CREATE: "Impor Data Baru",
+  IMPORT_UPDATE: "Pembaruan Impor",
+  MOVE: "Mutasi / Pindah",
+  SPLIT: "Pecah Unit",
+  CREATE_SPLIT: "Hasil Pecah Unit",
+  CHECK: "Pemeriksaan / Cek",
+  HOLDER_CONFIRMED: "Konfirmasi Pemegang",
+}
+
+function formatActionLabel(action?: string): string {
+  if (!action) return "-"
+  const key = action.toUpperCase()
+  return ACTION_LABELS[key] || action.replaceAll("_", " ")
+}
+
 /** Buat ringkasan perubahan berdasarkan entitas dan aksi */
 function formatRingkasan(item: ActivityItem): string {
   const action = item.action?.toUpperCase()
@@ -39,6 +66,10 @@ function formatRingkasan(item: ActivityItem): string {
 
   // 3. Entity: Assets
   if (entity === "assets" || entity === "asset") {
+    if (action === "HOLDER_CONFIRMED")
+      return `${actorName} mengonfirmasi kepemilikan aset.`
+    if (action === "CHECK")
+      return `Pemeriksaan / cek fisik pada aset berhasil dilakukan.`
     if (action === "CREATE") return "Aset baru berhasil ditambahkan."
     if (action === "UPDATE") return "Data informasi aset diperbarui."
     if (
@@ -58,6 +89,10 @@ function formatRingkasan(item: ActivityItem): string {
     if (action === "IMPORT_UPDATE")
       return "Data aset diperbarui lewat impor Excel."
   }
+
+  if (action === "HOLDER_CONFIRMED")
+    return `${actorName} mengonfirmasi kepemilikan aset.`
+  if (action === "CHECK") return `Pemeriksaan / cek fisik berhasil dilakukan.`
 
   // 4. Entity: Users
   if (entity === "users" || entity === "user") {
@@ -137,11 +172,6 @@ function formatTimestamp(dateStr: string): string {
   })
 }
 
-function getActivityBadgeVariant(_action?: string) {
-  void _action
-  return "secondary" as const
-}
-
 interface RecentActivityTableProps {
   data?: ActivityItem[]
 }
@@ -197,8 +227,11 @@ export function RecentActivityTable({ data = [] }: RecentActivityTableProps) {
                     className="transition hover:bg-muted/50"
                   >
                     <TableCell className="px-4 py-3">
-                      <Badge variant={getActivityBadgeVariant(item.action)}>
-                        {item.action}
+                      <Badge
+                        variant="outline"
+                        className="border-neutral-200 bg-neutral-100/80 font-medium text-neutral-700"
+                      >
+                        {formatActionLabel(item.action)}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3 font-medium capitalize">

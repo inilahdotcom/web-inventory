@@ -1,7 +1,9 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from "react"
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query"
 import { ShieldAlert, RefreshCw, Loader2, Download } from "lucide-react"
 import { usePermission } from "@/hooks/usePermission"
+import { usePageLoading } from "@/hooks/usePageLoading"
 import { formatDate } from "@/lib/formatters"
 import { auditLogService } from "@/services/auditLogServices"
 import {
@@ -12,10 +14,37 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
+import { FullPageLoading } from "@/components/ui/state"
 import { TimelineItem } from "@/components/ui/timeline"
 import { buildAuditTimelineEntries } from "@/features/audit-log/audit-timeline"
 import { toast } from "sonner"
+
+export const ACTION_LABELS: Record<string, string> = {
+  CREATE: "Tambah Data",
+  UPDATE: "Ubah Data",
+  DELETE: "Hapus",
+  PERMANENT_DELETE: "Hapus Permanen",
+  BULK_DELETE: "Hapus Masal",
+  LOGIN: "Masuk Akun",
+  LOGOUT: "Keluar Akun",
+  EXPORT_EXCEL: "Ekspor Excel",
+  EXPORT_PDF: "Ekspor PDF",
+  RESTORE: "Pulihkan",
+  IMPORT: "Impor Data",
+  IMPORT_CREATE: "Impor Data Baru",
+  IMPORT_UPDATE: "Pembaruan Impor",
+  MOVE: "Mutasi / Pindah",
+  SPLIT: "Pecah Unit",
+  CREATE_SPLIT: "Hasil Pecah Unit",
+  CHECK: "Pemeriksaan / Cek",
+  HOLDER_CONFIRMED: "Konfirmasi Pemegang",
+}
+
+export function formatActionLabel(action?: string): string {
+  if (!action) return "-"
+  const key = action.toUpperCase()
+  return ACTION_LABELS[key] || action.replaceAll("_", " ")
+}
 
 export interface AuditLogItem {
   id: string | number
@@ -173,6 +202,13 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
 
   const logs = data?.pages.flatMap((page) => page.data) ?? []
 
+  // Sembunyikan sidebar saat loading awal
+  usePageLoading(isLoading)
+
+  if (isLoading) {
+    return <FullPageLoading message="Memuat audit log..." />
+  }
+
   const handleRefresh = async () => {
     await refetch()
   }
@@ -200,35 +236,6 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
       toast.error("Gagal mengekspor data dari server.", { id: toastId })
     } finally {
       setIsExporting(false)
-    }
-  }
-
-  // ✅ Perbaikan: Parameter `type` digunakan aktif di dalam switch-case
-  const getBadgeVariant = (type?: string) => {
-    if (!type) return "outline" as const
-    switch (type.toUpperCase()) {
-      case "UPDATE":
-      case "IMPORT_UPDATE":
-        return "rusak-ringan" as const
-      case "DELETE":
-      case "PERMANENT_DELETE":
-      case "BULK_DELETE":
-        return "destructive" as const
-      case "CREATE":
-      case "IMPORT_CREATE":
-      case "CREATE_SPLIT":
-      case "LOGIN":
-        return "bagus" as const
-      case "EXPORT_EXCEL":
-      case "EXPORT_PDF":
-      case "LOGOUT":
-      case "IMPORT":
-      case "RESTORE":
-      case "MOVE":
-      case "SPLIT":
-        return "secondary" as const
-      default:
-        return "outline" as const
     }
   }
 
@@ -282,21 +289,23 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 className="cursor-pointer bg-transparent font-semibold text-neutral-900 outline-none"
               >
                 <option value="">Semua</option>
-                <option value="CREATE">CREATE</option>
-                <option value="UPDATE">UPDATE</option>
-                <option value="DELETE">DELETE</option>
-                <option value="PERMANENT_DELETE">PERMANENT_DELETE</option>
-                <option value="BULK_DELETE">BULK_DELETE</option>
-                <option value="LOGIN">LOGIN</option>
-                <option value="LOGOUT">LOGOUT</option>
-                <option value="EXPORT_EXCEL">EXPORT_EXCEL</option>
-                <option value="EXPORT_PDF">EXPORT_PDF</option>
-                <option value="RESTORE">RESTORE</option>
-                <option value="IMPORT_CREATE">IMPORT_CREATE</option>
-                <option value="IMPORT_UPDATE">IMPORT_UPDATE</option>
-                <option value="MOVE">MOVE</option>
-                <option value="SPLIT">SPLIT</option>
-                <option value="CREATE_SPLIT">CREATE_SPLIT</option>
+                <option value="CREATE">Tambah Data (CREATE)</option>
+                <option value="UPDATE">Ubah Data (UPDATE)</option>
+                <option value="DELETE">Hapus (DELETE)</option>
+                <option value="PERMANENT_DELETE">Hapus Permanen</option>
+                <option value="BULK_DELETE">Hapus Masal</option>
+                <option value="CHECK">Pemeriksaan / Cek</option>
+                <option value="LOGIN">Masuk Akun (LOGIN)</option>
+                <option value="LOGOUT">Keluar Akun (LOGOUT)</option>
+                <option value="EXPORT_EXCEL">Ekspor Excel</option>
+                <option value="EXPORT_PDF">Ekspor PDF</option>
+                <option value="RESTORE">Pulihkan</option>
+                <option value="IMPORT_CREATE">Impor Data Baru</option>
+                <option value="IMPORT_UPDATE">Pembaruan Impor</option>
+                <option value="MOVE">Mutasi / Pindah</option>
+                <option value="SPLIT">Pecah Unit</option>
+                <option value="CREATE_SPLIT">Hasil Pecah Unit</option>
+                <option value="HOLDER_CONFIRMED">Konfirmasi Pemegang</option>
               </select>
             </div>
 
@@ -371,51 +380,7 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="flex flex-col items-center justify-center gap-3 py-8">
-              <svg
-                className="h-8 w-8 animate-spin text-[#1c1c1e]"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              <p className="text-sm font-medium text-muted-foreground">
-                Memuat audit log...
-              </p>
-            </div>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Card
-                key={i}
-                className="flex flex-col justify-between gap-4 border-neutral-200/80 bg-white p-5 md:flex-row"
-              >
-                <div className="w-full shrink-0 space-y-2 md:w-56">
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                  <Skeleton className="h-4 w-32 rounded-md" />
-                  <Skeleton className="h-3 w-24 rounded-md" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-40 rounded-md" />
-                  <Skeleton className="h-16 w-full rounded-xl" />
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : isError ? (
+        {isError ? (
           <Alert variant="destructive">
             <AlertDescription>
               Gagal mengambil audit log. Pastikan server backend berjalan.
@@ -445,10 +410,10 @@ export function AuditLogView({ onExport }: AuditLogViewProps) {
                 >
                   <div className="flex w-full shrink-0 flex-col md:w-56 md:self-stretch">
                     <Badge
-                      variant={getBadgeVariant(log.type)}
-                      className="self-start"
+                      variant="outline"
+                      className="self-start border-neutral-200 bg-neutral-100/80 font-medium text-neutral-700"
                     >
-                      {log.type.replaceAll("_", " ")}
+                      {formatActionLabel(log.type)}
                     </Badge>
                     <div className="mt-1.5">
                       <h4 className="text-xs font-bold text-neutral-900">

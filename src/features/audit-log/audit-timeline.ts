@@ -93,12 +93,39 @@ export function buildAuditTimelineEntries(
     metaLabel = "Autentikasi"
   } else if (upperType === "EXPORT_EXCEL" || upperType === "EXPORT_PDF") {
     metaLabel = "Ekspor data"
+  } else if (upperType === "HOLDER_CONFIRMED") {
+    metaLabel = "Verifikasi pemegang"
   }
+
+  const actionFriendlyLabels: Record<string, string> = {
+    CREATE: "Tambah Data",
+    UPDATE: "Ubah Data",
+    DELETE: "Hapus Data",
+    PERMANENT_DELETE: "Hapus Permanen",
+    BULK_DELETE: "Hapus Masal",
+    LOGIN: "Masuk Akun",
+    LOGOUT: "Keluar Akun",
+    EXPORT_EXCEL: "Ekspor Excel",
+    EXPORT_PDF: "Ekspor PDF",
+    RESTORE: "Pulihkan Data",
+    IMPORT: "Impor Data",
+    IMPORT_CREATE: "Impor Data Baru",
+    IMPORT_UPDATE: "Pembaruan Impor",
+    MOVE: "Mutasi / Pindah Aset",
+    SPLIT: "Pecah Unit Aset",
+    CREATE_SPLIT: "Hasil Pecah Unit",
+    CHECK: "Pemeriksaan Aset",
+    HOLDER_CONFIRMED: "Konfirmasi Pemegang Aset",
+  }
+
+  const actionTitle =
+    actionFriendlyLabels[upperType] ||
+    `Aktivitas ${log.type.replaceAll("_", " ")}`
 
   return [
     {
       id: "aktivitas",
-      title: `Aktivitas ${log.type.replaceAll("_", " ")}`,
+      title: actionTitle,
       subtitle:
         log.description || "Tidak ada detail perubahan yang ditampilkan.",
       meta: metaLabel,
