@@ -243,6 +243,14 @@ const formatDescription = (
     return `Record ${entityType} ${name ? `${name} (${code})` : code} berhasil dipulihkan.`
   }
 
+  if (upperAction === "HOLDER_CONFIRMED") {
+    return `Pemegang aset (${actorName}) telah mengonfirmasi bahwa aset ${code} berada dalam penguasaannya.`
+  }
+
+  if (upperAction === "CHECK") {
+    return `Pemeriksaan / cek fisik pada aset ${code} berhasil dilakukan.`
+  }
+
   return `Aktivitas ${action} pada ${entityType} berhasil dicatat.`
 }
 
