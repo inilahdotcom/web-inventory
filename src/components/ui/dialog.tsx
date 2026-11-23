@@ -122,8 +122,13 @@ const DialogContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { hideCloseButton?: boolean }
 >(({ className, children, hideCloseButton = false, ...props }, ref) => {
-  const { onOpenChange, titleId, descriptionId } = useDialog()
+  const { open, onOpenChange, titleId, descriptionId } = useDialog()
   const contentRef = React.useRef<HTMLDivElement | null>(null)
+  const onOpenChangeRef = React.useRef(onOpenChange)
+
+  React.useEffect(() => {
+    onOpenChangeRef.current = onOpenChange
+  }, [onOpenChange])
 
   const setRefs = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -135,6 +140,8 @@ const DialogContent = React.forwardRef<
   )
 
   React.useEffect(() => {
+    if (!open) return
+
     const previousActiveElement = document.activeElement as HTMLElement | null
     const container = contentRef.current
 
@@ -150,7 +157,7 @@ const DialogContent = React.forwardRef<
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation()
-        onOpenChange(false)
+        onOpenChangeRef.current(false)
         return
       }
 
@@ -192,12 +199,13 @@ const DialogContent = React.forwardRef<
       document.removeEventListener("keydown", handleKeyDown)
       if (
         previousActiveElement &&
+        previousActiveElement.isConnected &&
         typeof previousActiveElement.focus === "function"
       ) {
         previousActiveElement.focus()
       }
     }
-  }, [onOpenChange])
+  }, [open])
 
   return (
     <DialogPortal>
