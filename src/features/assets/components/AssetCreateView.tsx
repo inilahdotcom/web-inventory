@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useMemo } from "react"
 import { formatNumber } from "@/lib/formatters"
 import { useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -22,7 +22,7 @@ import {
   type MasterDataItem,
 } from "@/services/masterDataService"
 import { profileService } from "@/services/profileService"
-import { authService } from "@/services/authServices" // Import authService jika ada, atau hapus token langsung
+import { authService } from "@/services/authServices"
 import { toast } from "sonner"
 
 const MAP_SATUAN: Record<string, string> = {
@@ -44,11 +44,87 @@ const MAP_STATUS: Record<string, string> = {
   Diperbaiki: "Diperbaiki",
 }
 
+function PhotoPreviewThumb({ file }: { file: File }) {
+  const previewUrl = useMemo(() => URL.createObjectURL(file), [file])
+
+  useEffect(() => {
+    return () => {
+      URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
+
+  return (
+    <img
+      src={previewUrl}
+      alt={file.name}
+      className="h-full w-full object-cover"
+    />
+  )
+}
+
+function resolveAssetCreateError(error: unknown): string {
+  const err = error as AxiosError<{ message?: string; error?: string }>
+  const backendError = err.response?.data?.error ?? ""
+  const backendMessage = err.response?.data?.message ?? ""
+  const combinedRaw = `${backendError} ${backendMessage}`.trim()
+
+  if (
+    combinedRaw.includes("failed on the 'min' tag") ||
+    combinedRaw.includes("min")
+  ) {
+    return "Jumlah barang minimal harus 1 unit!"
+  }
+
+  if (combinedRaw.includes("failed on the 'required' tag")) {
+    if (combinedRaw.includes("'Name'")) {
+      return "Nama barang wajib diisi!"
+    }
+    if (combinedRaw.includes("'Category'")) {
+      return "Kategori aset wajib dipilih!"
+    }
+    if (combinedRaw.includes("'LocationID'")) {
+      return "Lokasi aset wajib dipilih terlebih dahulu!"
+    }
+    if (combinedRaw.includes("'Quantity'")) {
+      return "Jumlah barang wajib diisi!"
+    }
+    return "Mohon lengkapi semua field yang wajib diisi (*)."
+  }
+
+  if (combinedRaw.includes("asset_photos") || combinedRaw.includes("upload")) {
+    return "Gagal memproses foto aset. Pastikan format file sesuai (JPG/PNG/WEBP)."
+  }
+
+  if (combinedRaw.includes("nomor urut kode aset sudah pernah digunakan")) {
+    return "Nomor urut kode aset ini sudah pernah dipakai sebelumnya."
+  }
+
+  if (
+    combinedRaw.includes("Duplicate entry") ||
+    combinedRaw.includes("asset_code")
+  ) {
+    return "Kode aset sudah digunakan. Silakan gunakan kode aset lain."
+  }
+
+  if (combinedRaw.includes("foreign key constraint fails")) {
+    return "Kategori, Merek, atau Lokasi yang dipilih tidak valid."
+  }
+
+  if (backendMessage === "bad_request") {
+    return "Data yang dikirim belum valid. Periksa kembali isian form."
+  }
+
+  if (backendMessage && !backendMessage.includes("Field validation")) {
+    return backendMessage
+  }
+
+  return "Terjadi kesalahan pada server. Silakan coba beberapa saat lagi."
+}
+
 export function AssetCreateView() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  // Profil user
   const { data: profile } = useQuery({
     queryKey: ["dashboard", "profile"],
     queryFn: () => profileService.get(),
@@ -63,12 +139,9 @@ export function AssetCreateView() {
     .join("")
     .toUpperCase()
 
-  // Popover dropdown profile
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 
-  // Handler Logout
-  // authService.logout sudah: catat ke backend, hapus token, lalu redirect ke /auth/login
   const handleLogout = async () => {
     setIsProfileOpen(false)
     await authService.logout()
@@ -281,50 +354,7 @@ export function AssetCreateView() {
       }
     } catch (error: unknown) {
       console.error("Gagal menyimpan aset:", error)
-
-      const err = error as AxiosError<{ message?: string; error?: string }>
-      const rawMsg: string =
-        err.response?.data?.message || err.response?.data?.error || ""
-      let userFriendlyMsg =
-        "Terjadi kesalahan pada server. Silakan coba beberapa saat lagi."
-
-      if (
-        rawMsg.includes("failed on the 'min' tag") ||
-        rawMsg.includes("min")
-      ) {
-        userFriendlyMsg = "Jumlah barang minimal harus 1 unit!"
-      } else if (rawMsg.includes("failed on the 'required' tag")) {
-        if (rawMsg.includes("'Name'")) {
-          userFriendlyMsg = "Nama barang wajib diisi!"
-        } else if (rawMsg.includes("'Category'")) {
-          userFriendlyMsg = "Kategori aset wajib dipilih!"
-        } else if (rawMsg.includes("'Quantity'")) {
-          userFriendlyMsg = "Jumlah barang wajib diisi!"
-        } else {
-          userFriendlyMsg = "Mohon lengkapi semua field yang wajib diisi (*)."
-        }
-      } else if (rawMsg.includes("asset_photos") || rawMsg.includes("upload")) {
-        userFriendlyMsg =
-          "Gagal memproses foto aset. Pastikan format file sesuai (JPG/PNG/WEBP)."
-      } else if (
-        rawMsg.includes("nomor urut kode aset sudah pernah digunakan")
-      ) {
-        userFriendlyMsg =
-          "Nomor urut kode aset ini sudah pernah dipakai sebelumnya."
-      } else if (
-        rawMsg.includes("Duplicate entry") ||
-        rawMsg.includes("asset_code")
-      ) {
-        userFriendlyMsg =
-          "Kode aset sudah digunakan. Silakan gunakan kode aset lain."
-      } else if (rawMsg.includes("foreign key constraint fails")) {
-        userFriendlyMsg =
-          "Kategori, Merek, atau Lokasi yang dipilih tidak valid."
-      } else if (rawMsg && !rawMsg.includes("Field validation")) {
-        userFriendlyMsg = rawMsg
-      }
-
-      setErrorMessage(userFriendlyMsg)
+      setErrorMessage(resolveAssetCreateError(error))
     } finally {
       setLoading(false)
     }
@@ -371,7 +401,6 @@ export function AssetCreateView() {
             <span className="font-semibold text-neutral-900">Tambah aset</span>
           </div>
 
-          {/* Avatar Profile */}
           <div className="relative" ref={profileRef}>
             <button
               type="button"
@@ -418,7 +447,6 @@ export function AssetCreateView() {
                   Detail Profile
                 </button>
 
-                {/* Tombol Logout Aktif */}
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -659,7 +687,7 @@ export function AssetCreateView() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
                     <SelectedField
-                      label="Lokasi"
+                      label="Lokasi *"
                       name="lokasi"
                       value={formData.lokasi}
                       onChange={handleChange}
@@ -762,7 +790,7 @@ export function AssetCreateView() {
                 <div className="grid grid-cols-3 gap-3 pt-1">
                   {fotos.map((file, index) => (
                     <div
-                      key={index}
+                      key={`${file.name}-${file.lastModified}-${index}`}
                       onClick={() => {
                         if (index !== 0) {
                           setSelectedPhotoIndexForPrimary(index)
@@ -779,11 +807,7 @@ export function AssetCreateView() {
                           : "Foto utama"
                       }
                     >
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Preview ${index}`}
-                        className="h-full w-full object-cover"
-                      />
+                      <PhotoPreviewThumb file={file} />
                       {index === 0 && (
                         <span className="absolute bottom-1.5 left-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-neutral-900 shadow-2xs">
                           Utama

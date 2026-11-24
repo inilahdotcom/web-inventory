@@ -32,24 +32,66 @@ export interface UIMasterDataItem {
   asset_count?: number
 }
 
+interface MasterDataFormValues {
+  nama: string
+  kode: string
+  deskripsi: string
+}
+
 interface MasterDataViewProps {
   categories?: UIMasterDataItem[]
   merekList?: UIMasterDataItem[]
   lokasiList?: UIMasterDataItem[]
   onAddItem?: (
     type: "kategori" | "merek" | "lokasi",
-    data: { nama: string; kode: string; deskripsi: string }
-  ) => void
+    data: MasterDataFormValues
+  ) => void | Promise<void>
   onEditItem?: (
     type: "kategori" | "merek" | "lokasi",
     id: string | number,
-    data: { nama: string; kode: string; deskripsi: string }
-  ) => void
+    data: MasterDataFormValues
+  ) => void | Promise<void>
   onDelete?: (
     type: "kategori" | "merek" | "lokasi",
     id: string | number
-  ) => void
+  ) => void | Promise<void>
 }
+
+const INITIAL_FORM_DATA: MasterDataFormValues = {
+  nama: "",
+  kode: "",
+  deskripsi: "",
+}
+
+const TAB_CONFIG = {
+  kategori: {
+    title: "Kategori aset",
+    desc: "Delapan kategori awal diturunkan dari isi kolom ITEM pada file Excel.",
+    labelNama: "Nama Kategori",
+    placeholderNama: "mis. Peralatan Kebersihan",
+    formTitle: "Tambah kategori",
+    btnSubmit: "Simpan kategori",
+    warning: "Kategori terpakai tidak bisa dihapus",
+  },
+  merek: {
+    title: "Merek aset",
+    desc: "Daftar merek/brand perangkat dan peralatan aset inventaris.",
+    labelNama: "Nama Merek",
+    placeholderNama: "mis. Asus, Samsung, Logitech",
+    formTitle: "Tambah merek",
+    btnSubmit: "Simpan merek",
+    warning: "Merek terpakai tidak bisa dihapus",
+  },
+  lokasi: {
+    title: "Lokasi aset",
+    desc: "Daftar ruangan, lantai, atau area penempatan aset.",
+    labelNama: "Nama Lokasi",
+    placeholderNama: "mis. Lantai 2 - Ruang Rapat",
+    formTitle: "Tambah lokasi",
+    btnSubmit: "Simpan lokasi",
+    warning: "Lokasi terisi tidak bisa dihapus",
+  },
+} as const
 
 export function MasterDataView({
   categories = [],
@@ -59,19 +101,15 @@ export function MasterDataView({
   onEditItem,
   onDelete,
 }: MasterDataViewProps) {
-  // Panggil hook permission untuk mengontrol hak akses kelola master data (Khusus Admin)
   const { canManageMasterData } = usePermission()
 
   const [activeTab, setActiveTab] = useState<"kategori" | "merek" | "lokasi">(
     "kategori"
   )
-  const [formData, setFormData] = useState({
-    nama: "",
-    kode: "",
-    deskripsi: "",
-  })
+  const [formData, setFormData] =
+    useState<MasterDataFormValues>(INITIAL_FORM_DATA)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // State untuk Modal Pop-up Edit
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<{
     id: string | number
@@ -87,34 +125,11 @@ export function MasterDataView({
         ? merekList
         : lokasiList
 
-  const tabConfig = {
-    kategori: {
-      title: "Kategori aset",
-      desc: "Delapan kategori awal diturunkan dari isi kolom ITEM pada file Excel.",
-      labelNama: "Nama Kategori",
-      placeholderNama: "mis. Peralatan Kebersihan",
-      formTitle: "Tambah kategori",
-      btnSubmit: "Simpan kategori",
-      warning: "Kategori terpakai tidak bisa dihapus",
-    },
-    merek: {
-      title: "Merek aset",
-      desc: "Daftar merek/brand perangkat dan peralatan aset inventaris.",
-      labelNama: "Nama Merek",
-      placeholderNama: "mis. Asus, Samsung, Logitech",
-      formTitle: "Tambah merek",
-      btnSubmit: "Simpan merek",
-      warning: "Merek terpakai tidak bisa dihapus",
-    },
-    lokasi: {
-      title: "Lokasi aset",
-      desc: "Daftar ruangan, lantai, atau area penempatan aset.",
-      labelNama: "Nama Lokasi",
-      placeholderNama: "mis. Lantai 2 - Ruang Rapat",
-      formTitle: "Tambah lokasi",
-      btnSubmit: "Simpan lokasi",
-      warning: "Lokasi terisi tidak bisa dihapus",
-    },
+  const activeConfig = TAB_CONFIG[activeTab]
+
+  const handleTabChange = (tab: "kategori" | "merek" | "lokasi") => {
+    setActiveTab(tab)
+    setFormData(INITIAL_FORM_DATA)
   }
 
   const handleChange = (
@@ -124,13 +139,21 @@ export function MasterDataView({
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (onAddItem) onAddItem(activeTab, formData)
-    setFormData({ nama: "", kode: "", deskripsi: "" })
+    if (!onAddItem || isSubmitting) return
+
+    setIsSubmitting(true)
+    try {
+      await onAddItem(activeTab, formData)
+      setFormData(INITIAL_FORM_DATA)
+    } catch {
+      // Error ditangani di parent/handler pemanggil
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  // Fungsi Buka Modal Edit
   const handleOpenEdit = (item: UIMasterDataItem) => {
     setEditingItem({
       id: item.id,
@@ -141,16 +164,15 @@ export function MasterDataView({
     setIsEditOpen(true)
   }
 
-  // Fungsi Submit Simpan Edit
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingItem && onEditItem) {
-      onEditItem(activeTab, editingItem.id, {
-        nama: editingItem.nama,
-        kode: editingItem.kode,
-        deskripsi: editingItem.deskripsi,
-      })
-    }
+    if (!editingItem || !onEditItem) return
+
+    await onEditItem(activeTab, editingItem.id, {
+      nama: editingItem.nama,
+      kode: editingItem.kode,
+      deskripsi: editingItem.deskripsi,
+    })
     setIsEditOpen(false)
     setEditingItem(null)
   }
@@ -164,15 +186,20 @@ export function MasterDataView({
             <div className="flex w-fit shrink-0 items-center gap-1.5 rounded-2xl bg-neutral-100 p-1">
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab("kategori")
-                  setFormData({ nama: "", kode: "", deskripsi: "" })
-                }}
-                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${activeTab === "kategori" ? "bg-neutral-900 text-neutral-100 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+                onClick={() => handleTabChange("kategori")}
+                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  activeTab === "kategori"
+                    ? "bg-neutral-900 text-neutral-100 shadow-2xs"
+                    : "text-neutral-500 hover:text-neutral-900"
+                }`}
               >
                 Kategori{" "}
                 <span
-                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === "kategori" ? "bg-neutral-100 text-neutral-900" : "bg-neutral-200/60 text-neutral-600"}`}
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    activeTab === "kategori"
+                      ? "bg-neutral-100 text-neutral-900"
+                      : "bg-neutral-200/60 text-neutral-600"
+                  }`}
                 >
                   {categories.length}
                 </span>
@@ -180,15 +207,20 @@ export function MasterDataView({
 
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab("merek")
-                  setFormData({ nama: "", kode: "", deskripsi: "" })
-                }}
-                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${activeTab === "merek" ? "bg-neutral-900 text-neutral-100 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+                onClick={() => handleTabChange("merek")}
+                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  activeTab === "merek"
+                    ? "bg-neutral-900 text-neutral-100 shadow-2xs"
+                    : "text-neutral-500 hover:text-neutral-900"
+                }`}
               >
                 Merek{" "}
                 <span
-                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === "merek" ? "bg-neutral-100 text-neutral-900" : "bg-neutral-200/60 text-neutral-600"}`}
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    activeTab === "merek"
+                      ? "bg-neutral-100 text-neutral-900"
+                      : "bg-neutral-200/60 text-neutral-600"
+                  }`}
                 >
                   {merekList.length}
                 </span>
@@ -196,15 +228,20 @@ export function MasterDataView({
 
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab("lokasi")
-                  setFormData({ nama: "", kode: "", deskripsi: "" })
-                }}
-                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${activeTab === "lokasi" ? "bg-neutral-900 text-neutral-100 shadow-2xs" : "text-neutral-500 hover:text-neutral-900"}`}
+                onClick={() => handleTabChange("lokasi")}
+                className={`shrink-0 cursor-pointer rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  activeTab === "lokasi"
+                    ? "bg-neutral-900 text-neutral-100 shadow-2xs"
+                    : "text-neutral-500 hover:text-neutral-900"
+                }`}
               >
                 Lokasi{" "}
                 <span
-                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === "lokasi" ? "bg-neutral-100 text-neutral-900" : "bg-neutral-200/60 text-neutral-600"}`}
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    activeTab === "lokasi"
+                      ? "bg-neutral-100 text-neutral-900"
+                      : "bg-neutral-200/60 text-neutral-600"
+                  }`}
                 >
                   {lokasiList.length}
                 </span>
@@ -217,11 +254,9 @@ export function MasterDataView({
       <div className="mx-auto max-w-7xl space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
-            {tabConfig[activeTab].title}
+            {activeConfig.title}
           </h1>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            {tabConfig[activeTab].desc}
-          </p>
+          <p className="mt-0.5 text-xs text-neutral-500">{activeConfig.desc}</p>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
@@ -232,7 +267,7 @@ export function MasterDataView({
                 <TableHeader>
                   <TableRow className="border-b border-hairline bg-muted/50">
                     <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
-                      {tabConfig[activeTab].labelNama}
+                      {activeConfig.labelNama}
                     </TableHead>
                     <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
                       Kode
@@ -240,7 +275,6 @@ export function MasterDataView({
                     <TableHead className="px-6 py-3.5 text-[10px] font-semibold tracking-wider uppercase">
                       Aset
                     </TableHead>
-                    {/* Tampilkan kolom Aksi hanya jika Admin */}
                     {canManageMasterData && (
                       <TableHead className="px-6 py-3.5 text-right text-[10px] font-semibold tracking-wider uppercase">
                         Aksi
@@ -278,7 +312,6 @@ export function MasterDataView({
                             <Badge variant="outline">{count}</Badge>
                           </TableCell>
 
-                          {/* Tombol Ubah & Hapus hanya tampil jika Admin */}
                           {canManageMasterData && (
                             <TableCell className="space-x-3 px-6 py-4 text-right">
                               <Button
@@ -304,7 +337,7 @@ export function MasterDataView({
                                 }`}
                                 title={
                                   hasAssets
-                                    ? tabConfig[activeTab].warning
+                                    ? activeConfig.warning
                                     : "Hapus data"
                                 }
                               >
@@ -326,7 +359,7 @@ export function MasterDataView({
             {canManageMasterData ? (
               <Card className="p-6">
                 <h3 className="mb-4 text-sm font-bold text-foreground">
-                  {tabConfig[activeTab].formTitle}
+                  {activeConfig.formTitle}
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1.5">
@@ -336,7 +369,8 @@ export function MasterDataView({
                       name="nama"
                       value={formData.nama}
                       onChange={handleChange}
-                      placeholder={tabConfig[activeTab].placeholderNama}
+                      placeholder={activeConfig.placeholderNama}
+                      disabled={isSubmitting}
                       required
                     />
                   </div>
@@ -348,6 +382,7 @@ export function MasterDataView({
                       value={formData.kode}
                       onChange={handleChange}
                       placeholder="KODE"
+                      disabled={isSubmitting}
                       className="font-mono"
                     />
                   </div>
@@ -360,15 +395,17 @@ export function MasterDataView({
                       onChange={handleChange}
                       rows={3}
                       placeholder="Opsional"
+                      disabled={isSubmitting}
                     />
                   </div>
                   <Button
                     type="submit"
                     variant="primary"
                     size="md"
+                    disabled={isSubmitting}
                     className="w-full"
                   >
-                    {tabConfig[activeTab].btnSubmit}
+                    {isSubmitting ? "Menyimpan..." : activeConfig.btnSubmit}
                   </Button>
                 </form>
               </Card>
@@ -392,7 +429,10 @@ export function MasterDataView({
       <Dialog
         open={Boolean(canManageMasterData && isEditOpen && editingItem)}
         onOpenChange={(open) => {
-          if (!open) setIsEditOpen(false)
+          if (!open) {
+            setIsEditOpen(false)
+            setEditingItem(null)
+          }
         }}
       >
         <DialogContent className="max-w-md">
@@ -442,7 +482,10 @@ export function MasterDataView({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => setIsEditOpen(false)}
+                  onClick={() => {
+                    setIsEditOpen(false)
+                    setEditingItem(null)
+                  }}
                 >
                   Batal
                 </Button>
